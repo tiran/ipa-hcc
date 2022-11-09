@@ -12,7 +12,6 @@ from ipalib.parameters import Int, Str
 from ipaserver.plugins.host import host
 from ipaserver.plugins.host import host_add
 from ipaserver.plugins.host import host_mod
-from ipaserver.plugins.host import host_show
 from ipaserver.plugins.internal import i18n_messages
 
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
