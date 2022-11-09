@@ -6,6 +6,7 @@
 """IPA plugin for Red Hat consoleDot
 """
 from ipalib import _
+from ipalib import api
 from ipalib import errors
 from ipapython.dn import DN
 from ipalib.parameters import Int, Str
@@ -16,6 +17,8 @@ from ipaserver.plugins.internal import i18n_messages
 
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 UUID_ERRMSG = "must be an UUID"
+
+consoledot_hostgroup = "consoledot-enrollment"
 
 consoledot_host_class = "consoledothost"
 
@@ -96,7 +99,7 @@ def get_config_orgid(ldap):
         )
 
 
-def check_consoledot_attr(ldap, entry):
+def check_consoledot_attr(ldap, dn, entry):
     """Common function to verify consoleDot host attributes"""
     subscriptionid = entry.get("consoledotsubscriptionid")
     if subscriptionid is not None:
@@ -106,6 +109,12 @@ def check_consoledot_attr(ldap, entry):
             entry["consoledotorgid"] = orgid
         entry["consoledotcertsubject"] = str(
             DN(("O", orgid), ("CN", subscriptionid))
+        )
+        pkey = api.Object.host.get_primary_key_from_dn(dn)
+        api.Command.hostgroup_add_member(
+            consoledot_hostgroup,
+            host=[pkey],
+            no_members=True,
         )
 
 
@@ -119,7 +128,7 @@ def host_add_consoledot_precb(
         ):
             entry["objectclass"].append(consoledot_host_class)
         # check consoleDot attributes
-        check_consoledot_attr(ldap, entry)
+        check_consoledot_attr(ldap, dn, entry)
     return dn
 
 
@@ -139,7 +148,7 @@ def host_mod_consoledot_precb(
         ):
             entry["objectclass"].append(consoledot_host_class)
         # check consoleDot attributes
-        check_consoledot_attr(ldap, entry)
+        check_consoledot_attr(ldap, dn, entry)
     return dn
 
 

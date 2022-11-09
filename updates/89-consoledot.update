@@ -4,6 +4,17 @@
 # See COPYING for license
 #
 
+# host group
+dn: cn=consoledot-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
+default: objectClass: top
+default: objectClass: groupOfNames
+default: objectClass: nestedGroup
+default: objectClass: ipaobject
+default: objectClass: ipahostgroup
+default: description: consoleDot enrollment hosts
+default: cn: consoledot-enrollment
+default: ipaUniqueID: autogenerate
+
 # Index
 dn: cn=consoleDotSubscriptionId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
 default:cn: consoleDotSubscriptionId

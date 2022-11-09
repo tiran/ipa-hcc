@@ -28,6 +28,11 @@ time.
 
 * *consoleDotOrgId*: int
 
+## Host groups
+
+Host group ``consoledot-enrollment`` is created on server upgrade. Hosts with
+a ``consoleDotSubscriptionId`` are automatically added to the host group.
+
 ## ACIs
 
 * ``System: Read consoleDot host attributes``
