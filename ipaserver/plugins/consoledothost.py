@@ -82,6 +82,11 @@ host.managed_permissions.update(
             "ipapermtargetfilter": [f"(objectclass={consoledot_host_class})"],
             "ipapermdefaultattr": consoledot_host_attributes,
         },
+        "System: Modify consoleDot host attributes": {
+            "ipapermright": {"write"},
+            "ipapermdefaultattr": consoledot_host_attributes,
+            "default_privileges": {"Host Administrators"},
+        },
     },
 )
 
