@@ -1,0 +1,38 @@
+dn: cn=ipaConfig,cn=etc,dc=ipa,dc=test
+default: consoleDotOrgId: 42
+
+dn: cn=rhsm-cert,cn=certmaprules,cn=certmap,$SUFFIX
+default: objectClass: ipacertmaprule
+default: objectClass: top
+default: cn: rhsm-cert
+default: ipaCertMapMapRule: (consoledotcertsubject={subject_dn!nss_x500})
+default: ipaCertMapMatchRule: <ISSUER>CN=Testing Candlepin Authority,OU=HMSIDM,O=Red Hat
+default: ipaEnabledFlag: TRUE
+
+dn: fqdn=hostc53b274ae54dc5dd.$DOMAIN,cn=computers,cn=accounts,$SUFFIX
+default: objectClass: consoledothost
+default: objectClass: ieee802device
+default: objectClass: ipahost
+default: objectClass: ipaobject
+default: objectClass: ipaservice
+default: objectClass: ipaSshGroupOfPubKeys
+default: objectClass: ipasshhost
+default: objectClass: krbprincipal
+default: objectClass: krbprincipalaux
+default: objectClass: nshost
+default: objectClass: pkiuser
+default: objectClass: top
+default: cn: hostc53b274ae54dc5dd.$DOMAIN
+default: fqdn: hostc53b274ae54dc5dd.$DOMAIN
+default: ipaUniqueID: autogenerate
+default: krbPrincipalName: host/hostc53b274ae54dc5dd.$DOMAIN@$REALM
+default: consoleDotCertSubject: O=42,CN=1f84492f-a824-41b8-8ccd-a4e9e1ab2f3d
+default: consoleDotOrgId: 42
+default: consoleDotSubscriptionId: 1f84492f-a824-41b8-8ccd-a4e9e1ab2f3d
+default: krbCanonicalName: host/hostc53b274ae54dc5dd.$DOMAIN@$REALM
+default: krbPwdPolicyReference: cn=Default Host Password Policy,cn=computers,cn=accounts,$SUFFIX
+default: managedBy: fqdn=hostc53b274ae54dc5dd.$DOMAIN,cn=computers,cn=accounts,$SUFFIX
+default: serverHostName: hostc53b274ae54dc5dd
+
+dn: cn=consoledot-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
+add: member: fqdn=hostc53b274ae54dc5dd.$DOMAIN,cn=computers,cn=accounts,$SUFFIX
