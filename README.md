@@ -1,4 +1,4 @@
-# IPA plugin for consokeDot
+# IPA plugin for consoleDot
 
 The *ipa-consoledot* plugin provides schema extension of IPA for
 consoleDot integration. The plugin must be installed on all FreeIPA
