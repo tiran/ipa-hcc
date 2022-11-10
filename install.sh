@@ -3,14 +3,14 @@ set -e
 
 SITE_PACKAGES=$(python3 -c 'from sys import version_info as v; print(f"/usr/lib/python{v.major}.{v.minor}/site-packages")')
 
-if [ -f /usr/share/ipa/schema.d/89-consoledot.ldif -a -f /usr/share/ipa/updates/89-consoledot.update ]; then
+if [ -f /usr/share/ipa/schema.d/85-consoledot.ldif -a -f /usr/share/ipa/updates/85-consoledot.update ]; then
     NEEDS_UPGRADE=0;
 else
     NEEDS_UPGRADE=1;
 fi
 
-cp schema.d/89-consoledot.ldif /usr/share/ipa/schema.d/
-cp updates/89-consoledot.update /usr/share/ipa/updates/
+cp schema.d/85-consoledot.ldif /usr/share/ipa/schema.d/
+cp updates/85-consoledot.update /usr/share/ipa/updates/
 
 mkdir -p -m 755 /usr/share/ipa/ui/js/plugins/consoledotconfig
 cp ui/js/plugins/consoledotconfig/consoledotconfig.js /usr/share/ipa/ui/js/plugins/consoledotconfig/
@@ -24,8 +24,8 @@ if [ $NEEDS_UPGRADE = 1 ]; then
     ipa-server-upgrade
 else
     ipa-ldap-updater \
-        -S /usr/share/ipa/schema.d/89-consoledot.ldif \
-        /usr/share/ipa/updates/89-consoledot.update
+        -S /usr/share/ipa/schema.d/85-consoledot.ldif \
+        /usr/share/ipa/updates/85-consoledot.update
     systemctl restart httpd.service
 fi
 
