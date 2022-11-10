@@ -53,6 +53,14 @@ $ ipa host-mod --help
   ...
 ```
 
+## Notes
+
+- IPA's KDC plugin caches certmap rules for 5 minutes. For rapid testing
+  restart the KDC with ``systemctl restart krb5kdc.service``. See
+  ``ipa_kdc_certauth.c``: ``DEFAULT_CERTMAP_LIFETIME``.
+- ``ipa certmap-match`` is only implemented for users. It cannot be used
+  to test cert mappings for hosts.
+
 ## License
 
 See file 'COPYING' for use and warranty information
