@@ -94,14 +94,14 @@ host.managed_permissions.update(
 def get_config_orgid(ldap):
     config = ldap.get_ipa_config()
     cfg_orgids = config.get("consoledotorgid")
-    if len(cfg_orgids) == 1:
-        return cfg_orgids[0]
-    else:
+    if cfg_orgids is None or len(cfg_orgids) != 1:
         msg = _("consoleDot is not configured globally")
         # raises for subscription id
         raise errors.ValidationError(
             name="consoledotsubscriptionid", errors=msg
         )
+    else:
+        return cfg_orgids[0]
 
 
 def check_consoledot_attr(ldap, dn, entry):
