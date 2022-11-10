@@ -1,5 +1,5 @@
 #
-# FreeIPA plugin for Fedora Account System
+# IPA plugin for consoleDot
 # Copyright (C) 2022  Christian Heimes <cheimes@redhat.com>
 # See COPYING for license
 #
@@ -40,7 +40,8 @@ default:nsSystemIndex: false
 default:nsIndexType: eq
 default:nsIndexType: pres
 
-# ensure that consoleDotCertSubjects are unique
+# Ensure that consoleDotCertSubjects are unique. The unique constraint
+# prevents multiple host entries for a RHSM cert.
 dn: cn=consoleDotCertSubject uniqueness,cn=plugins,cn=config
 default:objectClass: top
 default:objectClass: nsSlapdPlugin
