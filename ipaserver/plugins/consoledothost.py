@@ -6,7 +6,6 @@
 """IPA plugin for Red Hat consoleDot
 """
 from ipalib import _
-from ipalib import api
 from ipalib import errors
 from ipapython.dn import DN
 from ipalib.parameters import Int, Str
@@ -41,7 +40,6 @@ takes_params = (
         cli_name="consoledotorgid",
         label=_("organization id"),
         minvalue=1,
-        maxvalue=255,
         # no_option?
         flags={"no_create", "no_update", "no_search"},
     ),
@@ -115,12 +113,9 @@ def check_consoledot_attr(ldap, dn, entry):
         entry["consoledotcertsubject"] = str(
             DN(("O", orgid), ("CN", subscriptionid))
         )
-        pkey = api.Object.host.get_primary_key_from_dn(dn)
-        api.Command.hostgroup_add_member(
-            consoledot_hostgroup,
-            host=[pkey],
-            no_members=True,
-        )
+    else:
+        entry.pop("consoledotorgid")
+        entry.pop("consoledotcertsubject")
 
 
 def host_add_consoledot_precb(

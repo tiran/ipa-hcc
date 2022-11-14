@@ -29,7 +29,6 @@ takes_params = (
         cli_name="consoledotorgid",
         label=_("organization id"),
         minvalue=1,
-        maxvalue=255,
     ),
 )
 

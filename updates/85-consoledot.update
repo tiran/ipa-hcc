@@ -15,6 +15,51 @@ default: description: consoleDot enrollment hosts
 default: cn: consoledot-enrollment
 default: ipaUniqueID: autogenerate
 
+# automember for host group
+dn: cn=consoledot-enrollment,cn=Hostgroup,cn=automember,cn=etc,$SUFFIX
+default: objectClass: automemberregexrule
+default: objectClass: top
+default: autoMemberTargetGroup: cn=consoledot-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
+default: cn: consoledot-enrollment
+default: autoMemberExclusiveRegex: memberof=cn=ipaserver,cn=hostgroups,cn=accounts,.*
+default: autoMemberInclusiveRegex: consoledotsubscriptionid=.*
+
+# certmap rule for RHSM certificate
+dn: cn=rhsm-cert,cn=certmaprules,cn=certmap,$SUFFIX
+default: objectClass: ipacertmaprule
+default: objectClass: top
+default: cn: rhsm-cert
+default: description: Rule for Red Hat Subscription Manager (RHSM) certificates (/etc/pki/consumer/cert.pem).
+default: ipaCertMapMapRule: (&(consoledotcertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX)))
+# NSS uses E= instead of emailAddress
+# "," in "Red Hat, Inc." must be quoted as "\\,"
+# "$" is quoted as "$$" for ipa-ldap-updater
+# matches certificates that are signed by "Red Hat Candlepin Authority" or "Red Hat Candlepin Authority R2"
+default: ipaCertMapMatchRule: <ISSUER>^E=ca-support@redhat.com,CN=Red Hat Candlepin Authority( R2)?,OU=Red Hat Network,O=Red Hat\\, Inc\.,ST=North Carolina,C=US$$
+default: ipaEnabledFlag: TRUE
+
+# roles and privileges for consoleDot enrollment
+dn: cn=consoleDot Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
+default: objectClass: groupofnames
+default: objectClass: nestedgroup
+default: objectClass: top
+default: cn: consoleDot Enrollment Administrators
+default: description: Enrollment Administrators for Red Hat consoleDot
+
+dn: cn=consoleDot Host Administrators,cn=privileges,cn=pbac,$SUFFIX
+default: objectClass: groupofnames
+default: objectClass: nestedgroup
+default: objectClass: top
+default: cn: consoleDot Host Administrators
+default: description: Limited Host Administrators for consoleDot enrollment
+add: member: cn=consoleDot Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
+
+dn: cn=System: Add Hosts,cn=permissions,cn=pbac,$SUFFIX
+add: member: cn=consoleDot Host Administrators,cn=privileges,cn=pbac,$SUFFIX
+
+dn: cn=System: Modify consoleDot host attributes,cn=permissions,cn=pbac,$SUFFIX
+add: member: cn=consoleDot Host Administrators,cn=privileges,cn=pbac,$SUFFIX
+
 # Index
 dn: cn=consoleDotSubscriptionId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
 default:cn: consoleDotSubscriptionId

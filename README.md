@@ -31,12 +31,13 @@ time.
 ## Host groups
 
 Host group ``consoledot-enrollment`` is created on server upgrade. Hosts with
-a ``consoleDotSubscriptionId`` are automatically added to the host group.
+a ``consoleDotSubscriptionId`` are automatically added to the host group by
+an **automember rule**.
 
-## ACIs
+## certmap rule
 
-* ``System: Read consoleDot host attributes``
-* ``System: Read consoleDot config attributes``
+A certmap rule ``rhsm-cert`` matches subject of RHSM certificates to host's
+``consoleDotCertSubject` attribute.
 
 ## Indexes
 
@@ -49,8 +50,49 @@ a ``consoleDotSubscriptionId`` are automatically added to the host group.
 
 ```
 $ ipa host-mod --help
-...
   ...
+  --consoledotsubscriptionid=STR
+  --consoledotinventoryid=STR
+  ...
+$ ipa host-show host.test.example
+  ...
+  organization id: 42
+  subscription id: 1f84492f-a824-41b8-8ccd-a4e9e1ab2f3d
+  inventory id: e98a6828-faf2-4917-8f0f-7af27fad3683
+  RHSM certificate subject: O=42,CN=1f84492f-a824-41b8-8ccd-a4e9e1ab2f3d
+  ...
+$ ipa config-mod --help
+  ...
+  --consoledotorgid=INT  organization id
+  ...
+```
+
+## Roles / Privileges / Permissions
+
+* Permission
+  * ``System: Read consoleDot config attributes``
+  * ``System: Read consoleDot host attributes``
+  * ``System: Modify consoleDot host attributes``
+* Role ``consoleDot Enrollment Administrators``
+* Privilege ``consoleDot Host Administrators`` that grants permissions
+  * ``System: Add Hosts``
+  * ``System: Modify consoleDot host attributes``
+
+## Test setup
+
+Add enrollment service account
+```
+ipa service-add consoledot-enrollment/$(hostname)
+ipa role-add-member --services=consoledot-enrollment/$(hostname) "consoleDot Enrollment Administrators"
+```
+
+Configure keytab
+```
+# TODO needs home directory
+useradd -r -g ipaapi ipaconsoledot
+ipa-getkeytab -k /var/lib/ipa/ipaconsoledot.keytab -p consoledot-enrollment/$(hostname)
+# hack, get gssproxy working
+chown ipaconsoledot:ipaapi /var/lib/ipa/ipaconsoledot.keytab
 ```
 
 ## Notes

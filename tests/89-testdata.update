@@ -1,11 +1,12 @@
-dn: cn=ipaConfig,cn=etc,dc=ipa,dc=test
+dn: cn=ipaConfig,cn=etc,$SUFFIX
 default: consoleDotOrgId: 42
 
-dn: cn=rhsm-cert,cn=certmaprules,cn=certmap,$SUFFIX
+dn: cn=testing-candlepin-cert,cn=certmaprules,cn=certmap,$SUFFIX
 default: objectClass: ipacertmaprule
 default: objectClass: top
-default: cn: rhsm-cert
-default: ipaCertMapMapRule: (consoledotcertsubject={subject_dn!nss_x500})
+default: cn: testing-candlepin-cert
+default: description: Rule for internal "Testing Candlepin Authority"
+default: ipaCertMapMapRule: (&(consoledotcertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX)))
 default: ipaCertMapMatchRule: <ISSUER>CN=Testing Candlepin Authority,OU=HMSIDM,O=Red Hat
 default: ipaEnabledFlag: TRUE
 

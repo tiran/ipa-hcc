@@ -20,6 +20,9 @@ cp ui/js/plugins/consoledothost/consoledothost.js /usr/share/ipa/ui/js/plugins/c
 cp ipaserver/plugins/*.py ${SITE_PACKAGES}/ipaserver/plugins/
 python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/
 
+cp wsgi/consoledot.py /usr/share/ipa/
+cp apache/consoledot.conf /etc/httpd/conf.d/99-consoledot.conf
+
 if [ $NEEDS_UPGRADE = 1 ]; then
     ipa-server-upgrade
 else

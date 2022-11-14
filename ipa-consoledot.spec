@@ -46,23 +46,28 @@ for j in $(find ipaserver/plugins -name '*.py') ; do
     %__cp -p $j %{buildroot}%{python3_sitelib}/ipaserver/plugins
 done
 
-%__mkdir_p %buildroot/%_datadir/ipa/schema.d
+%__mkdir_p %buildroot/%{_datadir}/ipa/schema.d
 for j in $(find schema.d/ -name '*.ldif') ; do
-    %__cp -p $j %buildroot/%_datadir/ipa/schema.d/
+    %__cp -p $j %buildroot/%{_datadir}/ipa/schema.d/
 done
 
-%__mkdir_p %buildroot/%_datadir/ipa/updates
+%__mkdir_p %buildroot/%{_datadir}/ipa/updates
 for j in $(find updates/ -name '*.update') ; do
-    %__cp -p $j %buildroot/%_datadir/ipa/updates/
+    %__cp -p $j %buildroot/%{_datadir}/ipa/updates/
 done
 
-%__mkdir_p %buildroot/%_datadir/ipa/ui/js/plugins
+%__mkdir_p %buildroot/%{_datadir}/ipa/ui/js/plugins
 for j in $(find ui/ -name '*.js') ; do
-    destdir=%buildroot/%_datadir/ipa/ui/js/plugins/$(basename ${j%.js})
+    destdir=%buildroot/%{_datadir}/ipa/ui/js/plugins/$(basename ${j%.js})
     %__mkdir_p $destdir
     %__cp -p $j $destdir/
 done
 
+mkdir -p %{buildroot}%{_sysconfdir}/httpd/conf.d/
+cp apache/*.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/
+
+mkdir -p %{buildroot}%{_datadir}/ipa
+cp wsgi/consoledot.py %{buildroot}%{_datadir}/ipa/
 
 %posttrans
 python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
@@ -87,9 +92,11 @@ fi
 %doc README.md CONTRIBUTORS.txt
 %{python3_sitelib}/ipaserver/plugins/*.py
 %{python3_sitelib}/ipaserver/plugins/__pycache__/*.pyc
-%_datadir/ipa/schema.d/*.ldif
-%_datadir/ipa/updates/*.update
-%_datadir/ipa/ui/js/plugins/*
+%{_datadir}/ipa/schema.d/*.ldif
+%{_datadir}/ipa/updates/*.update
+%{_datadir}/ipa/ui/js/plugins/*
+%{_datadir}/ipa/consoledot.py
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/99-consoledot.conf
 
 %changelog
 * Tue Nov 01 2022 Christian Heimes <cheimes@redhat.com> - 0.0.1-1
