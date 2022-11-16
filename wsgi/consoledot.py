@@ -13,7 +13,7 @@ INVENTORY = {
 }
 
 # KEYTAB = "/var/lib/ipa/gssproxy/ipaconsoledot.keytab"
-KEYTAB = "/var/lib/ipa/ipaconsoledot.keytab"
+KEYTAB = "/var/lib/ipa/consoledot/service.keytab"
 CCNAME = "/tmp/krb5cc-ipaconsoledot"
 SERVICE = "consoledot-enrollment"
 

@@ -78,7 +78,24 @@ $ ipa config-mod --help
   * ``System: Add Hosts``
   * ``System: Modify consoleDot host attributes``
 
-## Test setup
+## Server test setup
+
+Add user account
+
+```
+useradd -r -m -d /var/lib/ipa/consoledot -g ipaapi ipaconsoledot
+```
+
+Install plugin
+```
+./install.sh
+```
+
+Configure consoleDot org id (replace 42 with your org id)
+
+```
+ipa config-mod --consoledotorgid=42
+```
 
 Add enrollment service account
 ```
@@ -87,12 +104,43 @@ ipa role-add-member --services=consoledot-enrollment/$(hostname) "consoleDot Enr
 ```
 
 Configure keytab
+TODO: get gssproxy working
 ```
-# TODO needs home directory
-useradd -r -g ipaapi ipaconsoledot
-ipa-getkeytab -k /var/lib/ipa/ipaconsoledot.keytab -p consoledot-enrollment/$(hostname)
-# hack, get gssproxy working
-chown ipaconsoledot:ipaapi /var/lib/ipa/ipaconsoledot.keytab
+ipa-getkeytab -k /var/lib/ipa/consoledot/service.keytab -p consoledot-enrollment/$(hostname)
+chown -R ipaconsoledot:ipaapi /var/lib/ipa/consoledot/
+```
+
+Import RHSM cert chain
+```
+ipa-cacert-manage install /etc/rhsm/ca/redhat-uep.pem
+ipa-cacert-manage install rhsm/candlepin-redhat-ca.pem
+ipa-certupdate
+systemctl restart krb5kdc.service
+```
+
+## Client test setup
+
+Update RHSM UUID in `/usr/share/ipa/consoledot.py` on the IPA server.
+
+Copy `/var/lib/ipa-client/pki/kdc-ca-bundle.pem` from server to client.
+
+Self-register system
+
+```
+curl \
+  --cacert /root/kdc-ca-bundle.pem \
+  --cert /etc/pki/consumer/cert.pem \
+  --key /etc/pki/consumer/key.pem \
+  https://ipaserver.hmsidm.test/consoledot
+```
+
+Enroll system
+
+```
+ipa-client-install \
+  --pkinit-identity=FILE:/etc/pki/consumer/cert.pem,/etc/pki/consumer/key.pem \
+  --pkinit-anchor=FILE:/root/kdc-ca-bundle.pem \
+  --server ipaserver.hmsidm.test --domain hmsidm.test -U -N
 ```
 
 ## Notes

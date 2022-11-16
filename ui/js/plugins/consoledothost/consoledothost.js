@@ -25,15 +25,15 @@ define([
                 name: 'consoledothost',
                 label: '@i18n:consoledothost.name',
                 fields: [{
-                    name: 'consoledotorgid',
-                    flags: ['w_if_no_aci'],
-                    read_only: true
-                }, {
                     name: 'consoledotsubscriptionid',
                     flags: ['w_if_no_aci']
                 }, {
                     name: 'consoledotinventoryid',
                     flags: ['w_if_no_aci']
+                }, {
+                    name: 'consoledotorgid',
+                    flags: ['w_if_no_aci'],
+                    read_only: true
                 }, {
                     name: 'consoledotcertsubject',
                     flags: ['w_if_no_aci'],
