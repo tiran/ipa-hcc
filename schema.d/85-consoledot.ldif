@@ -7,6 +7,7 @@
 # consoleDot OID:   2.16.840.1.113730.3.8.100
 # Attributes:       2.16.840.1.113730.3.8.100.1.x
 # Object classes:   2.16.840.1.113730.3.8.100.2.x
+# cert extension:   2.16.840.1.113730.3.8.100.3.x
 #
 dn: cn=schema
 #
