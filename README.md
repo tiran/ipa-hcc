@@ -110,13 +110,21 @@ ipa-getkeytab -k /var/lib/ipa/consoledot/service.keytab -p consoledot-enrollment
 chown -R ipaconsoledot:ipaapi /var/lib/ipa/consoledot/
 ```
 
-Import RHSM cert chain
+Import cross-signed RHSM cert chain (required on RHEL 9)
+```
+ipa-cacert-manage install rhsm/hmsidm-ca-bundle.pem
+ipa-certupdate
+systemctl restart krb5kdc.service
+```
+
+**or** import RHSM cert chain
 ```
 ipa-cacert-manage install /etc/rhsm/ca/redhat-uep.pem
 ipa-cacert-manage install rhsm/candlepin-redhat-ca.pem
 ipa-certupdate
 systemctl restart krb5kdc.service
 ```
+
 
 ## Client test setup
 
