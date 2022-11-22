@@ -7,9 +7,10 @@ from cryptography.x509.oid import NameOID
 
 from ipalib import api, errors
 from ipalib.install.kinit import kinit_keytab
+from ipaplatform.paths import paths
 
 INVENTORY = {
-    "5dc18091-da13-40df-a08c-df4e8db51eb8": "ipaclient1.hmsidm.test",
+    "c50f3252-520f-433d-9a1c-4b2c7a06dffa": "ipaclient1.hmsidm.test",
 }
 
 # KEYTAB = "/var/lib/ipa/gssproxy/ipaconsoledot.keytab"
@@ -19,6 +20,29 @@ SERVICE = "consoledot-enrollment"
 
 os.environ["KRB5CCNAME"] = CCNAME
 os.environ["KRB5_CLIENT_KTNAME"] = KEYTAB
+
+SCRIPT = """\
+#!/bin/sh
+set -ex
+
+CABUNDLE=$(mktemp)
+trap "rm -f $CABUNDLE" EXIT
+
+cat >$CABUNDLE << EOF
+{cabundle_pem}
+EOF
+
+ipa-client-install \
+--ca-cert-file=$CABUNDLE \
+--server={server} \
+--domain={domain} \
+--realm={realm} \
+--pkinit-identity=FILE:/etc/pki/consumer/cert.pem,/etc/pki/consumer/key.pem \
+--pkinit-anchor=FILE:$CABUNDLE \
+--force-join \
+--no-ntp \
+--unattended
+"""
 
 
 class HTTPException(Exception):
@@ -106,9 +130,17 @@ class Application:
             self.update_ipa(org_id, rhsm_id, fqdn)
         finally:
             self.disconnect_ipa()
+        with open(paths.KDC_CA_BUNDLE_PEM, "r") as f:
+            cabundle_pem = f.read()
+        script = SCRIPT.format(
+            server=api.env.host,
+            domain=api.env.domain,
+            realm=api.env.realm,
+            cabundle_pem=cabundle_pem,
+        )
         raise HTTPException(
             200,
-            f"Host {fqdn} for {rhsm_id} org={org_id} registered.\n",
+            script,
         )
 
     def __call__(self, env, start_response):
