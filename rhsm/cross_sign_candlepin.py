@@ -29,7 +29,7 @@ New / changed properties:
 
 Example::
 
-    $ openssl verify -show_chain -CAfile hmsidm-ca-bundle.pem cert.pem 
+    $ openssl verify -show_chain -CAfile hmsidm-ca-bundle.pem cert.pem
     cert.pem: OK
     Chain:
     depth=0: O = 7648012, CN = b4ab7ef2-973e-4423-ab55-5ed620050b4e (untrusted)
@@ -37,7 +37,6 @@ Example::
              CN = Red Hat Candlepin Authority, emailAddress = ca-support@redhat.com
     depth=2: C = US, ST = North Carolina, L = Raleigh, O = "Red Hat, Inc.", OU = HMSIDM,
              CN = HMSIDM Root CA
-
 """
 import datetime
 from typing import Tuple

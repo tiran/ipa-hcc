@@ -154,4 +154,7 @@ def host_mod_consoledot_precb(
 
 host_mod.register_pre_callback(host_mod_consoledot_precb)
 
-i18n_messages.messages["consoledothost"] = {"name": _("consoleDot host")}
+i18n_messages.messages["consoledothost"] = {
+    "name": _("consoleDot host"),
+    "inventory": _("consoleDot inventory"),
+}
