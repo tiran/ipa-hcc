@@ -33,8 +33,10 @@ Example::
     cert.pem: OK
     Chain:
     depth=0: O = 7648012, CN = b4ab7ef2-973e-4423-ab55-5ed620050b4e (untrusted)
-    depth=1: C = US, ST = North Carolina, O = "Red Hat, Inc.", OU = Red Hat Network, CN = Red Hat Candlepin Authority, emailAddress = ca-support@redhat.com
-    depth=2: CN = US, ST = North Carolina, L = Raleigh, O = "Red Hat, Inc.", OU = HMSIDM, CN = HMSIDM Root CA
+    depth=1: C = US, ST = North Carolina, O = "Red Hat, Inc.", OU = Red Hat Network,
+             CN = Red Hat Candlepin Authority, emailAddress = ca-support@redhat.com
+    depth=2: C = US, ST = North Carolina, L = Raleigh, O = "Red Hat, Inc.", OU = HMSIDM,
+             CN = HMSIDM Root CA
 
 """
 import datetime
@@ -60,7 +62,7 @@ KEY_SIZE = 4096
 
 ROOT_CA_SUBJECT = x509.Name(
     [
-        x509.NameAttribute(NameOID.COMMON_NAME, "US"),
+        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
         x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "North Carolina"),
         x509.NameAttribute(NameOID.LOCALITY_NAME, "Raleigh"),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Red Hat, Inc."),
