@@ -80,7 +80,12 @@ $ ipa config-mod --help
 
 ## Server test setup
 
-Add user account
+Create a [Red Hat API](https://access.redhat.com/articles/3626371) refresh
+token and store it in file `refresh_token`. `install.sh` will copy it to
+`/etc/ipa`. **WARNING** the token has the same privileges as your user
+account.
+
+Add local user account for service
 
 ```
 useradd -r -m -d /var/lib/ipa/consoledot -g ipaapi ipaconsoledot
@@ -128,7 +133,23 @@ systemctl restart krb5kdc.service
 
 ## Client test setup
 
-Update RHSM UUID in `/usr/share/ipa/consoledot.py` on the IPA server.
+Register the system with RHSM and consoleDot:
+
+```
+rhc connect
+```
+
+Register the system with IPA and enroll it using `curl | sh`.
+
+```
+curl -k \
+  --cert /etc/pki/consumer/cert.pem \
+  --key /etc/pki/consumer/key.pem \
+  https://ipaserver.hmsidm.test/consoledot | sh
+```
+
+
+## Client test setup (step by step)
 
 Copy `/var/lib/ipa-client/pki/kdc-ca-bundle.pem` from server to client.
 
