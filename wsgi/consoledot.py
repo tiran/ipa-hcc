@@ -82,9 +82,13 @@ class HTTPException(Exception):
 
 class Application:
     def __init__(self):
+        # inventory bearer token + validity timestamp
         self.access_token: Optional[str] = None
         self.valid_until: int = 0
+        # cached org_id from IPA config_show
         self.org_id: Optional[int] = None
+        # requests session for persistent HTTP connection
+        self.session = requests.Session()
 
     def parse_cert(self, env: dict, envname: str) -> x509.Certificate:
         cert_pem = env.get(envname)
@@ -125,7 +129,7 @@ class Application:
             "client_id": CLIENT_ID,
             "refresh_token": REFRESH_TOKEN,
         }
-        resp = requests.post(url, data)
+        resp = self.session.post(url, data)
         if resp.status_code >= 400:
             raise HTTPException(
                 resp.status_code, f"get_access_token() failed: {resp.reason}"
@@ -147,7 +151,7 @@ class Application:
         logger.debug("Looking up %s in console inventory", rhsm_id)
         headers = {"Authorization": f"Bearer {access_token}"}
         params = {"filter[system_profile][owner_id]": rhsm_id}
-        resp = requests.get(url, params=params, headers=headers)
+        resp = self.session.get(url, params=params, headers=headers)
         if resp.status_code >= 400:
             # reset access token
             self.access_token = None
@@ -239,8 +243,11 @@ class Application:
         try:
             self.connect_ipa()
             self.update_ipa(org_id, rhsm_id, inventory_id, fqdn)
-        finally:
+        except Exception:
+            # something went wrong, force reconnect
+            # otherwise keep persistent HTTP connection to IPA
             self.disconnect_ipa()
+            raise
         with open(paths.KDC_CA_BUNDLE_PEM, "r") as f:
             cabundle_pem = f.read()
         script = SCRIPT.format(
