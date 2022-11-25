@@ -99,7 +99,7 @@ Install plugin
 Configure consoleDot org id (replace 42 with your org id)
 
 ```
-ipa config-mod --consoledotorgid=42
+ipa -eforce_schema_check=True config-mod --consoledotorgid=42
 ```
 
 Add enrollment service account
@@ -120,6 +120,7 @@ Import cross-signed RHSM cert chain (required on RHEL 9)
 ipa-cacert-manage install rhsm/hmsidm-ca-bundle.pem
 ipa-certupdate
 systemctl restart krb5kdc.service
+systemctl restart httpd.service
 ```
 
 **or** import RHSM cert chain
@@ -128,6 +129,7 @@ ipa-cacert-manage install /etc/rhsm/ca/redhat-uep.pem
 ipa-cacert-manage install rhsm/candlepin-redhat-ca.pem
 ipa-certupdate
 systemctl restart krb5kdc.service
+systemctl restart httpd.service
 ```
 
 

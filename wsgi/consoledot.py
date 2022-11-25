@@ -1,6 +1,8 @@
-import os
 import http.client
-from typing import Tuple
+import logging
+import os
+import time
+from typing import Optional, Tuple
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -9,6 +11,10 @@ import requests
 from ipalib import api, errors
 from ipalib.install.kinit import kinit_keytab
 from ipaplatform.paths import paths
+
+logging.basicConfig(format="%(message)s", level=logging.INFO)
+logger = logging.getLogger("consoledot")
+logger.setLevel(logging.DEBUG)
 
 # KEYTAB = "/var/lib/ipa/gssproxy/ipaconsoledot.keytab"
 KEYTAB = "/var/lib/ipa/consoledot/service.keytab"
@@ -75,6 +81,11 @@ class HTTPException(Exception):
 
 
 class Application:
+    def __init__(self):
+        self.access_token: Optional[str] = None
+        self.valid_until: int = 0
+        self.org_id: Optional[int] = None
+
     def parse_cert(self, env: dict, envname: str) -> x509.Certificate:
         cert_pem = env.get(envname)
         if not cert_pem:
@@ -102,6 +113,11 @@ class Application:
 
         https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html#refreshing-tokens
         """
+        # use cached access token
+        if self.access_token and time.monotonic() < self.valid_until:
+            return self.access_token
+
+        logger.debug("Getting refresh token from %s", url)
         if refresh_token is None:
             raise ValueError("REFRESH_TOKEN not set")
         data = {
@@ -114,7 +130,12 @@ class Application:
             raise HTTPException(
                 resp.status_code, f"get_access_token() failed: {resp.reason}"
             )
-        return resp.json()["access_token"]
+        logger.debug("Got access token from refresh token")
+        j = resp.json()
+        self.access_token = j["access_token"]
+        # 10 seconds slack
+        self.valid_until = time.monotonic() + j["expires_in"] - 10
+        return self.access_token
 
     def lookup_inventory(
         self, rhsm_id: str, access_token: str, url: str = INVENTORY_HOSTS_API
@@ -123,10 +144,13 @@ class Application:
 
         Returns FQDN, inventory_id
         """
+        logger.debug("Looking up %s in console inventory", rhsm_id)
         headers = {"Authorization": f"Bearer {access_token}"}
         params = {"filter[system_profile][owner_id]": rhsm_id}
         resp = requests.get(url, params=params, headers=headers)
         if resp.status_code >= 400:
+            # reset access token
+            self.access_token = None
             raise HTTPException(
                 resp.status_code, f"lookup_inventory() failed: {resp.reason}"
             )
@@ -135,9 +159,18 @@ class Application:
         if j["total"] != 1:
             raise HTTPException(404, f"Unknown host {rhsm_id}.")
         result = j["results"][0]
-        return result["fqdn"], result["id"]
+        fqdn = result["fqdn"]
+        inventoryid = result["id"]
+        logger.warn(
+            "Resolved %s to fqdn %s / inventory %s",
+            rhsm_id,
+            fqdn,
+            inventoryid,
+        )
+        return fqdn, inventoryid
 
     def connect_ipa(self):
+        logger.debug("Connecting to IPA")
         if not api.isdone("bootstrap"):
             api.bootstrap(in_server=False)
         principal = f"{SERVICE}/{api.env.host}@{api.env.realm}"
@@ -146,14 +179,31 @@ class Application:
             api.finalize()
         if not api.Backend.rpcclient.isconnected():
             api.Backend.rpcclient.connect()
+        logger.debug("Connected")
 
     def disconnect_ipa(self):
         if api.Backend.rpcclient.isconnected():
             api.Backend.rpcclient.disconnect()
 
+    def get_ipa_org_id(self) -> int:
+        """Get and cache global org_id from IPA config"""
+        if self.org_id is not None:
+            return self.org_id
+        result = api.Command.config_show()["result"]
+        org_ids = result.get("consoledotorgid")
+        if not org_ids or len(org_ids) != 1:
+            raise ValueError("Invalid IPA 'consoledotorgid'")
+        self.org_id = int(org_ids[0])
+        return self.org_id
+
     def update_ipa(
         self, org_id: int, rhsm_id: str, inventory_id: str, fqdn: str
     ):
+        ipa_org_id = self.get_ipa_org_id()
+        if org_id != ipa_org_id:
+            raise HTTPException(
+                403, f"Invalid org_id: {org_id} != {ipa_org_id}"
+            )
         try:
             api.Command.host_add(
                 fqdn,
@@ -162,6 +212,7 @@ class Application:
                 consoledotinventoryid=inventory_id,
                 force=True,
             )
+            logger.info("Added IPA host %s", fqdn)
         except errors.DuplicateEntry:
             try:
                 api.Command.host_mod(
@@ -170,8 +221,9 @@ class Application:
                     consoledotsubscriptionid=rhsm_id,
                     consoledotinventoryid=inventory_id,
                 )
+                logger.info("Updated IPA host %s", fqdn)
             except errors.EmptyModlist:
-                pass
+                logger.info("Nothing to update for IPA host %s", fqdn)
 
     def handle(self, env, start_repose):
         method = env["REQUEST_METHOD"]
@@ -179,6 +231,7 @@ class Application:
             raise HTTPException(405, f"Method {method} not allowed.")
         cert = self.parse_cert(env, "SSL_CLIENT_CERT")
         org_id, rhsm_id = self.parse_subject(cert.subject)
+        logger.warn("Got request for org O=%s, CN=%s", org_id, rhsm_id)
         access_token = self.get_access_token(REFRESH_TOKEN)
         fqdn, inventory_id = self.lookup_inventory(
             rhsm_id, access_token=access_token
@@ -196,6 +249,12 @@ class Application:
             realm=api.env.realm,
             cabundle_pem=cabundle_pem,
         )
+        logger.info(
+            "Self-registration of %s (O=%s, CN=%s) was successful",
+            fqdn,
+            org_id,
+            rhsm_id,
+        )
         raise HTTPException(
             200,
             script,
@@ -205,9 +264,12 @@ class Application:
         try:
             return self.handle(env, start_response)
         except HTTPException as e:
+            if e.code >= 400:
+                logger.info("%s: %s", str(e), e.message)
             start_response(str(e), e.headers)
             return [e.message]
         except Exception as e:
+            logger.exception("Request failed")
             e = HTTPException(500, f"invalid server error: {e}")
             start_response(str(e), e.headers)
             return [e.message]
