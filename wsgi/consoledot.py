@@ -1,6 +1,7 @@
 import http.client
 import logging
 import os
+import sys
 import time
 from typing import Optional, Tuple
 
@@ -129,12 +130,14 @@ class Application:
             "client_id": CLIENT_ID,
             "refresh_token": REFRESH_TOKEN,
         }
+        start = time.monotonic()
         resp = self.session.post(url, data)
+        dur = time.monotonic() - start
         if resp.status_code >= 400:
             raise HTTPException(
                 resp.status_code, f"get_access_token() failed: {resp.reason}"
             )
-        logger.debug("Got access token from refresh token")
+        logger.debug("Got access token from refresh token in %0.3fs.", dur)
         j = resp.json()
         self.access_token = j["access_token"]
         # 10 seconds slack
@@ -151,7 +154,9 @@ class Application:
         logger.debug("Looking up %s in console inventory", rhsm_id)
         headers = {"Authorization": f"Bearer {access_token}"}
         params = {"filter[system_profile][owner_id]": rhsm_id}
+        start = time.monotonic()
         resp = self.session.get(url, params=params, headers=headers)
+        dur = time.monotonic() - start
         if resp.status_code >= 400:
             # reset access token
             self.access_token = None
@@ -165,15 +170,20 @@ class Application:
         result = j["results"][0]
         fqdn = result["fqdn"]
         inventoryid = result["id"]
-        logger.warn(
-            "Resolved %s to fqdn %s / inventory %s",
+        logger.warning(
+            "Resolved %s to fqdn %s / inventory %s in %0.3fs",
             rhsm_id,
             fqdn,
             inventoryid,
+            dur,
         )
         return fqdn, inventoryid
 
     def connect_ipa(self):
+        if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
+            logger.debug("IPA rpcclient is already connected.")
+            return
+
         logger.debug("Connecting to IPA")
         if not api.isdone("bootstrap"):
             api.bootstrap(in_server=False)
@@ -183,10 +193,10 @@ class Application:
             api.finalize()
         if not api.Backend.rpcclient.isconnected():
             api.Backend.rpcclient.connect()
-        logger.debug("Connected")
+            logger.debug("Connected")
 
     def disconnect_ipa(self):
-        if api.Backend.rpcclient.isconnected():
+        if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
             api.Backend.rpcclient.disconnect()
 
     def get_ipa_org_id(self) -> int:
@@ -235,7 +245,11 @@ class Application:
             raise HTTPException(405, f"Method {method} not allowed.")
         cert = self.parse_cert(env, "SSL_CLIENT_CERT")
         org_id, rhsm_id = self.parse_subject(cert.subject)
-        logger.warn("Got request for org O=%s, CN=%s", org_id, rhsm_id)
+        logger.warn(
+            "Received self-enrollment request for org O=%s, CN=%s",
+            org_id,
+            rhsm_id,
+        )
         access_token = self.get_access_token(REFRESH_TOKEN)
         fqdn, inventory_id = self.lookup_inventory(
             rhsm_id, access_token=access_token
@@ -283,3 +297,32 @@ class Application:
 
 
 application = Application()
+
+
+def test(rhsm_id: str):
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="[%(asctime)s %(name)s] <%(levelname)s>: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%SZ",
+        force=True,
+    )
+    if False:
+        # extra debug output
+        from http.client import HTTPConnection
+
+        requests_log = logging.getLogger("urllib3")
+        requests_log.setLevel(logging.DEBUG)
+        requests_log.propagate = True
+        HTTPConnection.debuglevel = 1
+
+    # Internal testing VM has issues with IPv6 connections:
+    # import urllib3.util.connection
+    # urllib3.util.connection.HAS_IPV6 = False
+
+    access_token = application.get_access_token(REFRESH_TOKEN)
+    application.lookup_inventory(rhsm_id, access_token)
+    application.lookup_inventory(rhsm_id, access_token)
+
+
+if __name__ == "__main__" and len(sys.argv) == 2:
+    test(sys.argv[1])
