@@ -182,6 +182,13 @@ ipa-client-install \
 - ``ipa certmap-match`` is only implemented for users. It cannot be used
   to test cert mappings for hosts.
 
+## RPM build
+
+```
+git archive --format=tar.gz -o ipa-consoledot-0.0.1.tar.gz --prefix ipa-consoledot-0.0.1/ HEAD
+rpmbuild --define "_sourcedir $(pwd)" -bb ipa-consoledot.spec
+```
+
 ## License
 
 See file 'COPYING' for use and warranty information

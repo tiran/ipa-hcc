@@ -1,12 +1,22 @@
-%global debug_package %{nil}
-%global plugin_name consoledot
-%global ipa_version 4.9.8
-
 %if 0%{?rhel}
-Name:           ipa-%{plugin_name}
+# RHEL 8 or 9
+%global package_name ipa-consoledot
+%global alt_name freeipa-consoledot
+%global ipa_name ipa
+%if 0%{?rhel} < 9
+%global ipa_version 4.9.11
 %else
-Name:           freeipa-%{plugin_name}
+%global ipa_version 4.10.1
 %endif
+%else
+# Fedora
+%global package_name freeipa-consoledot
+%global alt_name ipa-consoledot
+%global ipa_name freeipa
+%global ipa_version 4.10.1
+%endif
+
+Name:           %{package_name}
 Version:        0.0.1
 Release:        1%{?dist}
 Summary:        consoleDot extension for IPA
@@ -15,25 +25,87 @@ BuildArch:      noarch
 
 License:        GPLv3+
 # URL:            https://github.com/tiran/ipa-consoledot
-# Source0:        https://github.com/tiran/ipa-consoledot/archive/v%{version}/ipa-consoledot-%{version}.tar.gz
+# Source0:        https://github.com/tiran/ipa-consoledot/archive/v{version}/ipa-consoledot-{version}.tar.gz
+Source0:    ipa-consoledot-%{version}.tar.gz
 
 BuildRequires: python3-devel
 BuildRequires: systemd
 
-%if 0%{?rhel}
-Requires:        ipa-server >= %{ipa_version}
-Requires(post):  ipa-server >= %{ipa_version}
-%else
-Provides:        ipa-%{plugin_name} = %{version}-%{release}
-Requires:        freeipa-server >= %{ipa_version}
-Requires(post):  freeipa-server >= %{ipa_version}
-%endif
-
 %description
-A module for IPA server with extensions for consoleDot
+An extension for IPA integration with Red Hat Console (consoleDot).
+
+
+%package common
+Summary: Common files for IPA consoleDot extension
+BuildArch: noarch
+
+Provides: %{alt_name}-common = %{version}
+Conflicts: %{alt_name}-common
+Obsoletes: %{alt_name}-common < %{version}
+Requires: %{ipa_name}-client >= %{ipa_version}
+
+%description common
+This package contains common files for consoleDot IPA extension.
+
+
+%package server-plugin
+Summary: Server plugin for IPA consoleDot extension
+BuildArch: noarch
+
+Provides: %{alt_name}-server-plugin = %{version}
+Conflicts: %{alt_name}-server-plugin
+Obsoletes: %{alt_name}-server-plugin < %{version}
+Requires: %{package_name}-common >= %{version}
+Requires: %{ipa_name}-server >= %{ipa_version}
+Requires(post): %{ipa_name}-server >= %{ipa_version}
+%systemd_requires
+
+%description server-plugin
+This package contains server plugins and WebUI extension for
+consoleDot IPA extension.
+
+%post server-plugin
+/bin/systemctl --system daemon-reload 2>&1 || :
+
+%posttrans server-plugin
+python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    /usr/sbin/ipa-server-upgrade --quiet >/dev/null || :
+    /bin/systemctl is-enabled ipa.service >/dev/null 2>&1
+    if [  $? -eq 0 ]; then
+        /bin/systemctl restart ipa.service >/dev/null 2>&1 || :
+    fi
+fi
+
+
+%package registration-service
+Summary: Registration service for IPA consoleDot extension
+BuildArch: noarch
+
+Provides:       %{alt_name}-registration-service = %{version}
+Conflicts: %{alt_name}-registration-service
+Obsoletes: %{alt_name}-registration-service < %{version}
+# Don't allow installation on an IPA server
+# Conflicts:       {ipa_name}-server
+Requires: %{package_name}-common >= %{version}
+Requires: httpd
+Requires: python3-mod_wsgi
+Requires: mod_ssl
+
+%description registration-service
+This package contains the registration service for
+consoleDot IPA extension.
+
+%pre registration-service
+# create user account for service
+getent passwd ipaconsoledot >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c "IPA consoleDot enrollment service" ipaconsoledot
+
+
+
 
 %prep
-%autosetup -n ipa-%{plugin_name}-%{version}
+%autosetup -n ipa-consoledot-%{version}
 
 %build
 touch debugfiles.list
@@ -42,19 +114,13 @@ touch debugfiles.list
 rm -rf $RPM_BUILD_ROOT
 
 %__mkdir_p %{buildroot}%{python3_sitelib}/ipaserver/plugins
-for j in $(find ipaserver/plugins -name '*.py') ; do
-    %__cp -p $j %{buildroot}%{python3_sitelib}/ipaserver/plugins
-done
+cp -p ipaserver/plugins/*.py %{buildroot}%{python3_sitelib}/ipaserver/plugins/
 
 %__mkdir_p %buildroot/%{_datadir}/ipa/schema.d
-for j in $(find schema.d/ -name '*.ldif') ; do
-    %__cp -p $j %buildroot/%{_datadir}/ipa/schema.d/
-done
+cp -p schema.d/*.ldif %buildroot/%{_datadir}/ipa/schema.d/
 
 %__mkdir_p %buildroot/%{_datadir}/ipa/updates
-for j in $(find updates/ -name '*.update') ; do
-    %__cp -p $j %buildroot/%{_datadir}/ipa/updates/
-done
+cp -p updates/*.update %buildroot/%{_datadir}/ipa/updates/
 
 %__mkdir_p %buildroot/%{_datadir}/ipa/ui/js/plugins
 for j in $(find ui/ -name '*.js') ; do
@@ -64,39 +130,45 @@ for j in $(find ui/ -name '*.js') ; do
 done
 
 mkdir -p %{buildroot}%{_sysconfdir}/httpd/conf.d/
-cp apache/*.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/
+cp apache/consoledot.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/85-consoledot.conf
 
-mkdir -p %{buildroot}%{_datadir}/ipa
-cp wsgi/consoledot.py %{buildroot}%{_datadir}/ipa/
+mkdir -p %{buildroot}%{_datadir}/ipa/consoledot
+cp -p wsgi/consoledot.py %{buildroot}%{_datadir}/ipa/consoledot/
+cp -p rhsm/hmsidm-ca-bundle.pem %{buildroot}%{_datadir}/ipa/consoledot/
 
-%posttrans
-python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
+mkdir -p %{buildroot}%{_libexecdir}/ipa-consoledot
+cp -p install/ipa-consoledot-krb5conf.py %{buildroot}%{_libexecdir}/ipa-consoledot/ipa-consoledot-krb5conf.py
 
-if [ $? -eq 0 ]; then
-    # This must be run in posttrans so that updates from previous
-    # execution that may no longer be shipped are not applied.
-    /usr/sbin/ipa-server-upgrade --quiet >/dev/null || :
+mkdir -p %{buildroot}%{_unitdir}/krb5.conf.d
+cp -p install/ipa-consoledot.service %{buildroot}%{_unitdir}/krb5.conf.d/
 
-    # Restart IPA processes. This must be also run in postrans so that plugins
-    # and software is in consistent state
-    # NOTE: systemd specific section
+mkdir -p %{buildroot}%{_sysconfdir}/krb5.conf.d
+touch %{buildroot}%{_sysconfdir}/krb5.conf.d/ipa-consoledot.conf
 
-    /bin/systemctl is-enabled ipa.service >/dev/null 2>&1
-    if [  $? -eq 0 ]; then
-        /bin/systemctl restart ipa.service >/dev/null 2>&1 || :
-    fi
-fi
 
-%files
-%license COPYING
+%files common
 %doc README.md CONTRIBUTORS.txt
+%license COPYING
+%dir %{_datadir}/ipa/consoledot/
+%{_datadir}/ipa/consoledot/hmsidm-ca-bundle.pem
+
+
+%files server-plugin
+%doc README.md CONTRIBUTORS.txt
+%license COPYING
 %{python3_sitelib}/ipaserver/plugins/*.py
 %{python3_sitelib}/ipaserver/plugins/__pycache__/*.pyc
 %{_datadir}/ipa/schema.d/*.ldif
 %{_datadir}/ipa/updates/*.update
 %{_datadir}/ipa/ui/js/plugins/*
-%{_datadir}/ipa/consoledot.py
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/99-consoledot.conf
+%{_libexecdir}/ipa-consoledot/ipa-consoledot-krb5conf.py
+%attr(644,root,root) %{_unitdir}/krb5.conf.d/ipa-consoledot.service
+%ghost %attr(644,root,root) %{_sysconfdir}/krb5.conf.d/ipa-consoledot.conf
+
+%files registration-service
+%{_datadir}/ipa/consoledot/consoledot.py
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/85-consoledot.conf
+
 
 %changelog
 * Tue Nov 01 2022 Christian Heimes <cheimes@redhat.com> - 0.0.1-1

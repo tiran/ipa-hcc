@@ -20,9 +20,20 @@ cp ui/js/plugins/consoledothost/consoledothost.js /usr/share/ipa/ui/js/plugins/c
 cp ipaserver/plugins/*.py ${SITE_PACKAGES}/ipaserver/plugins/
 python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/
 
-cp wsgi/consoledot.py /usr/share/ipa/
-cp apache/consoledot.conf /etc/httpd/conf.d/99-consoledot.conf
+mkdir -p /usr/share/ipa/consoledot
+cp wsgi/consoledot.py /usr/share/ipa/consoledot
+cp rhsm/hmsidm-ca-bundle.pem /usr/share/ipa/consoledot/hmsidm-ca-bundle.pem
+
+cp apache/consoledot.conf /etc/httpd/conf.d/85-consoledot.conf
 cp refresh_token /etc/ipa || true
+
+mkdir -p /usr/libexec/ipa-consoledot
+cp install/ipa-consoledot-krb5conf.py /usr/libexec/ipa-consoledot/
+
+# mkdir -p /usr/lib/systemd/system/krb5.conf.d
+# cp install/ipa-consoledot.service /usr/lib/systemd/system/krb5.conf.d/
+
+getent passwd ipaconsoledot >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c "IPA consoleDot enrollment service" ipaconsoledot
 
 if [ $NEEDS_UPGRADE = 1 ]; then
     ipa-server-upgrade

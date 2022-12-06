@@ -21,6 +21,8 @@ logger.setLevel(logging.DEBUG)
 KEYTAB = "/var/lib/ipa/consoledot/service.keytab"
 CCNAME = "/tmp/krb5cc-ipaconsoledot"
 SERVICE = "consoledot-enrollment"
+HMSIDM_CA_BUNDLE_PEM = "/usr/share/ipa/consoledot/hmsidm-ca-bundle.pem"
+
 
 os.environ["KRB5CCNAME"] = CCNAME
 os.environ["KRB5_CLIENT_KTNAME"] = KEYTAB
@@ -44,7 +46,6 @@ ipa-client-install \
 --realm={realm} \
 --pkinit-identity=FILE:/etc/pki/consumer/cert.pem,/etc/pki/consumer/key.pem \
 --pkinit-anchor=FILE:$CABUNDLE \
---force-join \
 --no-ntp \
 --unattended
 """
@@ -239,6 +240,14 @@ class Application:
             except errors.EmptyModlist:
                 logger.info("Nothing to update for IPA host %s", fqdn)
 
+    def get_ca_bundle(self):
+        with open(paths.KDC_CA_BUNDLE_PEM, "r") as f:
+            kdc_ca_bundle_pem = f.read()
+        with open(HMSIDM_CA_BUNDLE_PEM, "r") as f:
+            hsmidm_ca_bundle_pem = f.read()
+        # filter out duplicates?
+        return kdc_ca_bundle_pem + "\n" + hsmidm_ca_bundle_pem
+
     def handle(self, env, start_repose):
         method = env["REQUEST_METHOD"]
         if method != "GET":
@@ -262,8 +271,7 @@ class Application:
             # otherwise keep persistent HTTP connection to IPA
             self.disconnect_ipa()
             raise
-        with open(paths.KDC_CA_BUNDLE_PEM, "r") as f:
-            cabundle_pem = f.read()
+        cabundle_pem = self.get_ca_bundle()
         script = SCRIPT.format(
             server=api.env.host,
             domain=api.env.domain,

@@ -1,0 +1,14 @@
+[Unit]
+Description=IPA consoleDot krb5 config
+Wants=network.target
+After=network.target
+Before=ipa.service
+
+[Service]
+Type=oneshot
+Environment=LC_ALL=C.UTF-8
+ExecStart=/usr/libexec/ipa-consoledot/ipa-consoledot-krb5conf.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target ipa.service
