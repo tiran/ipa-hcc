@@ -123,5 +123,8 @@ default:nsslapd-pluginId: NSUniqueAttr
 default:nsslapd-pluginVersion: 1.1.0
 default:nsslapd-pluginVendor: Fedora Project
 
+# Retrieve keytab for service principal
+plugin: update_consoledot_service
+
 # Update Permissions (keep this at the bottom of the file)
 plugin: update_managed_permissions

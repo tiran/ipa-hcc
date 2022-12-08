@@ -17,7 +17,7 @@ from ipaplatform import consoledotplatform
 os.environ["XDG_CACHE_HOME"] = "/var/cache/ipa-consoledot"
 os.environ["GSS_USE_PROXY"] = "1"
 
-from ipalib import api, errors
+from ipalib import api, errors  # noqa: E402
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("consoledot")

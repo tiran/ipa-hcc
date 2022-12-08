@@ -125,6 +125,9 @@ cp -p ipaplatform/*.py %{buildroot}%{python3_sitelib}/ipaplatform/
 %__mkdir_p %{buildroot}%{python3_sitelib}/ipaserver/plugins
 cp -p ipaserver/plugins/*.py %{buildroot}%{python3_sitelib}/ipaserver/plugins/
 
+%__mkdir_p %{buildroot}%{python3_sitelib}/ipaserver/install/plugins
+cp -p ipaserver/install/plugins/*.py %{buildroot}%{python3_sitelib}/ipaserver/install/plugins/
+
 %__mkdir_p %buildroot/%{_datadir}/ipa/schema.d
 cp -p schema.d/*.ldif %buildroot/%{_datadir}/ipa/schema.d/
 
@@ -168,6 +171,8 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 %license COPYING
 %{python3_sitelib}/ipaserver/plugins/*.py
 %{python3_sitelib}/ipaserver/plugins/__pycache__/*.pyc
+%{python3_sitelib}/ipaserver/install/plugins/*.py
+%{python3_sitelib}/ipaserver/install/plugins/__pycache__/*.pyc
 %{_datadir}/ipa/schema.d/*.ldif
 %{_datadir}/ipa/updates/*.update
 %{_datadir}/ipa/ui/js/plugins/*

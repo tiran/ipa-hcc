@@ -1,8 +1,0 @@
-# Do not edit. Added by ipa-consoledot-server-plugin
-# /etc/systemd/system/krb5.conf.d/ipa-consoledot.service
-#
-# Creates /etc/krb5.conf.d/ipa-consoledot.conf on startup
-# when IPA server is installed.
-
-[Service]
-ExecStartPre=/usr/libexec/ipa-consoledot/ipa-consoledot-krb5conf.py

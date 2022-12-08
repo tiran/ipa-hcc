@@ -44,8 +44,9 @@ mkdir -p -m 755 /usr/share/ipa/ui/js/plugins/consoledothost
 cp ui/js/plugins/consoledothost/consoledothost.js /usr/share/ipa/ui/js/plugins/consoledothost/
 
 cp ipaserver/plugins/*.py ${SITE_PACKAGES}/ipaserver/plugins/
+cp ipaserver/install/plugins/*.py ${SITE_PACKAGES}/ipaserver/install/plugins/
 cp ipaplatform/*.py ${SITE_PACKAGES}/ipaplatform
-python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/ ${SITE_PACKAGES}/ipaplatform
+python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/ ${SITE_PACKAGES}/ipaserver/install/plugins ${SITE_PACKAGES}/ipaplatform
 
 # helpers
 cp install/consoledot-enrollment-getkeytab /usr/libexec/ipa-consoledot/
@@ -71,9 +72,6 @@ if [ $? -eq 1 ]; then
     ipa-certupdate
     systemctl restart krb5kdc.service httpd.service
 fi
-
-# get service keytab for gssproxy
-/usr/libexec/ipa-consoledot/consoledot-enrollment-getkeytab
 
 echo "NOTE: $0 is a hack for internal development."
 echo "Some changes require a proper ipa-server-upgrade or ipactl restart."

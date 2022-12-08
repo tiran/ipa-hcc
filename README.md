@@ -51,6 +51,11 @@ Each IPA server has a ``consoledot-enrollment/$FQDN`` service with role
 * Index on ``consoleDotCertSubject`` for presence and equality
 * Uniqueness of ``consoleDotCertSubject`` attributes
 
+## Update plugin
+
+The server update plugin ``update_consoledot_service`` retrieves the service
+keytab for ``consoledot-enrollment/$FQDN`` principal.
+
 ## Command line extension
 
 ```
