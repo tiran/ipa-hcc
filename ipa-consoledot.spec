@@ -148,6 +148,9 @@ mkdir -p %{buildroot}%{_datadir}/ipa-consoledot
 cp -p wsgi/consoledotwsgi.py %{buildroot}%{_datadir}/ipa-consoledot/
 cp -p rhsm/hmsidm-ca-bundle.pem %{buildroot}%{_datadir}/ipa-consoledot/
 
+mkdir -p %{buildroot}%{_libexecdir}/ipa-consoledot
+cp install/consoledot-enrollment-getkeytab %{buildroot}%{_libexecdir}/ipa-consoledot
+
 mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
 
@@ -171,7 +174,9 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
 
 %files registration-service
-%attr(755,ipaconsoledot,ipaapi) %dir %{_localstatedir}/cache/ipa-consoledot
+%attr(0755,ipaconsoledot,ipaapi) %dir %{_localstatedir}/cache/ipa-consoledot
+%attr(0755,root,root) %dir %{_libexecdir}/ipa-consoledot
+%attr(0755,root,root) %{_libexecdir}/ipa-consoledot/consoledot-enrollment-getkeytab
 %{_datadir}/ipa-consoledot/consoledotwsgi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/85-consoledot.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-consoledot-enrollment.conf

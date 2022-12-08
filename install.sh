@@ -17,7 +17,7 @@ getent passwd ipaconsoledot >/dev/null || useradd -r -g ipaapi -s /sbin/nologin 
 
 # directories, cache directory must be writeable by user
 mkdir -p /usr/share/ipa-consoledot
-mkdir -p /usr/share/ipa-consoledot/wsgi
+mkdir -p /usr/libexec/ipa-consoledot
 mkdir -p /var/cache/ipa-consoledot
 chown ipaconsoledot:ipaapi -R /var/cache/ipa-consoledot
 semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-consoledot(/.*)?' || :
@@ -47,6 +47,9 @@ cp ipaserver/plugins/*.py ${SITE_PACKAGES}/ipaserver/plugins/
 cp ipaplatform/*.py ${SITE_PACKAGES}/ipaplatform
 python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/ ${SITE_PACKAGES}/ipaplatform
 
+# helpers
+cp install/consoledot-enrollment-getkeytab /usr/libexec/ipa-consoledot/
+
 # run updater
 if [ $NEEDS_UPGRADE = 1 ]; then
     ipa-server-upgrade
@@ -69,14 +72,8 @@ if [ $? -eq 1 ]; then
     systemctl restart krb5kdc.service httpd.service
 fi
 
-# get keytab for gssproxy
-KEYTAB=/var/lib/ipa/gssproxy/consoledot-enrollment.keytab
-if [ ! -f $KEYTAB ]; then
-    export KRB5CCNAME=FILE:/tmp/ipa-consoledot.ccache
-    kinit -kt /etc/krb5.keytab
-    ipa-getkeytab -k $KEYTAB -p consoledot-enrollment/$(hostname)
-    kdestroy -A
-fi
+# get service keytab for gssproxy
+/usr/libexec/ipa-consoledot/consoledot-enrollment-getkeytab
 
 echo "NOTE: $0 is a hack for internal development."
 echo "Some changes require a proper ipa-server-upgrade or ipactl restart."

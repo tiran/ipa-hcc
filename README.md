@@ -39,6 +39,11 @@ an **automember rule**.
 A certmap rule ``rhsm-cert`` matches subject of RHSM certificates to host's
 ``consoleDotCertSubject` attribute.
 
+## service principal
+
+Each IPA server has a ``consoledot-enrollment/$FQDN`` service with role
+``consoleDot Enrollment Administrators``.
+
 ## Indexes
 
 * Index on ``consoleDotSubscriptionId`` for presence and equality

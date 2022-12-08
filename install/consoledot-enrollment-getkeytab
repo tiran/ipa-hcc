@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+
+HOST_KEYTAB=/etc/krb5.keytab
+SERVICE_KEYTAB=/var/lib/ipa/gssproxy/consoledot-enrollment.keytab
+SERVICE_PRINCIPAL=consoledot-enrollment/$(hostname)
+
+if test -n "$1"; then
+    echo "Error: script takes no arguments." >&2
+    echo "" >&2
+    echo "Fetch $SERVICE_KEYTAB for $SERVICE_PRINCIPAL" >&2
+    exit 1
+fi
+
+if test -f $SERVICE_KEYTAB; then
+    echo "Skip: $SERVICE_KEYTAB exists, nothing to do."
+    exit 0
+fi
+
+if test ! -f $HOST_KEYTAB; then
+    echo "Skip: $HOST_KEYTAB is not present"
+    exit 0
+fi
+
+umask 0027
+
+KRB5CCNAME=/tmp/ipa-consoledot.ccache
+trap "rm -f $KRB5CCNAME" EXIT
+
+kinit -kt $HOST_KEYTAB
+ipa-getkeytab -k $SERVICE_KEYTAB -p $SERVICE_PRINCIPAL
+kdestroy -A
+
+echo "Created keytab for $SERVICE_PRINCIPAL"
