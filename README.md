@@ -85,53 +85,23 @@ token and store it in file `refresh_token`. `install.sh` will copy it to
 `/etc/ipa`. **WARNING** the token has the same privileges as your user
 account.
 
-Add local user account for service
-
-```
-useradd -r -m -d /var/lib/ipa/consoledot -g ipaapi ipaconsoledot
-```
-
-Install plugin
+Install plugin and other services
 ```
 ./install.sh
 ```
+
+- creates `ipaconsoledot` system user
+- copies plugins, UI extension, schema extension, and updates
+- runs updater
+- imports `hmsidm-ca-bundle.pem` with `ipa-cacert-manage` and runs `ipa-certupdate`
+- creates keytab for enrollment service
+
 
 Configure consoleDot org id (replace 42 with your org id)
 
 ```
 ipa -eforce_schema_check=True config-mod --consoledotorgid=42
 ```
-
-Add enrollment service account
-```
-ipa service-add consoledot-enrollment/$(hostname)
-ipa role-add-member --services=consoledot-enrollment/$(hostname) "consoleDot Enrollment Administrators"
-```
-
-Configure keytab
-TODO: get gssproxy working
-```
-ipa-getkeytab -k /var/lib/ipa/consoledot/service.keytab -p consoledot-enrollment/$(hostname)
-chown -R ipaconsoledot:ipaapi /var/lib/ipa/consoledot/
-```
-
-Import cross-signed RHSM cert chain (required on RHEL 9)
-```
-ipa-cacert-manage install rhsm/hmsidm-ca-bundle.pem
-ipa-certupdate
-systemctl restart krb5kdc.service
-systemctl restart httpd.service
-```
-
-**or** import RHSM cert chain
-```
-ipa-cacert-manage install /etc/rhsm/ca/redhat-uep.pem
-ipa-cacert-manage install rhsm/candlepin-redhat-ca.pem
-ipa-certupdate
-systemctl restart krb5kdc.service
-systemctl restart httpd.service
-```
-
 
 ## Client test setup
 

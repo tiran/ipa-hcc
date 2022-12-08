@@ -38,6 +38,23 @@ default: ipaCertMapMapRule: (&(consoledotcertsubject={subject_dn!nss_x500})(!(me
 default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority( R2)?,OU=Red Hat Network,O=Red Hat\\, Inc\.,ST=North Carolina,C=US$$
 default: ipaEnabledFlag: TRUE
 
+# service account for consoleDot enrollment service
+# NOTE: Each IPA server gets its own service account
+dn: krbprincipalname=consoledot-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
+default: objectClass: krbprincipal
+default: objectClass: krbprincipalaux
+default: objectClass: krbticketpolicyaux
+default: objectClass: ipaobject
+default: objectClass: ipaservice
+default: objectClass: pkiuser
+default: objectClass: ipakrbprincipal
+default: objectClass: top
+default: krbcanonicalname: consoledot-enrollment/$FQDN@$REALM
+default: krbprincipalname: consoledot-enrollment/$FQDN@$REALM
+default: managedby: fqdn=$FQDN,cn=computers,cn=accounts,$SUFFIX
+default: ipaKrbPrincipalAlias: consoledot-enrollment/$FQDN@$REALM
+default: ipaUniqueID: autogenerate
+
 # roles and privileges for consoleDot enrollment
 dn: cn=consoleDot Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 default: objectClass: groupofnames
@@ -45,6 +62,7 @@ default: objectClass: nestedgroup
 default: objectClass: top
 default: cn: consoleDot Enrollment Administrators
 default: description: Enrollment Administrators for Red Hat consoleDot
+add: member: krbprincipalname=consoledot-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
 
 dn: cn=consoleDot Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 default: objectClass: groupofnames

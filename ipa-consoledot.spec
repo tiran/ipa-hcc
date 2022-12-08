@@ -101,7 +101,13 @@ consoleDot IPA extension.
 # create user account for service
 getent passwd ipaconsoledot >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c "IPA consoleDot enrollment service" ipaconsoledot
 
+%post registration-service
+# SELinux context for cache dir
+semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-consoledot(/.*)?' || :
+restorecon -R /var/cache/ipa-consoledot || :
 
+# pick up new gssproxy and HTTPD config
+systemctl restart gssproxy.service httpd.service
 
 
 %prep
@@ -112,6 +118,9 @@ touch debugfiles.list
 
 %install
 rm -rf $RPM_BUILD_ROOT
+
+%__mkdir_p %{buildroot}%{python3_sitelib}/ipaplatform
+cp -p ipaplatform/*.py %{buildroot}%{python3_sitelib}/ipaplatform/
 
 %__mkdir_p %{buildroot}%{python3_sitelib}/ipaserver/plugins
 cp -p ipaserver/plugins/*.py %{buildroot}%{python3_sitelib}/ipaserver/plugins/
@@ -132,25 +141,23 @@ done
 mkdir -p %{buildroot}%{_sysconfdir}/httpd/conf.d/
 cp apache/consoledot.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/85-consoledot.conf
 
-mkdir -p %{buildroot}%{_datadir}/ipa/consoledot
-cp -p wsgi/consoledot.py %{buildroot}%{_datadir}/ipa/consoledot/
-cp -p rhsm/hmsidm-ca-bundle.pem %{buildroot}%{_datadir}/ipa/consoledot/
+mkdir -p %{buildroot}%{_sysconfdir}/gssproxy
+cp gssproxy/85-consoledot-enrollment.conf %{buildroot}%{_sysconfdir}/gssproxy/85-consoledot-enrollment.conf
 
-mkdir -p %{buildroot}%{_libexecdir}/ipa-consoledot
-cp -p install/ipa-consoledot-krb5conf.py %{buildroot}%{_libexecdir}/ipa-consoledot/ipa-consoledot-krb5conf.py
+mkdir -p %{buildroot}%{_datadir}/ipa-consoledot
+cp -p wsgi/consoledotwsgi.py %{buildroot}%{_datadir}/ipa-consoledot/
+cp -p rhsm/hmsidm-ca-bundle.pem %{buildroot}%{_datadir}/ipa-consoledot/
 
-mkdir -p %{buildroot}%{_unitdir}/krb5.conf.d
-cp -p install/ipa-consoledot.service %{buildroot}%{_unitdir}/krb5.conf.d/
-
-mkdir -p %{buildroot}%{_sysconfdir}/krb5.conf.d
-touch %{buildroot}%{_sysconfdir}/krb5.conf.d/ipa-consoledot.conf
+mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
 
 %files common
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%dir %{_datadir}/ipa/consoledot/
-%{_datadir}/ipa/consoledot/hmsidm-ca-bundle.pem
+%dir %{_datadir}/ipa-consoledot/
+%{_datadir}/ipa-consoledot/hmsidm-ca-bundle.pem
+%{python3_sitelib}/ipaplatform/*.py
+%{python3_sitelib}/ipaplatform/__pycache__/*.pyc
 
 
 %files server-plugin
@@ -161,14 +168,13 @@ touch %{buildroot}%{_sysconfdir}/krb5.conf.d/ipa-consoledot.conf
 %{_datadir}/ipa/schema.d/*.ldif
 %{_datadir}/ipa/updates/*.update
 %{_datadir}/ipa/ui/js/plugins/*
-%{_libexecdir}/ipa-consoledot/ipa-consoledot-krb5conf.py
-%attr(644,root,root) %{_unitdir}/krb5.conf.d/ipa-consoledot.service
-%ghost %attr(644,root,root) %{_sysconfdir}/krb5.conf.d/ipa-consoledot.conf
+
 
 %files registration-service
-%{_datadir}/ipa/consoledot/consoledot.py
+%attr(755,ipaconsoledot,ipaapi) %dir %{_localstatedir}/cache/ipa-consoledot
+%{_datadir}/ipa-consoledot/consoledotwsgi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/85-consoledot.conf
-
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-consoledot-enrollment.conf
 
 %changelog
 * Tue Nov 01 2022 Christian Heimes <cheimes@redhat.com> - 0.0.1-1

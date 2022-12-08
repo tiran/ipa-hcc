@@ -7,25 +7,23 @@ from typing import Optional, Tuple
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID
+import gssapi
 import requests
 
-from ipalib import api, errors
-from ipalib.install.kinit import kinit_keytab
 from ipaplatform.paths import paths
+from ipaplatform import consoledotplatform
+
+# must be set before ipalib or ipapython is imported
+os.environ["XDG_CACHE_HOME"] = "/var/cache/ipa-consoledot"
+os.environ["GSS_USE_PROXY"] = "1"
+
+from ipalib import api, errors
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("consoledot")
 logger.setLevel(logging.DEBUG)
 
-# KEYTAB = "/var/lib/ipa/gssproxy/ipaconsoledot.keytab"
-KEYTAB = "/var/lib/ipa/consoledot/service.keytab"
-CCNAME = "/tmp/krb5cc-ipaconsoledot"
-SERVICE = "consoledot-enrollment"
-HMSIDM_CA_BUNDLE_PEM = "/usr/share/ipa/consoledot/hmsidm-ca-bundle.pem"
-
-
-os.environ["KRB5CCNAME"] = CCNAME
-os.environ["KRB5_CLIENT_KTNAME"] = KEYTAB
+os.environ["KRB5CCNAME"] = consoledotplatform.CONSOLEDOT_SERVICE_KRB5CCNAME
 
 SCRIPT = """\
 #!/bin/sh
@@ -180,6 +178,13 @@ class Application:
         )
         return fqdn, inventoryid
 
+    def kinit_gssproxy(self):
+        service = consoledotplatform.CONSOLEDOT_SERVICE
+        principal = f"{service}/{api.env.host}@{api.env.realm}"
+        name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
+        store = {"ccache": consoledotplatform.CONSOLEDOT_SERVICE_KRB5CCNAME}
+        return gssapi.Credentials(name=name, store=store, usage="initiate")
+
     def connect_ipa(self):
         if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
             logger.debug("IPA rpcclient is already connected.")
@@ -188,8 +193,7 @@ class Application:
         logger.debug("Connecting to IPA")
         if not api.isdone("bootstrap"):
             api.bootstrap(in_server=False)
-        principal = f"{SERVICE}/{api.env.host}@{api.env.realm}"
-        kinit_keytab(principal, KEYTAB, CCNAME)
+        self.kinit_gssproxy()
         if not api.isdone("finalize"):
             api.finalize()
         if not api.Backend.rpcclient.isconnected():
@@ -243,7 +247,7 @@ class Application:
     def get_ca_bundle(self):
         with open(paths.KDC_CA_BUNDLE_PEM, "r") as f:
             kdc_ca_bundle_pem = f.read()
-        with open(HMSIDM_CA_BUNDLE_PEM, "r") as f:
+        with open(consoledotplatform.HMSIDM_CA_BUNDLE_PEM, "r") as f:
             hsmidm_ca_bundle_pem = f.read()
         # filter out duplicates?
         return kdc_ca_bundle_pem + "\n" + hsmidm_ca_bundle_pem

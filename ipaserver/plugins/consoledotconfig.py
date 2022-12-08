@@ -11,6 +11,7 @@ from ipaserver.plugins.config import config
 from ipaserver.plugins.config import config_mod
 from ipaserver.plugins.internal import i18n_messages
 
+
 consoledot_config_class = "consoledotconfig"
 
 if consoledot_config_class not in config.possible_objectclasses:
