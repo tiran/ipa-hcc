@@ -48,9 +48,6 @@ cp ipaserver/install/plugins/*.py ${SITE_PACKAGES}/ipaserver/install/plugins/
 cp ipaplatform/*.py ${SITE_PACKAGES}/ipaplatform
 python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/ ${SITE_PACKAGES}/ipaserver/install/plugins ${SITE_PACKAGES}/ipaplatform
 
-# helpers
-cp install/consoledot-enrollment-getkeytab /usr/libexec/ipa-consoledot/
-
 # run updater
 if [ $NEEDS_UPGRADE = 1 ]; then
     ipa-server-upgrade

@@ -4,21 +4,21 @@
 %global alt_name freeipa-consoledot
 %global ipa_name ipa
 %if 0%{?rhel} < 9
-%global ipa_version 4.9.11
+%global ipa_version 4.9.10
 %else
-%global ipa_version 4.10.1
+%global ipa_version 4.10.0
 %endif
 %else
 # Fedora
 %global package_name freeipa-consoledot
 %global alt_name ipa-consoledot
 %global ipa_name freeipa
-%global ipa_version 4.10.1
+%global ipa_version 4.10.0
 %endif
 
 Name:           %{package_name}
 Version:        0.0.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        consoleDot extension for IPA
 
 BuildArch:      noarch
@@ -29,7 +29,8 @@ License:        GPLv3+
 Source0:    ipa-consoledot-%{version}.tar.gz
 
 BuildRequires: python3-devel
-BuildRequires: systemd
+BuildRequires: systemd-devel
+BuildRequires: selinux-policy-devel
 
 %description
 An extension for IPA integration with Red Hat Console (consoleDot).
@@ -58,24 +59,21 @@ Obsoletes: %{alt_name}-server-plugin < %{version}
 Requires: %{package_name}-common >= %{version}
 Requires: %{ipa_name}-server >= %{ipa_version}
 Requires(post): %{ipa_name}-server >= %{ipa_version}
-%systemd_requires
+%{?systemd_requires}
 
 %description server-plugin
 This package contains server plugins and WebUI extension for
 consoleDot IPA extension.
-
-%post server-plugin
-/bin/systemctl --system daemon-reload 2>&1 || :
 
 %posttrans server-plugin
 python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
 
 if [ $? -eq 0 ]; then
     /usr/sbin/ipa-server-upgrade --quiet >/dev/null || :
-    /bin/systemctl is-enabled ipa.service >/dev/null 2>&1
-    if [  $? -eq 0 ]; then
-        /bin/systemctl restart ipa.service >/dev/null 2>&1 || :
-    fi
+    /usr/sbin/ipa-cacert-manage --quiet install %{_datadir}/ipa-consoledot/hmsidm-ca-bundle.pem || :
+    /usr/sbin/ipa-certupdate --quiet || :
+    # restart if running
+    /bin/systemctl try-restart ipa.service >/dev/null 2>&1 || :
 fi
 
 
@@ -92,6 +90,8 @@ Requires: %{package_name}-common >= %{version}
 Requires: httpd
 Requires: python3-mod_wsgi
 Requires: mod_ssl
+%{?selinux_requires}
+%{?systemd_requires}
 
 %description registration-service
 This package contains the registration service for
@@ -103,11 +103,13 @@ getent passwd ipaconsoledot >/dev/null || useradd -r -g ipaapi -s /sbin/nologin 
 
 %post registration-service
 # SELinux context for cache dir
-semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-consoledot(/.*)?' || :
-restorecon -R /var/cache/ipa-consoledot || :
+/usr/sbin/semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-consoledot(/.*)?' 2>/dev/null || :
+/usr/sbin/restorecon -R /var/cache/ipa-consoledot || :
+# pick up new gssproxy and HTTPD config (restart if running)
+systemctl try-restart gssproxy.service httpd.service
 
-# pick up new gssproxy and HTTPD config
-systemctl restart gssproxy.service httpd.service
+%postun registration-service
+/usr/sbin/semanage fcontext -d '/var/cache/ipa-consoledot(/.*)?' 2>/dev/null || :
 
 
 %prep
@@ -151,9 +153,6 @@ mkdir -p %{buildroot}%{_datadir}/ipa-consoledot
 cp -p wsgi/consoledotwsgi.py %{buildroot}%{_datadir}/ipa-consoledot/
 cp -p rhsm/hmsidm-ca-bundle.pem %{buildroot}%{_datadir}/ipa-consoledot/
 
-mkdir -p %{buildroot}%{_libexecdir}/ipa-consoledot
-cp install/consoledot-enrollment-getkeytab %{buildroot}%{_libexecdir}/ipa-consoledot
-
 mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
 
@@ -180,12 +179,11 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
 %files registration-service
 %attr(0755,ipaconsoledot,ipaapi) %dir %{_localstatedir}/cache/ipa-consoledot
-%attr(0755,root,root) %dir %{_libexecdir}/ipa-consoledot
-%attr(0755,root,root) %{_libexecdir}/ipa-consoledot/consoledot-enrollment-getkeytab
 %{_datadir}/ipa-consoledot/consoledotwsgi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/85-consoledot.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-consoledot-enrollment.conf
 
+
 %changelog
-* Tue Nov 01 2022 Christian Heimes <cheimes@redhat.com> - 0.0.1-1
+* Fri Dec 09 2022 Christian Heimes <cheimes@redhat.com> - 0.0.1-2
 - Initial release
