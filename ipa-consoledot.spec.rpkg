@@ -108,6 +108,10 @@ systemctl try-restart gssproxy.service httpd.service
 %postun registration-service
 /usr/sbin/semanage fcontext -d '/var/cache/ipa-consoledot(/.*)?' 2>/dev/null || :
 
+%postun server-plugin
+# remove pkinit_anchors line from KRB5 KDC config
+sed --in-place=.bak '/\/usr\/share\/ipa-consoledot\/hmsidm-ca-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
+
 
 %prep
 {{{ git_dir_setup_macro }}}
