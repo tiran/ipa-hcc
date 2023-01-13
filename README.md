@@ -172,11 +172,6 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 - Kerberos KDC loads extra PKINIT trust anchors from
   `FILE:/usr/share/ipa-consoledot/hmsidm-ca-bundle.pem`.
 
-## TODO
-
-- Remove `hmsidm-ca-bundle.pem` from `/var/kerberos/krb5kdc/kdc.conf` when
-  package is uninstalled.
-
 ## RPM build
 
 ```
