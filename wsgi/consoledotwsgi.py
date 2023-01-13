@@ -245,14 +245,11 @@ class Application:
                 logger.info("Nothing to update for IPA host %s", fqdn)
 
     def get_ca_bundle(self):
-        with open(paths.KDC_CA_BUNDLE_PEM, "r") as f:
-            kdc_ca_bundle_pem = f.read()
-        return kdc_ca_bundle_pem
-        # our bundle is currently in KDC_CA_BUNDLE_PEM
-        # with open(consoledotplatform.HMSIDM_CA_BUNDLE_PEM, "r") as f:
-        #     hsmidm_ca_bundle_pem = f.read()
-        # # filter out duplicates?
-        # return kdc_ca_bundle_pem + "\n" + hsmidm_ca_bundle_pem
+        with open(paths.IPA_CA_CRT, "r") as f:
+            ipa_ca_pem = f.read()
+        with open(consoledotplatform.HMSIDM_CA_BUNDLE_PEM, "r") as f:
+            hsmidm_ca_bundle_pem = f.read()
+        return ipa_ca_pem + "\n" + hsmidm_ca_bundle_pem
 
     def handle(self, env, start_repose):
         method = env["REQUEST_METHOD"]

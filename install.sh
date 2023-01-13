@@ -25,10 +25,13 @@ restorecon -R /var/cache/ipa-consoledot || :
 
 # WSGI app and configuration
 cp wsgi/consoledotwsgi.py /usr/share/ipa-consoledot/
-cp rhsm/hmsidm-ca-bundle.pem /usr/share/ipa-consoledot/hmsidm-ca-bundle.pem
-
 cp apache/consoledot.conf /etc/httpd/conf.d/85-consoledot.conf
 cp refresh_token /etc/ipa || true
+
+# CA certs
+cp rhsm/hmsidm-ca-bundle.pem /usr/share/ipa-consoledot/hmsidm-ca-bundle.pem
+mkdir -p /usr/share/ipa-consoledot/cacerts
+cp rhsm/cacerts/* /usr/share/ipa-consoledot/cacerts/
 
 # gssproxy
 cp gssproxy/85-consoledot-enrollment.conf /etc/gssproxy/
@@ -56,18 +59,6 @@ else
         -S /usr/share/ipa/schema.d/85-consoledot.ldif \
         /usr/share/ipa/updates/85-consoledot.update
     systemctl restart httpd.service
-fi
-
-## phase 2, handled by installer
-
-# install cert bundle
-set +e
-ipa-cacert-manage list | grep -q HMSIDM
-set -e
-if [ $? -eq 1 ]; then
-    ipa-cacert-manage install /usr/share/ipa-consoledot/hmsidm-ca-bundle.pem
-    ipa-certupdate
-    systemctl restart krb5kdc.service httpd.service
 fi
 
 echo "NOTE: $0 is a hack for internal development."

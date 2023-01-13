@@ -38,7 +38,9 @@ Example::
     depth=2: C = US, ST = North Carolina, L = Raleigh, O = "Red Hat, Inc.", OU = HMSIDM,
              CN = HMSIDM Root CA
 """
+import os
 import datetime
+import subprocess
 from typing import Tuple
 
 from cryptography import x509
@@ -47,9 +49,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
 
-ROOT_CA_FILE = "hmsidm-root-ca.pem"
-HMSIDM_CANDLEPIN_CA_FILE = "hmsidm-candlepin-ca.pem"
-HMSIDM_CANDLEPIN_R2_CA_FILE = "hmsidm-candlepin-r2-ca.pem"
+CACERTS_DIR = "cacerts"
+ROOT_CA_FILE = f"{CACERTS_DIR}/hmsidm-root-ca.pem"
+HMSIDM_CANDLEPIN_CA_FILE = f"{CACERTS_DIR}/hmsidm-candlepin-ca.pem"
+HMSIDM_CANDLEPIN_R2_CA_FILE = f"{CACERTS_DIR}/hmsidm-candlepin-r2-ca.pem"
 BUNDLE_FILE = "hmsidm-ca-bundle.pem"
 
 OID_MAP = {
@@ -339,12 +342,17 @@ def main():
         serialization.Encoding.PEM
     )
 
+    os.makedirs(CACERTS_DIR, exist_ok=True)
+
     with open(ROOT_CA_FILE, "wb") as f:
         f.write(root_pem)
     with open(HMSIDM_CANDLEPIN_CA_FILE, "wb") as f:
         f.write(hmsidm_candlepin_pem)
     with open(HMSIDM_CANDLEPIN_R2_CA_FILE, "wb") as f:
         f.write(hmsidm_candlepin_r2_pem)
+
+    subprocess.check_call(["openssl", "rehash", CACERTS_DIR])
+
     with open(BUNDLE_FILE, "wb") as f:
         f.write(encode_name(hmsidm_candlepin.subject) + b"\n")
         f.write(hmsidm_candlepin_pem)

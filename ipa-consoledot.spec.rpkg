@@ -17,16 +17,15 @@
 %endif
 
 Name:           %{package_name}
-Version:        0.0.1
-Release:        2%{?dist}
+Version:        {{{ git_dir_version }}}
+Release:        1%{?dist}
 Summary:        consoleDot extension for IPA
 
 BuildArch:      noarch
 
 License:        GPLv3+
-# URL:            https://github.com/tiran/ipa-consoledot
-# Source0:        https://github.com/tiran/ipa-consoledot/archive/v{version}/ipa-consoledot-{version}.tar.gz
-Source0:    ipa-consoledot-%{version}.tar.gz
+VCS:            {{{ git_dir_vcs }}}
+Source:         {{{ git_dir_pack }}}
 
 BuildRequires: python3-devel
 BuildRequires: systemd-devel
@@ -111,7 +110,7 @@ systemctl try-restart gssproxy.service httpd.service
 
 
 %prep
-%autosetup -n ipa-consoledot-%{version}
+{{{ git_dir_setup_macro }}}
 
 %build
 touch debugfiles.list
@@ -186,5 +185,4 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
 
 %changelog
-* Fri Dec 09 2022 Christian Heimes <cheimes@redhat.com> - 0.0.1-2
-- Initial release
+{{{ git_dir_changelog }}}

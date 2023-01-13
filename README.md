@@ -162,6 +162,21 @@ ipa-client-install \
 - ``ipa certmap-match`` is only implemented for users. It cannot be used
   to test cert mappings for hosts.
 
+## Workarounds
+
+IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
+*"Install CA certificates only for PKINIT or TLS client auth"*, yet.
+
+- Apache HTTPd is configured to load extra CA certs for client cert
+  authentication from CA path `/usr/share/ipa-consoledot/cacerts/`.
+- Kerberos KDC loads extra PKINIT trust anchors from
+  `FILE:/usr/share/ipa-consoledot/hmsidm-ca-bundle.pem`.
+
+## TODO
+
+- Remove `hmsidm-ca-bundle.pem` from `/var/kerberos/krb5kdc/kdc.conf` when
+  package is uninstalled.
+
 ## RPM build
 
 ```
