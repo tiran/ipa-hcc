@@ -57,7 +57,9 @@ class update_consoledot_service(Updater):
     def modify_krb5kdc_conf(self):
         anchor = f"FILE:{consoledotplatform.HMSIDM_CA_BUNDLE_PEM}"
         logger.debug(
-            "Checking for 'pkinit_anchors=%s' in '%s'", anchor, paths.KRB5KDC_KDC_CONF
+            "Checking for 'pkinit_anchors=%s' in '%s'",
+            anchor,
+            paths.KRB5KDC_KDC_CONF,
         )
 
         aug = Augeas(
@@ -82,14 +84,14 @@ class update_consoledot_service(Updater):
                 try:
                     aug.save()
                 except IOError:
-                    for error_path in aug.match('/augeas//error'):
-                        logger.error('augeas: %s', aug.get(error_path))
+                    for error_path in aug.match("/augeas//error"):
+                        logger.error("augeas: %s", aug.get(error_path))
                     raise
             else:
                 logger.debug("KDC already configured.")
         finally:
             aug.close()
-        
+
         if modified:
             # restart KDC if running
             logger.debug("Restarting KDC")
