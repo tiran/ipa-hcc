@@ -88,6 +88,29 @@ $ ipa config-mod --help
   * ``System: Add Hosts``
   * ``System: Modify consoleDot host attributes``
 
+## Schema / server updater
+
+The update file `85-consoledot.update` for `ipa-server-upgrade` creates:
+
+- host group `consoledot-enrollment`
+- automember rule for host group
+- certmap rule `rhsm-cert`
+- service principal `consoledot-enrollment/$FQDN@$REALM`
+- additional role and privileges
+- new indexes and unique constraint
+- runs `update_consoledot_service` update plugin
+
+The `update_consoledot_service` update plugin:
+
+- creates or validates the keytab for `consoledot-enrollment/$FQDN@$REALM`
+  service account
+- modifies KRB5 KDC config file to trust the RHSM certificate chain and
+  restarts the service if necessary.
+- checks consoledotOrgId setting in IPA's global configuration. If the
+  option is not set, then it sets the value based on the subject org
+  name of server's RHSM certificate (`/etc/pki/consumer/cert.pem`).
+
+
 ## Server test setup
 
 Create a [Red Hat API](https://access.redhat.com/articles/3626371) refresh
@@ -103,15 +126,7 @@ Install plugin and other services
 - creates `ipaconsoledot` system user
 - copies plugins, UI extension, schema extension, and updates
 - runs updater
-- imports `hmsidm-ca-bundle.pem` with `ipa-cacert-manage` and runs `ipa-certupdate`
-- creates keytab for enrollment service
 
-
-Configure consoleDot org id (replace 42 with your org id)
-
-```
-ipa -eforce_schema_check=True config-mod --consoledotorgid=42
-```
 
 ## Client test setup
 
@@ -174,10 +189,7 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 
 ## RPM build
 
-```
-git archive --format=tar.gz -o ipa-consoledot-0.0.1.tar.gz --prefix ipa-consoledot-0.0.1/ HEAD
-rpmbuild --define "_sourcedir $(pwd)" -bb ipa-consoledot.spec
-```
+[rpkg](https://docs.pagure.org/rpkg-util/v3/index.html)
 
 ## License
 

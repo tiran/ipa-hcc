@@ -10,8 +10,8 @@
 %endif
 %else
 # Fedora
-%global package_name freeipa-consoledot
-%global alt_name ipa-consoledot
+%global package_name ipa-consoledot
+%global alt_name freeipa-consoledot
 %global ipa_name freeipa
 %global ipa_version 4.10.0
 %endif
