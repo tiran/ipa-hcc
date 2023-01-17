@@ -9,9 +9,13 @@ import os
 import logging
 
 from augeas import Augeas
+from cryptography import x509
+from cryptography.x509.oid import NameOID
 
+from ipalib import errors
 from ipalib import Registry
 from ipalib import Updater
+from ipalib.install.kinit import kinit_keytab
 from ipapython.ipaldap import realm_to_ldapi_uri
 from ipapython import ipautil
 from ipaplatform import consoledotplatform
@@ -28,14 +32,21 @@ class update_consoledot_service(Updater):
     """Create keytab for consoledot enrollment service"""
 
     def add_service_keytab(self):
+        """Create keytab for consoledot WSGI app"""
         keytab = consoledotplatform.CONSOLEDOT_SERVICE_KEYTAB
-        if os.path.isfile(keytab):
-            logger.debug("keytab %s exists, nothing to do", keytab)
-            return False, []
-
-        ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
         service = consoledotplatform.CONSOLEDOT_SERVICE
         principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
+        ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
+
+        if os.path.isfile(keytab):
+            try:
+                kinit_keytab(principal, keytab, "MEMORY:")
+            except Exception as e:
+                # keytab from previous installation?
+                logger.debug("keytab %s is outdated: %s", keytab, e)
+            else:
+                logger.debug("keytab %s exists, nothing to do", keytab)
+                return False, []
 
         # fmt: off
         args = [
@@ -55,6 +66,7 @@ class update_consoledot_service(Updater):
         )
 
     def modify_krb5kdc_conf(self):
+        """Add RHSM cert chain to KDC"""
         anchor = f"FILE:{consoledotplatform.HMSIDM_CA_BUNDLE_PEM}"
         logger.debug(
             "Checking for 'pkinit_anchors=%s' in '%s'",
@@ -97,7 +109,36 @@ class update_consoledot_service(Updater):
             logger.debug("Restarting KDC")
             knownservices.krb5kdc.try_restart()
 
+    def configure_consoledotorgid(self):
+        """Auto-configure global consoledot org id"""
+        result = self.api.Command.config_show()["result"]
+        org_ids = result.get("consoledotorgid")
+        if org_ids:
+            logger.debug("consoledotorgid already configured: %s", org_ids[0])
+        try:
+            with open(consoledotplatform.RHSM_CERT, "rb") as f:
+                cert = x509.load_pem_x509_certificate(f.read())
+        except Exception:
+            logger.exception(
+                "Failed to parse '%s'.", consoledotplatform.RHSM_CERT
+            )
+            return False
+
+        nas = list(cert.subject)
+        if len(nas) != 2 or nas[0].oid != NameOID.ORGANIZATION_NAME:
+            logger.error("Unexpected cert subject %s", cert.subject)
+        try:
+            org_id = int(nas[0].value)
+        except (ValueError, TypeError):
+            logger.error("Unexpected cert subject %s", cert.subject)
+
+        try:
+            self.api.Command.config_mod(consoledotorgid=org_id)
+        except errors.EmptyModList:
+            pass
+
     def execute(self, **options):
         self.add_service_keytab()
         self.modify_krb5kdc_conf()
+        self.configure_consoledotorgid()
         return False, []

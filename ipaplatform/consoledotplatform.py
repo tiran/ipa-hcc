@@ -24,3 +24,6 @@ CONSOLEDOT_ENROLLMENT_ROLE = "consoleDot Enrollment Administrators"
 HMSIDM_CA_BUNDLE_PEM = "/usr/share/ipa-consoledot/hmsidm-ca-bundle.pem"
 
 HMSIDM_CACERTS_DIR = "/usr/share/ipa-consoledot/cacerts"
+
+RHSM_CERT = "/etc/pki/consumer/cert.pem"
+RHSM_KEY = "/etc/pki/consumer/key.pem"

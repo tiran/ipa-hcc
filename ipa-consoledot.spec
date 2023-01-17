@@ -112,6 +112,8 @@ systemctl try-restart gssproxy.service httpd.service
 %postun server-plugin
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-consoledot\/hmsidm-ca-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
+# remove service keytab
+rm -f /var/lib/ipa/gssproxy/consoledot-enrollment.keytab
 
 
 %prep

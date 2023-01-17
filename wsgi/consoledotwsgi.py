@@ -211,7 +211,9 @@ class Application:
         result = api.Command.config_show()["result"]
         org_ids = result.get("consoledotorgid")
         if not org_ids or len(org_ids) != 1:
-            raise ValueError("Invalid IPA 'consoledotorgid'")
+            raise ValueError(
+                "Invalid IPA configuration, 'consoledotorgid' is not set."
+            )
         self.org_id = int(org_ids[0])
         return self.org_id
 
