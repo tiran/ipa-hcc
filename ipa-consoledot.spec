@@ -17,7 +17,7 @@
 %endif
 
 Name:           %{package_name}
-Version:        0.1.git.2.2df0454d.dirty.1y98w7
+Version:        0.1.git.3.ec98093e.dirty.1y985k
 Release:        1%{?dist}
 Summary:        consoleDot extension for IPA
 
@@ -25,7 +25,7 @@ BuildArch:      noarch
 
 License:        GPLv3+
 VCS:            git+git@gitlab.com:tiran/ipa-consoledot.git#:
-Source:         ipa-consoledot-2df0454d-dirty.tar.gz
+Source:         ipa-consoledot-ec98093e-dirty.tar.gz
 
 BuildRequires: python3-devel
 BuildRequires: systemd-devel
@@ -134,14 +134,14 @@ Requires: rhc
 This package contains the automatic enrollment service of IPA clients.
 
 %post client-enrollment
-%systemd_post ipa-enrollment-consoledot.service
+%systemd_post ipa-enroll-consoledot.service
 /bin/systemctl daemon-reload
 
 %preun client-enrollment
-%systemd_preun ipa-enrollment-consoledot.service
+%systemd_preun ipa-enroll-consoledot.service
 
 %postun client-enrollment
-%systemd_postun ipa-enrollment-consoledot.service
+%systemd_postun ipa-enroll-consoledot.service
 
 
 %prep
