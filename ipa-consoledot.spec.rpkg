@@ -125,7 +125,7 @@ Obsoletes: %{alt_name}-client-enrollment < %{version}
 # Don't allow installation on an IPA server
 Conflicts:  %{ipa_name}-server
 # Requires: %{package_name}-common >= %{version}
-Requires: {ipa_name}-client
+Requires: %{ipa_name}-client
 Requires: python3-requests
 Requires: rhc
 %{?systemd_requires}

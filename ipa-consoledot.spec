@@ -17,15 +17,15 @@
 %endif
 
 Name:           %{package_name}
-Version:        0.1.git.2.597119d4
+Version:        0.1.git.2.2df0454d.dirty.1y98w7
 Release:        1%{?dist}
 Summary:        consoleDot extension for IPA
 
 BuildArch:      noarch
 
 License:        GPLv3+
-VCS:            git+git@gitlab.com:tiran/ipa-consoledot.git#597119d4cde479e16596da4ade79ce83d24a9575:
-Source:         ipa-consoledot-597119d4.tar.gz
+VCS:            git+git@gitlab.com:tiran/ipa-consoledot.git#:
+Source:         ipa-consoledot-2df0454d-dirty.tar.gz
 
 BuildRequires: python3-devel
 BuildRequires: systemd-devel
@@ -125,7 +125,7 @@ Obsoletes: %{alt_name}-client-enrollment < %{version}
 # Don't allow installation on an IPA server
 Conflicts:  %{ipa_name}-server
 # Requires: %{package_name}-common >= %{version}
-Requires: {ipa_name}-client
+Requires: %{ipa_name}-client
 Requires: python3-requests
 Requires: rhc
 %{?systemd_requires}
