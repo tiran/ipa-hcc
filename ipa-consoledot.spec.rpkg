@@ -73,6 +73,12 @@ if [ $? -eq 0 ]; then
     /bin/systemctl try-restart ipa.service >/dev/null 2>&1 || :
 fi
 
+%postun server-plugin
+# remove pkinit_anchors line from KRB5 KDC config
+sed --in-place=.bak '/\/usr\/share\/ipa-consoledot\/hmsidm-ca-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
+# remove service keytab
+rm -f /var/lib/ipa/gssproxy/consoledot-enrollment.keytab
+
 
 %package registration-service
 Summary: Registration service for IPA consoleDot extension
@@ -108,11 +114,34 @@ systemctl try-restart gssproxy.service httpd.service
 %postun registration-service
 /usr/sbin/semanage fcontext -d '/var/cache/ipa-consoledot(/.*)?' 2>/dev/null || :
 
-%postun server-plugin
-# remove pkinit_anchors line from KRB5 KDC config
-sed --in-place=.bak '/\/usr\/share\/ipa-consoledot\/hmsidm-ca-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
-# remove service keytab
-rm -f /var/lib/ipa/gssproxy/consoledot-enrollment.keytab
+
+%package client-enrollment
+Summary: Automatic IPA client enrollment for consoleDot
+BuildArch: noarch
+
+Provides:  %{alt_name}-client-enrollment = %{version}
+Conflicts: %{alt_name}-client-enrollment
+Obsoletes: %{alt_name}-client-enrollment < %{version}
+# Don't allow installation on an IPA server
+Conflicts:       {ipa_name}-server
+# Requires: %{package_name}-common >= %{version}
+Requires: {ipa_name}-client
+Requires: python3-requests
+Requires: rhc
+%{?systemd_requires}
+
+%description client-enrollment
+This package contains the automatic enrollment service of IPA clients.
+
+%post client-enrollment
+%systemd_post ipa-enrollment-consoledot.service
+/bin/systemctl daemon-reload
+
+%preun client-enrollment
+%systemd_preun ipa-enrollment-consoledot.service
+
+%postun client-enrollment
+%systemd_postun ipa-enrollment-consoledot.service
 
 
 %prep
@@ -160,6 +189,11 @@ cp -p rhsm/cacerts/* %{buildroot}%{_datadir}/ipa-consoledot/cacerts/
 
 mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
+mkdir -p %{buildroot}%{_unitdir}
+cp -p client/ipa-enroll-consoledot.service %{buildroot}%{_unitdir}/
+mkdir -p %{buildroot}%{_libexecdir}/ipa/consoledot/
+cp -p client/ipa_enroll_consoledot.py %{buildroot}%{_libexecdir}/ipa/consoledot/
+
 
 %files common
 %doc README.md CONTRIBUTORS.txt
@@ -184,10 +218,20 @@ mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
 
 
 %files registration-service
+%doc README.md CONTRIBUTORS.txt
+%license COPYING
 %attr(0755,ipaconsoledot,ipaapi) %dir %{_localstatedir}/cache/ipa-consoledot
 %{_datadir}/ipa-consoledot/consoledotwsgi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/85-consoledot.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-consoledot-enrollment.conf
+
+
+%files client-enrollment
+%doc README.md CONTRIBUTORS.txt
+%license COPYING
+%attr(0755,root,root) %dir %{_libexecdir}/ipa/consoledot
+%{_libexecdir}/ipa/consoledot/ipa_enroll_consoledot.py
+%{_unitdir}/ipa-enroll-consoledot.service
 
 
 %changelog

@@ -191,6 +191,10 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 
 [rpkg](https://docs.pagure.org/rpkg-util/v3/index.html)
 
+```
+rpkg spec --outdir .
+```
+
 ## License
 
 See file 'COPYING' for use and warranty information

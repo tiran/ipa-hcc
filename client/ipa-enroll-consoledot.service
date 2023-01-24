@@ -1,0 +1,20 @@
+[Unit]
+Description=IPA consoledot auto-enrollment service
+Documentation=man:ipa-client-install(1)
+
+# run if IPA config does not exist and RHSM certs exist
+ConditionPathExists=!/etc/ipa/default.conf
+ConditionPathExists=/etc/pki/consumer/cert.pem
+ConditionPathExists=/etc/pki/consumer/key.pem
+
+# use RHC daemon as trigger point
+After=rhcd.service
+Requisite=rhcd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/libexec/ipa/consoledot/ipa_enroll_consoledot.py --insecure
+
+[Install]
+WantedBy=rhcd.service
