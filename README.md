@@ -130,27 +130,45 @@ Install plugin and other services
 
 ## Client test setup
 
-Register the system with RHSM and consoleDot:
+1) Install packages
+
+```
+dnf copr enable copr.devel.redhat.com/cheimes/hmsidm
+dnf install ipa-consoledot-client-enrollment
+```
+
+2) Configure DNS and hostname. The client must be able to discover its
+IPA domain and IPA servers with DNS SRV discovery.
+
+3) Enable the auto-enrollment service
+
+```
+systemctl enable ipa-consoledot-enrollment.service
+```
+
+2) Register system with RHSM and Insights
 
 ```
 rhc connect
 ```
 
-Register the system with IPA and enroll it using `curl | sh`.
-
-```
-curl -k \
-  --cert /etc/pki/consumer/cert.pem \
-  --key /etc/pki/consumer/key.pem \
-  https://ipaserver.hmsidm.test/consoledot | sh
-```
-
+The `ipa-consoledot-enrollment.service` triggers after `rhc` starts the
+`rhcd` service. The enrollment service runs the script
+`ipa-consoledot-enrollment.py`, which uses DNS SRV discovery to locate
+IPA servers, connects to `/consoledot` WSGI app to self-register the
+host and finally runs `ipa-client-install`.
 
 ## Client test setup (step by step)
 
-Copy `/var/lib/ipa-client/pki/kdc-ca-bundle.pem` from server to client.
+1) Copy `/var/lib/ipa-client/pki/kdc-ca-bundle.pem` from server to client.
 
-Self-register system
+2) Register system with RHSM and Insights
+
+```
+rhc connect
+```
+
+3) Self-register host with IdM
 
 ```
 curl \
@@ -160,7 +178,7 @@ curl \
   https://ipaserver.hmsidm.test/consoledot
 ```
 
-Enroll system
+4) Enroll host with IdM
 
 ```
 ipa-client-install \

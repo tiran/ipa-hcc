@@ -1,0 +1,7 @@
+# ipaconsoledot:ipaapi
+addFilter('non-standard-uid')
+addFilter('non-standard-gid')
+# systemd service file in /usr/lib
+addFilter('only-non-binary-in-usr-lib')
+# auto-generated source file
+addFilter('invalid-url Source0')

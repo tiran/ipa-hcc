@@ -10,11 +10,7 @@ import requests
 from ipaclient import discovery
 from ipaplatform.paths import paths
 
-try:
-    from ipaplatform.consoledotplatform import RHSM_CERT, RHSM_KEY
-except ImportError:
-    RHSM_CERT = "/etc/pki/consumer/cert.pem"
-    RHSM_KEY = "/etc/pki/consumer/key.pem"
+from ipaplatform.consoledotplatform import RHSM_CERT, RHSM_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +31,13 @@ parser.add_argument(
     action="store_true",
 )
 
+
 def discover_ipa(args):
     ds = discovery.IPADiscovery()
     res = ds.search(ca_cert_path=args.cacert)
     if res != discovery.SUCCESS:
-        parser.error(
-            f"IPA discovery failed: %s.\n", discovery.error_names[res]
-        )
+        err = discovery.error_names[res]
+        parser.error(f"IPA discovery failed: {err}.\n")
     logger.info(
         "Discovered IPA realm '%s', domain '%s'.", ds.realm, ds.domain
     )
@@ -94,6 +90,7 @@ def main():
         cmd = [
             "ipa-client-install",
             f"--pkinit-identity=FILE:{RHSM_CERT},{RHSM_KEY}",
+            # use HMSIDM_CA_BUNDLE_PEM here?
             f"--pkinit-anchor=FILE:{f.name}",
             "--unattended",
         ]

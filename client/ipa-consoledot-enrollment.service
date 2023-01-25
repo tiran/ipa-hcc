@@ -14,7 +14,7 @@ Requisite=rhcd.service
 [Service]
 Type=oneshot
 RemainAfterExit=no
-ExecStart=/usr/libexec/ipa/consoledot/ipa_enroll_consoledot.py --insecure
+ExecStart=/usr/libexec/ipa/consoledot/ipa-consoledot-enrollment.py --insecure
 
 [Install]
 WantedBy=rhcd.service
