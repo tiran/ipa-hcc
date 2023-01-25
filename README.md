@@ -130,6 +130,21 @@ Install plugin and other services
 
 ## Client test setup
 
+Current RHEL releases of `ipa-client` are missing PKINIT option.
+
+RHEL 9.1 hack:
+
+```
+curl -o /usr/lib/python3.9/site-packages/ipaclient/install/client.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-10-1/ipaclient/install/client.py
+curl -o /usr/lib/python3.9/site-packages/ipalib/install/kinit.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-10-1/ipalib/install/kinit.py
+```
+
+RHEL 8.7 hack:
+```
+curl -o /usr/lib/python3.6/site-packages/ipaclient/install/client.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-9-11/ipaclient/install/client.py
+curl -o /usr/lib/python3.6/site-packages/ipalib/install/kinit.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-9-11/ipalib/install/kinit.py
+```
+
 1) Install packages
 
 ```
