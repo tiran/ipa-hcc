@@ -4,15 +4,19 @@ import logging
 import os
 import subprocess
 import tempfile
+import time
 
 import requests
 
 from ipaclient import discovery
+from ipalib.constants import FQDN
 from ipaplatform.paths import paths
 
 from ipaplatform.consoledotplatform import RHSM_CERT, RHSM_KEY
 
 logger = logging.getLogger(__name__)
+
+INVENTORY_HOSTS = "https://cert.console.redhat.com/api/inventory/v1/hosts"
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -30,11 +34,23 @@ parser.add_argument(
     "--insecure",
     action="store_true",
 )
+parser.add_argument(
+    "--hostname",
+    default=FQDN,
+)
 
 
 def discover_ipa(args):
+    """Discover IPA servers
+
+    Uses DNS SRV records and LDAP query to detect IPA domain, realm and
+    servers.
+    """
     ds = discovery.IPADiscovery()
-    res = ds.search(ca_cert_path=args.cacert)
+    res = ds.search(
+        hostname=args.hostname,
+        ca_cert_path=args.cacert,
+    )
     if res != discovery.SUCCESS:
         err = discovery.error_names[res]
         parser.error(f"IPA discovery failed: {err}.\n")
@@ -46,6 +62,10 @@ def discover_ipa(args):
 
 
 def consoledot_register(args, server):
+    """Register this host with /consoledot API endpoint
+
+    TODO: On 404 try next server
+    """
     url = f"https://{server}/consoledot"
     logger.info("Registering host at %s", url)
     r = requests.get(
@@ -55,6 +75,35 @@ def consoledot_register(args, server):
     )
     r.raise_for_status()
     return r.content
+
+
+def wait_for_inventory_host(args):
+    """Wait until this host is available in Insights inventory
+
+    Sometimes it takes a while until a host appears in Insights.
+    """
+    sess = requests.Session()
+    sess.cert = (RHSM_CERT, RHSM_KEY)
+    for i in range(5):
+        try:
+            resp = sess.get(INVENTORY_HOSTS)
+            resp.raise_for_status()
+            j = resp.json()
+            # 'j["total"] != 0' also works. A host sees only its record.
+            for host in j.get("results", ()):
+                if host["fqdn"] == FQDN:
+                    logger.info(
+                        "Host '%s' found in ConsoleDot inventory.",
+                        host["subscription_manager_id"],
+                    )
+                    return host
+        except Exception:
+            logger.exception("Host inventory lookup failed, sleeping...")
+        else:
+            logger.debug("Host not found in ConsoleDot inventory, sleeping...")
+        time.sleep(5)
+    else:
+        logger.warning("Host not found in ConsoleDot inventory")
 
 
 def main():
@@ -79,8 +128,11 @@ def main():
             f"IPA is already installed, '{paths.IPA_DEFAULT_CONF}' exists.\n"
         )
 
+    # wait until this host appears in ConsoleDont host inventory
+    wait_for_inventory_host(args)
+    # discover IPA realm, domain, and servers
     ds = discover_ipa(args)
-
+    # self-register host with IPA
     kdc_ca_data = consoledot_register(args, ds.server)
 
     with tempfile.NamedTemporaryFile() as f:
