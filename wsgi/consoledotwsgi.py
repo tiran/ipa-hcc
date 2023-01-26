@@ -186,10 +186,6 @@ class Application:
         return gssapi.Credentials(name=name, store=store, usage="initiate")
 
     def connect_ipa(self):
-        if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
-            logger.debug("IPA rpcclient is already connected.")
-            return
-
         logger.debug("Connecting to IPA")
         if not api.isdone("bootstrap"):
             api.bootstrap(in_server=False)
@@ -199,6 +195,8 @@ class Application:
         if not api.Backend.rpcclient.isconnected():
             api.Backend.rpcclient.connect()
             logger.debug("Connected")
+        else:
+            logger.debug("IPA rpcclient is already connected.")
 
     def disconnect_ipa(self):
         if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
@@ -271,11 +269,8 @@ class Application:
         try:
             self.connect_ipa()
             self.update_ipa(org_id, rhsm_id, inventory_id, fqdn)
-        except Exception:
-            # something went wrong, force reconnect
-            # otherwise keep persistent HTTP connection to IPA
+        finally:
             self.disconnect_ipa()
-            raise
         cabundle_pem = self.get_ca_bundle()
         script = SCRIPT.format(
             server=api.env.host,
