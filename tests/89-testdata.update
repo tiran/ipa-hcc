@@ -27,9 +27,9 @@ default: cn: hostc53b274ae54dc5dd.$DOMAIN
 default: fqdn: hostc53b274ae54dc5dd.$DOMAIN
 default: ipaUniqueID: autogenerate
 default: krbPrincipalName: host/hostc53b274ae54dc5dd.$DOMAIN@$REALM
-default: consoleDotCertSubject: O=42,CN=1f84492f-a824-41b8-8ccd-a4e9e1ab2f3d
-default: consoleDotOrgId: 42
-default: consoleDotSubscriptionId: 1f84492f-a824-41b8-8ccd-a4e9e1ab2f3d
+default: consoleDotCertSubject: O=16541323,CN=3ecb23bf-c99b-40ec-bec5-d884a63ddf12
+default: consoleDotOrgId: 16541323
+default: consoleDotSubscriptionId: 3ecb23bf-c99b-40ec-bec5-d884a63ddf12
 default: krbCanonicalName: host/hostc53b274ae54dc5dd.$DOMAIN@$REALM
 default: krbPwdPolicyReference: cn=Default Host Password Policy,cn=computers,cn=accounts,$SUFFIX
 default: managedBy: fqdn=hostc53b274ae54dc5dd.$DOMAIN,cn=computers,cn=accounts,$SUFFIX
