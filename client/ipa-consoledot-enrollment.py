@@ -100,7 +100,9 @@ def wait_for_inventory_host(args):
         except Exception:
             logger.exception("Host inventory lookup failed, sleeping...")
         else:
-            logger.debug("Host not found in ConsoleDot inventory, sleeping...")
+            logger.debug(
+                "Host not found in ConsoleDot inventory, sleeping..."
+            )
         time.sleep(5)
     else:
         logger.warning("Host not found in ConsoleDot inventory")

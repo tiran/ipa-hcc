@@ -29,7 +29,7 @@ cp apache/consoledot.conf /etc/httpd/conf.d/85-consoledot.conf
 cp refresh_token /etc/ipa || true
 
 # CA certs
-cp rhsm/hmsidm-ca-bundle.pem /usr/share/ipa-consoledot/hmsidm-ca-bundle.pem
+cp rhsm/redhat-candlepin-bundle.pem /usr/share/ipa-consoledot/redhat-candlepin-bundle.pem
 mkdir -p /usr/share/ipa-consoledot/cacerts
 cp rhsm/cacerts/* /usr/share/ipa-consoledot/cacerts/
 

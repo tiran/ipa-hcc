@@ -76,7 +76,7 @@ fi
 
 %postun server-plugin
 # remove pkinit_anchors line from KRB5 KDC config
-sed --in-place=.bak '/\/usr\/share\/ipa-consoledot\/hmsidm-ca-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
+sed --in-place=.bak '/\/usr\/share\/ipa-consoledot\/redhat-candlepin-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
 
 
 %package registration-service
@@ -183,7 +183,7 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/consoledot-enrollment.keytab
 mkdir -p %{buildroot}%{_datadir}/ipa-consoledot
 mkdir -p %{buildroot}%{_datadir}/ipa-consoledot/cacerts
 cp -p wsgi/consoledotwsgi.py %{buildroot}%{_datadir}/ipa-consoledot/
-cp -p rhsm/hmsidm-ca-bundle.pem %{buildroot}%{_datadir}/ipa-consoledot/
+cp -p rhsm/redhat-candlepin-bundle.pem %{buildroot}%{_datadir}/ipa-consoledot/
 cp -pd rhsm/cacerts/* %{buildroot}%{_datadir}/ipa-consoledot/cacerts/
 
 mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-consoledot
@@ -198,7 +198,7 @@ cp -p client/ipa-consoledot-enrollment.py %{buildroot}%{_libexecdir}/ipa/console
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
 %dir %{_datadir}/ipa-consoledot/
-%{_datadir}/ipa-consoledot/hmsidm-ca-bundle.pem
+%{_datadir}/ipa-consoledot/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-consoledot/cacerts
 %{python3_sitelib}/ipaplatform/*.py
 %{python3_sitelib}/ipaplatform/__pycache__/*.pyc

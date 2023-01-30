@@ -21,7 +21,7 @@ CONSOLEDOT_SERVICE_KRB5CCNAME = "/var/cache/ipa-consoledot/krb5ccname"
 
 CONSOLEDOT_ENROLLMENT_ROLE = "consoleDot Enrollment Administrators"
 
-HMSIDM_CA_BUNDLE_PEM = "/usr/share/ipa-consoledot/hmsidm-ca-bundle.pem"
+HMSIDM_CA_BUNDLE_PEM = "/usr/share/ipa-consoledot/redhat-candlepin-bundle.pem"
 
 HMSIDM_CACERTS_DIR = "/usr/share/ipa-consoledot/cacerts"
 

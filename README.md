@@ -218,7 +218,7 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 - Apache HTTPd is configured to load extra CA certs for client cert
   authentication from CA path `/usr/share/ipa-consoledot/cacerts/`.
 - Kerberos KDC loads extra PKINIT trust anchors from
-  `FILE:/usr/share/ipa-consoledot/hmsidm-ca-bundle.pem`.
+  `FILE:/usr/share/ipa-consoledot/redhat-candlepin-bundle.pem`.
 
 ## RPM build
 
