@@ -134,7 +134,7 @@ class update_consoledot_service(Updater):
 
         try:
             self.api.Command.config_mod(consoledotorgid=org_id)
-        except errors.EmptyModList:
+        except errors.EmptyModlist:
             pass
 
     def execute(self, **options):
