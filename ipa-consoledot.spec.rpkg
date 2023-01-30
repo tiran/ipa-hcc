@@ -130,14 +130,14 @@ Requires: rhc
 This package contains the automatic enrollment service of IPA clients.
 
 %post client-enrollment
-%systemd_post ipa-enroll-consoledot.service
+%systemd_post ipa-consoledot-enrollment.service
 /bin/systemctl daemon-reload
 
 %preun client-enrollment
-%systemd_preun ipa-enroll-consoledot.service
+%systemd_preun ipa-consoledot-enrollment.service
 
 %postun client-enrollment
-%systemd_postun_with_restart ipa-enroll-consoledot.service
+%systemd_postun_with_restart ipa-consoledot-enrollment.service
 
 
 %prep
