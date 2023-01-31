@@ -78,10 +78,10 @@ $ ipa config-mod --help
   * ``System: Read HCC config attributes``
   * ``System: Read HCC host attributes``
   * ``System: Modify HCC host attributes``
-* Role ``HCC Enrollment Administrators``
 * Privilege ``HCC Host Administrators`` that grants permissions
   * ``System: Add Hosts``
   * ``System: Modify HCC host attributes``
+* Role ``HCC Enrollment Administrators``
 
 ## Schema / server updater
 
@@ -90,20 +90,25 @@ The update file `85-hcc.update` for `ipa-server-upgrade` creates:
 - host group `hcc-enrollment`
 - automember rule for host group
 - certmap rule `rhsm-cert`
-- service principal `hcc-enrollment/$FQDN@$REALM`
 - additional role and privileges
 - new indexes and unique constraint
 - runs `update_hcc` update plugin
 
 The `update_hcc` update plugin:
 
-- creates or validates the keytab for `hcc-enrollment/$FQDN@$REALM`
-  service account
 - modifies KRB5 KDC config file to trust the RHSM certificate chain and
   restarts the service if necessary.
 - checks HCCOrgId setting in IPA's global configuration. If the
   option is not set, then it sets the value based on the subject org
   name of server's RHSM certificate (`/etc/pki/consumer/cert.pem`).
+
+The update file `86-hcc-enrollment-service.update` runs the
+`update_hcc_enrollment_service` plugin, whoch
+
+- creates service account `hcc-enrollment/$FQDN@$REALM`
+- adds the service to the `HCC Enrollment Administrators` role
+- creates or validates the keytab for `hcc-enrollment/$FQDN@$REALM`
+  service account
 
 
 ## Server test setup

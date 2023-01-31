@@ -38,23 +38,6 @@ default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=
 default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority( R2)?,OU=Red Hat Network,O=Red Hat\\, Inc\.,ST=North Carolina,C=US$$
 default: ipaEnabledFlag: TRUE
 
-# service account for hcc-enrollment service
-# NOTE: Each IPA server gets its own service account
-dn: krbprincipalname=hcc-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
-default: objectClass: krbprincipal
-default: objectClass: krbprincipalaux
-default: objectClass: krbticketpolicyaux
-default: objectClass: ipaobject
-default: objectClass: ipaservice
-default: objectClass: pkiuser
-default: objectClass: ipakrbprincipal
-default: objectClass: top
-default: krbcanonicalname: hcc-enrollment/$FQDN@$REALM
-default: krbprincipalname: hcc-enrollment/$FQDN@$REALM
-default: managedby: fqdn=$FQDN,cn=computers,cn=accounts,$SUFFIX
-default: ipaKrbPrincipalAlias: hcc-enrollment/$FQDN@$REALM
-default: ipaUniqueID: autogenerate
-
 # roles and privileges for HCC enrollment
 dn: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 default: objectClass: groupofnames
@@ -62,7 +45,6 @@ default: objectClass: nestedgroup
 default: objectClass: top
 default: cn: HCC Enrollment Administrators
 default: description: Enrollment Administrators for Red Hat Hybrid Cloud Console
-add: member: krbprincipalname=hcc-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
 
 dn: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 default: objectClass: groupofnames
@@ -123,7 +105,7 @@ default:nsslapd-pluginId: NSUniqueAttr
 default:nsslapd-pluginVersion: 1.1.0
 default:nsslapd-pluginVendor: Fedora Project
 
-# Setup keytab for hcc-enrollment service
+# Add RHSM cert of KDC config
 # Auto-configure global HCC organization id
 plugin: update_hcc
 

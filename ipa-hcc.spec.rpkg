@@ -209,10 +209,10 @@ cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
 %license COPYING
 %{python3_sitelib}/ipaserver/plugins/*.py
 %{python3_sitelib}/ipaserver/plugins/__pycache__/*.pyc
-%{python3_sitelib}/ipaserver/install/plugins/*.py
-%{python3_sitelib}/ipaserver/install/plugins/__pycache__/*.pyc
-%{_datadir}/ipa/schema.d/*.ldif
-%{_datadir}/ipa/updates/*.update
+%{python3_sitelib}/ipaserver/install/plugins/update_hcc.py
+%{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc.*.pyc
+%{_datadir}/ipa/schema.d/85-hcc.ldif
+%{_datadir}/ipa/updates/85-hcc.update
 %{_datadir}/ipa/ui/js/plugins/*
 %ghost %{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 
@@ -221,7 +221,10 @@ cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
 %attr(0755,ipahcc,ipaapi) %dir %{_localstatedir}/cache/ipa-hcc
+%{python3_sitelib}/ipaserver/install/plugins/update_hcc_enrollment_service.py
+%{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_enrollment_service.*.pyc
 %{_datadir}/ipa-hcc/hcc_registration_service.py
+%{_datadir}/ipa/updates/86-hcc-enrollment-service.update
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-ipa-hcc.conf
 

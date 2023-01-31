@@ -1,0 +1,10 @@
+#
+# IPA plugin for Hybrid Cloud Console (HCC)
+# Copyright (C) 2022  Christian Heimes <cheimes@redhat.com>
+# See COPYING for license
+#
+
+# Create hcc-enrollment service account
+# Update roles
+# Create service keytab
+plugin: update_hcc_enrollment_service
