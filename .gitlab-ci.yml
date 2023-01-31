@@ -1,0 +1,17 @@
+image: fedora:37
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+    - venv/
+
+before_script:
+  - sudo dnf install --setopt=install_weak_deps=False tox make rpkg rpmlint python3-devel systemd-devel selinux-policy-devel
+  - python3 --version  # For debugging
+
+test:
+  script:
+    - tox
