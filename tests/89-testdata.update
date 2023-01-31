@@ -1,17 +1,17 @@
 dn: cn=ipaConfig,cn=etc,$SUFFIX
-default: consoleDotOrgId: 42
+default: HCCOrgId: 16541323
 
 dn: cn=testing-candlepin-cert,cn=certmaprules,cn=certmap,$SUFFIX
 default: objectClass: ipacertmaprule
 default: objectClass: top
 default: cn: testing-candlepin-cert
 default: description: Rule for internal "Testing Candlepin Authority"
-default: ipaCertMapMapRule: (&(consoledotcertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX)))
+default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX)))
 default: ipaCertMapMatchRule: <ISSUER>CN=Testing Candlepin Authority,OU=HMSIDM,O=Red Hat
 default: ipaEnabledFlag: TRUE
 
 dn: fqdn=hostc53b274ae54dc5dd.$DOMAIN,cn=computers,cn=accounts,$SUFFIX
-default: objectClass: consoledothost
+default: objectClass: hcchost
 default: objectClass: ieee802device
 default: objectClass: ipahost
 default: objectClass: ipaobject
@@ -27,13 +27,13 @@ default: cn: hostc53b274ae54dc5dd.$DOMAIN
 default: fqdn: hostc53b274ae54dc5dd.$DOMAIN
 default: ipaUniqueID: autogenerate
 default: krbPrincipalName: host/hostc53b274ae54dc5dd.$DOMAIN@$REALM
-default: consoleDotCertSubject: O=16541323,CN=3ecb23bf-c99b-40ec-bec5-d884a63ddf12
-default: consoleDotOrgId: 16541323
-default: consoleDotSubscriptionId: 3ecb23bf-c99b-40ec-bec5-d884a63ddf12
+default: HCCCertSubject: O=16541323,CN=3ecb23bf-c99b-40ec-bec5-d884a63ddf12
+default: HCCOrgId: 16541323
+default: HCCSubscriptionId: 3ecb23bf-c99b-40ec-bec5-d884a63ddf12
 default: krbCanonicalName: host/hostc53b274ae54dc5dd.$DOMAIN@$REALM
 default: krbPwdPolicyReference: cn=Default Host Password Policy,cn=computers,cn=accounts,$SUFFIX
 default: managedBy: fqdn=hostc53b274ae54dc5dd.$DOMAIN,cn=computers,cn=accounts,$SUFFIX
 default: serverHostName: hostc53b274ae54dc5dd
 
-dn: cn=consoledot-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
+dn: cn=hcc-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
 add: member: fqdn=hostc53b274ae54dc5dd.$DOMAIN,cn=computers,cn=accounts,$SUFFIX

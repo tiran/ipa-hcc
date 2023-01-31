@@ -1,9 +1,9 @@
 #
-# IPA plugin for Red Hat consoleDot
+# IPA plugin for Red Hat Hybrid Cloud Console
 # Copyright (C) 2022  Christian Heimes <cheimes@redhat.com>
 # See COPYING for license
 #
-"""IPA plugin for Red Hat consoleDot
+"""IPA plugin for Red Hat Hybrid Cloud Console
 """
 import os
 import logging
@@ -18,7 +18,7 @@ from ipalib import Updater
 from ipalib.install.kinit import kinit_keytab
 from ipapython.ipaldap import realm_to_ldapi_uri
 from ipapython import ipautil
-from ipaplatform import consoledotplatform
+from ipaplatform import hccplatform
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
 
@@ -28,13 +28,17 @@ register = Registry()
 
 
 @register()
-class update_consoledot_service(Updater):
-    """Create keytab for consoledot enrollment service"""
+class update_hcc(Updater):
+    """Configure Hybrid Cloud Console services
+
+    - create keytab for hcc-enrollment service
+    - auto-configure HCC org id
+    """
 
     def add_service_keytab(self):
-        """Create keytab for consoledot WSGI app"""
-        keytab = consoledotplatform.CONSOLEDOT_SERVICE_KEYTAB
-        service = consoledotplatform.CONSOLEDOT_SERVICE
+        """Create keytab for hcc-enrollment WSGI app"""
+        keytab = hccplatform.HCC_SERVICE_KEYTAB
+        service = hccplatform.HCC_SERVICE
         principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
         ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
 
@@ -67,7 +71,7 @@ class update_consoledot_service(Updater):
 
     def modify_krb5kdc_conf(self):
         """Add RHSM cert chain to KDC"""
-        anchor = f"FILE:{consoledotplatform.HMSIDM_CA_BUNDLE_PEM}"
+        anchor = f"FILE:{hccplatform.HMSIDM_CA_BUNDLE_PEM}"
         logger.debug(
             "Checking for 'pkinit_anchors=%s' in '%s'",
             anchor,
@@ -109,19 +113,17 @@ class update_consoledot_service(Updater):
             logger.debug("Restarting KDC")
             knownservices.krb5kdc.try_restart()
 
-    def configure_consoledotorgid(self):
-        """Auto-configure global consoledot org id"""
+    def configure_hcc_orgid(self):
+        """Auto-configure global HCC org id"""
         result = self.api.Command.config_show()["result"]
-        org_ids = result.get("consoledotorgid")
+        org_ids = result.get("hccorgid")
         if org_ids:
-            logger.debug("consoledotorgid already configured: %s", org_ids[0])
+            logger.debug("hccorgid already configured: %s", org_ids[0])
         try:
-            with open(consoledotplatform.RHSM_CERT, "rb") as f:
+            with open(hccplatform.RHSM_CERT, "rb") as f:
                 cert = x509.load_pem_x509_certificate(f.read())
         except Exception:
-            logger.exception(
-                "Failed to parse '%s'.", consoledotplatform.RHSM_CERT
-            )
+            logger.exception("Failed to parse '%s'.", hccplatform.RHSM_CERT)
             return False
 
         nas = list(cert.subject)
@@ -133,12 +135,12 @@ class update_consoledot_service(Updater):
             logger.error("Unexpected cert subject %s", cert.subject)
 
         try:
-            self.api.Command.config_mod(consoledotorgid=org_id)
+            self.api.Command.config_mod(hccorgid=org_id)
         except errors.EmptyModlist:
             pass
 
     def execute(self, **options):
         self.add_service_keytab()
         self.modify_krb5kdc_conf()
-        self.configure_consoledotorgid()
+        self.configure_hcc_orgid()
         return False, []

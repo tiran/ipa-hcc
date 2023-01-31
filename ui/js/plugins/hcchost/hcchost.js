@@ -1,5 +1,5 @@
 //
-// IPA plugin for consoleDot
+// IPA plugin for Hybrid Cloud Console
 // Copyright (C) 2022  Christian Heimes <cheimes@redhat.com>
 // See COPYING for license
 //
@@ -20,25 +20,25 @@ define([
             return null;
         }
 
-        var consoledot_host_plugin = {};
+        var hcc_host_plugin = {};
 
-        // show consoleDot fields on detailed page
-        consoledot_host_plugin.add_consoledot_host_pre_op = function() {
+        // show Hybrid Cloud Console fields on detailed page
+        hcc_host_plugin.add_hcc_host_pre_op = function() {
             var section = {
-                name: 'consoledothost',
-                label: '@i18n:consoledothost.name',
+                name: 'hcchost',
+                label: '@i18n:hcchost.name',
                 fields: [{
-                    name: 'consoledotsubscriptionid',
+                    name: 'hccsubscriptionid',
                     flags: ['w_if_no_aci']
                 }, {
-                    name: 'consoledotinventoryid',
+                    name: 'hccinventoryid',
                     flags: ['w_if_no_aci']
                 }, {
-                    name: 'consoledotorgid',
+                    name: 'hccorgid',
                     flags: ['w_if_no_aci'],
                     read_only: true
                 }, {
-                    name: 'consoledotcertsubject',
+                    name: 'hcccertsubject',
                     flags: ['w_if_no_aci'],
                     read_only: true
                 }]
@@ -48,25 +48,25 @@ define([
             return true;
         };
 
-        phases.on('customization', consoledot_host_plugin.add_consoledot_host_pre_op);
+        phases.on('customization', hcc_host_plugin.add_hcc_host_pre_op);
 
         // add registration status and deep link to overview page
-        consoledot_host_plugin.add_consoledot_host_search = function() {
+        hcc_host_plugin.add_hcc_host_search = function() {
             var column = {
-                name: 'consoledotinventoryid',
-                label: '@i18n:consoledothost.inventory',
-                formatter: 'consoledot_host_link'
+                name: 'hccinventoryid',
+                label: '@i18n:hcchost.inventory',
+                formatter: 'hcc_host_link'
             }
             var facet = get_item(IPA.host.entity_spec.facets, '$type', 'search');
             facet.columns.push(column);
             return true;
         }
 
-        phases.on('customization', consoledot_host_plugin.add_consoledot_host_search);
+        phases.on('customization', hcc_host_plugin.add_hcc_host_search);
 
-        // custom HTML formatter to render a consoleDot inventory ID as deep
-        // link into consoleDot Insights.
-        consoledot_host_plugin.consoledot_host_link_formatter = function(spec) {
+        // custom HTML formatter to render a Hybrid Cloud Console inventory ID as deep
+        // link into Hybrid Cloud Console's host based inventory (Insights Inventory).
+        hcc_host_plugin.hcc_host_link_formatter = function(spec) {
             var that = IPA.formatter(spec);
 
             that.type = 'html';
@@ -80,12 +80,12 @@ define([
             return that;
         };
 
-        consoledot_host_plugin.register = function() {
+        hcc_host_plugin.register = function() {
             var f = reg.formatter;
-            f.register('consoledot_host_link', consoledot_host_plugin.consoledot_host_link_formatter);
+            f.register('hcc_host_link', hcc_host_plugin.hcc_host_link_formatter);
         }
 
-        phases.on('customization', consoledot_host_plugin.register);
+        phases.on('customization', hcc_host_plugin.register);
 
-        return consoledot_host_plugin;
+        return hcc_host_plugin;
     });

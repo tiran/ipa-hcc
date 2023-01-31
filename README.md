@@ -1,7 +1,7 @@
-# IPA plugin for consoleDot
+# IPA plugin for Hybrid Cloud Console
 
-The *ipa-consoledot* plugin provides schema extension of IPA for
-consoleDot integration. The plugin must be installed on all FreeIPA
+The *ipa-hcc* plugin provides schema extension of IPA for
+Hybrid Cloud Console integration. The plugin must be installed on all FreeIPA
 servers, preferable before the server/replica is installed.
 
 If the plugin is installed later, then the local schema cache may be
@@ -19,50 +19,45 @@ time.
 
 ## Additional host attributes
 
-* *consoleDotOrgId*: int
-* *consoleDotSubscriptionId*: string
-* *consoleDotInventoryId*: string
-* *consoleDotCertSubject*: string (auto-generated)
+* *HCCOrgId*: int
+* *HCCSubscriptionId*: string
+* *HCCInventoryId*: string
+* *HCCCertSubject*: string (auto-generated)
 
 ## Server config
 
-* *consoleDotOrgId*: int
+* *HCCOrgId*: int
 
 ## Host groups
 
-Host group ``consoledot-enrollment`` is created on server upgrade. Hosts with
-a ``consoleDotSubscriptionId`` are automatically added to the host group by
+Host group ``hcc-enrollment`` is created on server upgrade. Hosts with
+a ``HCCSubscriptionId`` are automatically added to the host group by
 an **automember rule**.
 
 ## certmap rule
 
 A certmap rule ``rhsm-cert`` matches subject of RHSM certificates to host's
-``consoleDotCertSubject` attribute.
+``HCCCertSubject` attribute.
 
 ## service principal
 
-Each IPA server has a ``consoledot-enrollment/$FQDN`` service with role
-``consoleDot Enrollment Administrators``.
+Each IPA server has a ``hcc-enrollment/$FQDN`` service with role
+``HCC Enrollment Administrators``.
 
 ## Indexes
 
-* Index on ``consoleDotSubscriptionId`` for presence and equality
-* Index on ``consoleDotInventoryId`` for presence and equality
-* Index on ``consoleDotCertSubject`` for presence and equality
-* Uniqueness of ``consoleDotCertSubject`` attributes
-
-## Update plugin
-
-The server update plugin ``update_consoledot_service`` retrieves the service
-keytab for ``consoledot-enrollment/$FQDN`` principal.
+* Index on ``HCCSubscriptionId`` for presence and equality
+* Index on ``HCCInventoryId`` for presence and equality
+* Index on ``HCCCertSubject`` for presence and equality
+* Uniqueness of ``HCCCertSubject`` attributes
 
 ## Command line extension
 
 ```
 $ ipa host-mod --help
   ...
-  --consoledotsubscriptionid=STR
-  --consoledotinventoryid=STR
+  --hccsubscriptionid=STR
+  --hccinventoryid=STR
   ...
 $ ipa host-show host.test.example
   ...
@@ -73,40 +68,40 @@ $ ipa host-show host.test.example
   ...
 $ ipa config-mod --help
   ...
-  --consoledotorgid=INT  organization id
+  --hccorgid=INT  organization id
   ...
 ```
 
 ## Roles / Privileges / Permissions
 
 * Permission
-  * ``System: Read consoleDot config attributes``
-  * ``System: Read consoleDot host attributes``
-  * ``System: Modify consoleDot host attributes``
-* Role ``consoleDot Enrollment Administrators``
-* Privilege ``consoleDot Host Administrators`` that grants permissions
+  * ``System: Read HCC config attributes``
+  * ``System: Read HCC host attributes``
+  * ``System: Modify HCC host attributes``
+* Role ``HCC Enrollment Administrators``
+* Privilege ``HCC Host Administrators`` that grants permissions
   * ``System: Add Hosts``
-  * ``System: Modify consoleDot host attributes``
+  * ``System: Modify HCC host attributes``
 
 ## Schema / server updater
 
-The update file `85-consoledot.update` for `ipa-server-upgrade` creates:
+The update file `85-hcc.update` for `ipa-server-upgrade` creates:
 
-- host group `consoledot-enrollment`
+- host group `hcc-enrollment`
 - automember rule for host group
 - certmap rule `rhsm-cert`
-- service principal `consoledot-enrollment/$FQDN@$REALM`
+- service principal `hcc-enrollment/$FQDN@$REALM`
 - additional role and privileges
 - new indexes and unique constraint
-- runs `update_consoledot_service` update plugin
+- runs `update_hcc` update plugin
 
-The `update_consoledot_service` update plugin:
+The `update_hcc` update plugin:
 
-- creates or validates the keytab for `consoledot-enrollment/$FQDN@$REALM`
+- creates or validates the keytab for `hcc-enrollment/$FQDN@$REALM`
   service account
 - modifies KRB5 KDC config file to trust the RHSM certificate chain and
   restarts the service if necessary.
-- checks consoledotOrgId setting in IPA's global configuration. If the
+- checks HCCOrgId setting in IPA's global configuration. If the
   option is not set, then it sets the value based on the subject org
   name of server's RHSM certificate (`/etc/pki/consumer/cert.pem`).
 
@@ -123,7 +118,7 @@ Install plugin and other services
 ./install.sh
 ```
 
-- creates `ipaconsoledot` system user
+- creates `ipahcc` system user
 - copies plugins, UI extension, schema extension, and updates
 - runs updater
 
@@ -149,7 +144,7 @@ curl -o /usr/lib/python3.6/site-packages/ipalib/install/kinit.py https://raw.git
 
 ```
 dnf copr enable copr.devel.redhat.com/cheimes/hmsidm
-dnf install ipa-consoledot-client-enrollment
+dnf install ipa-hcc-client-enrollment
 ```
 
 2) Configure DNS and hostname. The client must be able to discover its
@@ -158,7 +153,7 @@ IPA domain and IPA servers with DNS SRV discovery.
 3) Enable the auto-enrollment service
 
 ```
-systemctl enable ipa-consoledot-enrollment.service
+systemctl enable ipa-hcc-auto-enrollment.service
 ```
 
 2) Register system with RHSM and Insights
@@ -167,10 +162,10 @@ systemctl enable ipa-consoledot-enrollment.service
 rhc connect
 ```
 
-The `ipa-consoledot-enrollment.service` triggers after `rhc` starts the
+The `ipa-hcc-auto-enrollment.service` triggers after `rhc` starts the
 `rhcd` service. The enrollment service runs the script
-`ipa-consoledot-enrollment.py`, which uses DNS SRV discovery to locate
-IPA servers, connects to `/consoledot` WSGI app to self-register the
+`ipa-hcc-auto-enrollment.py`, which uses DNS SRV discovery to locate
+IPA servers, connects to `/hcc` WSGI app to self-register the
 host and finally runs `ipa-client-install`.
 
 ## Client test setup (step by step)
@@ -190,7 +185,7 @@ curl \
   --cacert /root/kdc-ca-bundle.pem \
   --cert /etc/pki/consumer/cert.pem \
   --key /etc/pki/consumer/key.pem \
-  https://ipaserver.hmsidm.test/consoledot
+  https://ipaserver.hmsidm.test/hcc
 ```
 
 4) Enroll host with IdM
@@ -216,9 +211,9 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 *"Install CA certificates only for PKINIT or TLS client auth"*, yet.
 
 - Apache HTTPd is configured to load extra CA certs for client cert
-  authentication from CA path `/usr/share/ipa-consoledot/cacerts/`.
+  authentication from CA path `/usr/share/ipa-hcc/cacerts/`.
 - Kerberos KDC loads extra PKINIT trust anchors from
-  `FILE:/usr/share/ipa-consoledot/redhat-candlepin-bundle.pem`.
+  `FILE:/usr/share/ipa-hcc/redhat-candlepin-bundle.pem`.
 
 ## RPM build
 

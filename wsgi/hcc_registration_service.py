@@ -11,19 +11,19 @@ import gssapi
 import requests
 
 from ipaplatform.paths import paths
-from ipaplatform import consoledotplatform
+from ipaplatform import hccplatform
 
 # must be set before ipalib or ipapython is imported
-os.environ["XDG_CACHE_HOME"] = "/var/cache/ipa-consoledot"
+os.environ["XDG_CACHE_HOME"] = "/var/cache/ipa-hcc"
 os.environ["GSS_USE_PROXY"] = "1"
 
 from ipalib import api, errors  # noqa: E402
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
-logger = logging.getLogger("consoledot")
+logger = logging.getLogger("ipa-hcc")
 logger.setLevel(logging.DEBUG)
 
-os.environ["KRB5CCNAME"] = consoledotplatform.CONSOLEDOT_SERVICE_KRB5CCNAME
+os.environ["KRB5CCNAME"] = hccplatform.HCC_SERVICE_KRB5CCNAME
 
 SCRIPT = """\
 #!/bin/sh
@@ -48,7 +48,7 @@ ipa-client-install \
 --unattended
 """
 
-# consoleDot Inventory and acess token
+# Hybrid Cloud Console Inventory and access token
 # see https://access.redhat.com/articles/3626371
 REFRESH_TOKEN = None
 TOKEN_URL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
@@ -179,10 +179,10 @@ class Application:
         return fqdn, inventoryid
 
     def kinit_gssproxy(self):
-        service = consoledotplatform.CONSOLEDOT_SERVICE
+        service = hccplatform.HCC_SERVICE
         principal = f"{service}/{api.env.host}@{api.env.realm}"
         name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
-        store = {"ccache": consoledotplatform.CONSOLEDOT_SERVICE_KRB5CCNAME}
+        store = {"ccache": hccplatform.HCC_SERVICE_KRB5CCNAME}
         return gssapi.Credentials(name=name, store=store, usage="initiate")
 
     def connect_ipa(self):
@@ -207,10 +207,10 @@ class Application:
         if self.org_id is not None:
             return self.org_id
         result = api.Command.config_show()["result"]
-        org_ids = result.get("consoledotorgid")
+        org_ids = result.get("hccorgid")
         if not org_ids or len(org_ids) != 1:
             raise ValueError(
-                "Invalid IPA configuration, 'consoledotorgid' is not set."
+                "Invalid IPA configuration, 'hccorgid' is not set."
             )
         self.org_id = int(org_ids[0])
         return self.org_id
@@ -226,9 +226,9 @@ class Application:
         try:
             api.Command.host_add(
                 fqdn,
-                # consoledotorgid=org_id,
-                consoledotsubscriptionid=rhsm_id,
-                consoledotinventoryid=inventory_id,
+                # hccorgid=org_id,
+                hccsubscriptionid=rhsm_id,
+                hccinventoryid=inventory_id,
                 force=True,
             )
             logger.info("Added IPA host %s", fqdn)
@@ -236,9 +236,9 @@ class Application:
             try:
                 api.Command.host_mod(
                     fqdn,
-                    # consoledotorgid=org_id,
-                    consoledotsubscriptionid=rhsm_id,
-                    consoledotinventoryid=inventory_id,
+                    # hccorgid=org_id,
+                    hccsubscriptionid=rhsm_id,
+                    hccinventoryid=inventory_id,
                 )
                 logger.info("Updated IPA host %s", fqdn)
             except errors.EmptyModlist:
@@ -247,7 +247,7 @@ class Application:
     def get_ca_bundle(self):
         with open(paths.IPA_CA_CRT, "r") as f:
             ipa_ca_pem = f.read()
-        with open(consoledotplatform.HMSIDM_CA_BUNDLE_PEM, "r") as f:
+        with open(hccplatform.HMSIDM_CA_BUNDLE_PEM, "r") as f:
             hsmidm_ca_bundle_pem = f.read()
         return ipa_ca_pem + "\n" + hsmidm_ca_bundle_pem
 

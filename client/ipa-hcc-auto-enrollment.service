@@ -1,5 +1,5 @@
 [Unit]
-Description=IPA consoledot auto-enrollment service
+Description=IPA Hybrid Cloud Console client auto-enrollment service
 Documentation=man:ipa-client-install(1)
 
 # run if IPA config does not exist and RHSM certs exist
@@ -14,7 +14,7 @@ Requisite=rhcd.service
 [Service]
 Type=oneshot
 RemainAfterExit=no
-ExecStart=/usr/libexec/ipa/consoledot/ipa-consoledot-enrollment.py --insecure
+ExecStart=/usr/libexec/ipa/hcc/ipa-hcc-auto-enrollment.py --insecure
 
 [Install]
 WantedBy=rhcd.service

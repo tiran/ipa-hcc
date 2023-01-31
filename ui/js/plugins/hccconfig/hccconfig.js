@@ -1,5 +1,5 @@
 //
-// IPA plugin for consoleDot
+// IPA plugin for Hybrid Cloud Console
 // Copyright (C) 2022  Christian Heimes <cheimes@redhat.com>
 // See COPYING for license
 //
@@ -18,14 +18,14 @@ function(phases, IPA) {
         return null;
     }
 
-    var consoledot_config_plugin = {};
+    var hcc_config_plugin = {};
 
-    consoledot_config_plugin.add_consoledot_config_pre_op = function() {
+    hcc_config_plugin.add_hcc_config_pre_op = function() {
         var section = {
-            name: 'consoledot',
-            label: '@i18n:consoledotconfig.name',
+            name: 'hcc',
+            label: '@i18n:hccconfig.name',
             fields: [{
-                name: 'consoledotorgid',
+                name: 'hccorgid',
                 flags: ['w_if_no_aci']
             }]
         };
@@ -34,7 +34,7 @@ function(phases, IPA) {
         return true;
     };
 
-    phases.on('customization', consoledot_config_plugin.add_consoledot_config_pre_op);
+    phases.on('customization', hcc_config_plugin.add_hcc_config_pre_op);
 
-    return consoledot_config_plugin;
+    return hcc_config_plugin;
 });

@@ -12,7 +12,7 @@ from ipaclient import discovery
 from ipalib.constants import FQDN
 from ipaplatform.paths import paths
 
-from ipaplatform.consoledotplatform import RHSM_CERT, RHSM_KEY
+from ipaplatform.hccplatform import RHSM_CERT, RHSM_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +61,12 @@ def discover_ipa(args):
     return ds
 
 
-def consoledot_register(args, server):
-    """Register this host with /consoledot API endpoint
+def hcc_register(args, server):
+    """Register this host with /hcc API endpoint
 
     TODO: On 404 try next server
     """
-    url = f"https://{server}/consoledot"
+    url = f"https://{server}/hcc"
     logger.info("Registering host at %s", url)
     r = requests.get(
         url,
@@ -93,19 +93,17 @@ def wait_for_inventory_host(args):
             for host in j.get("results", ()):
                 if host["fqdn"] == FQDN:
                     logger.info(
-                        "Host '%s' found in ConsoleDot inventory.",
+                        "Host '%s' found in Insights Inventory.",
                         host["subscription_manager_id"],
                     )
                     return host
         except Exception:
             logger.exception("Host inventory lookup failed, sleeping...")
         else:
-            logger.debug(
-                "Host not found in ConsoleDot inventory, sleeping..."
-            )
+            logger.info("Host not found in Insights Inventory, sleeping...")
         time.sleep(5)
     else:
-        logger.warning("Host not found in ConsoleDot inventory")
+        logger.warning("Host not found in Insights Inventory inventory")
 
 
 def main():
@@ -135,7 +133,7 @@ def main():
     # discover IPA realm, domain, and servers
     ds = discover_ipa(args)
     # self-register host with IPA
-    kdc_ca_data = consoledot_register(args, ds.server)
+    kdc_ca_data = hcc_register(args, ds.server)
 
     with tempfile.NamedTemporaryFile() as f:
         f.write(kdc_ca_data)

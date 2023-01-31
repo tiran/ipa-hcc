@@ -1,4 +1,4 @@
-# ipaconsoledot:ipaapi
+# ipahcc:ipaapi
 addFilter('non-standard-uid')
 addFilter('non-standard-gid')
 # systemd service file in /usr/lib

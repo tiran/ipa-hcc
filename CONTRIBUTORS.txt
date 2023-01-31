@@ -1,4 +1,4 @@
-# Contributions to the ipa-consoledot project
+# Contributions to the IPA Hybrid Cloud Console project
 
 ## Creators & Maintainers
 

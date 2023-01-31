@@ -21,7 +21,7 @@ rpkg:
 	@rm -rf .tox/rpkg
 	@mkdir -p .tox/rpkg
 	rpkg local --outdir $$(pwd)/.tox/rpkg
-	rpmlint --strict -r ipa-consoledot.rpmlintrc .tox/rpkg/
+	rpmlint --strict -r ipa-hcc.rpmlintrc .tox/rpkg/
 
 .PHONY: test
 test:

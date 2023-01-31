@@ -1,28 +1,28 @@
 #
-# IPA plugin for consoleDot
+# IPA plugin for Hybrid Cloud Console (HCC)
 # Copyright (C) 2022  Christian Heimes <cheimes@redhat.com>
 # See COPYING for license
 #
 
 # host group
-dn: cn=consoledot-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
+dn: cn=hcc-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
 default: objectClass: top
 default: objectClass: groupOfNames
 default: objectClass: nestedGroup
 default: objectClass: ipaobject
 default: objectClass: ipahostgroup
-default: description: consoleDot enrollment hosts
-default: cn: consoledot-enrollment
+default: description: Hybrid Cloud Console auto-enrolled hosts
+default: cn: hcc-enrollment
 default: ipaUniqueID: autogenerate
 
 # automember for host group
-dn: cn=consoledot-enrollment,cn=Hostgroup,cn=automember,cn=etc,$SUFFIX
+dn: cn=hcc-enrollment,cn=Hostgroup,cn=automember,cn=etc,$SUFFIX
 default: objectClass: automemberregexrule
 default: objectClass: top
-default: autoMemberTargetGroup: cn=consoledot-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
-default: cn: consoledot-enrollment
+default: autoMemberTargetGroup: cn=hcc-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
+default: cn: hcc-enrollment
 default: autoMemberExclusiveRegex: memberof=cn=ipaserver,cn=hostgroups,cn=accounts,.*
-default: autoMemberInclusiveRegex: consoledotsubscriptionid=.*
+default: autoMemberInclusiveRegex: hccsubscriptionid=.*
 
 # certmap rule for RHSM certificate
 dn: cn=rhsm-cert,cn=certmaprules,cn=certmap,$SUFFIX
@@ -30,7 +30,7 @@ default: objectClass: ipacertmaprule
 default: objectClass: top
 default: cn: rhsm-cert
 default: description: Rule for Red Hat Subscription Manager (RHSM) certificates (/etc/pki/consumer/cert.pem).
-default: ipaCertMapMapRule: (&(consoledotcertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX))(!(krbprincipalkey=*)))
+default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX))(!(krbprincipalkey=*)))
 # NSS uses E= instead of emailAddress, sss-certmap(5) suggests to skip this field
 # "," in "Red Hat, Inc." must be quoted as "\\,"
 # "$" is quoted as "$$" for ipa-ldap-updater
@@ -38,9 +38,9 @@ default: ipaCertMapMapRule: (&(consoledotcertsubject={subject_dn!nss_x500})(!(me
 default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority( R2)?,OU=Red Hat Network,O=Red Hat\\, Inc\.,ST=North Carolina,C=US$$
 default: ipaEnabledFlag: TRUE
 
-# service account for consoleDot enrollment service
+# service account for hcc-enrollment service
 # NOTE: Each IPA server gets its own service account
-dn: krbprincipalname=consoledot-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
+dn: krbprincipalname=hcc-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
 default: objectClass: krbprincipal
 default: objectClass: krbprincipalaux
 default: objectClass: krbticketpolicyaux
@@ -49,73 +49,73 @@ default: objectClass: ipaservice
 default: objectClass: pkiuser
 default: objectClass: ipakrbprincipal
 default: objectClass: top
-default: krbcanonicalname: consoledot-enrollment/$FQDN@$REALM
-default: krbprincipalname: consoledot-enrollment/$FQDN@$REALM
+default: krbcanonicalname: hcc-enrollment/$FQDN@$REALM
+default: krbprincipalname: hcc-enrollment/$FQDN@$REALM
 default: managedby: fqdn=$FQDN,cn=computers,cn=accounts,$SUFFIX
-default: ipaKrbPrincipalAlias: consoledot-enrollment/$FQDN@$REALM
+default: ipaKrbPrincipalAlias: hcc-enrollment/$FQDN@$REALM
 default: ipaUniqueID: autogenerate
 
-# roles and privileges for consoleDot enrollment
-dn: cn=consoleDot Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
+# roles and privileges for HCC enrollment
+dn: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 default: objectClass: groupofnames
 default: objectClass: nestedgroup
 default: objectClass: top
-default: cn: consoleDot Enrollment Administrators
-default: description: Enrollment Administrators for Red Hat consoleDot
-add: member: krbprincipalname=consoledot-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
+default: cn: HCC Enrollment Administrators
+default: description: Enrollment Administrators for Red Hat Hybrid Cloud Console
+add: member: krbprincipalname=hcc-enrollment/$FQDN@$REALM,cn=services,cn=accounts,$SUFFIX
 
-dn: cn=consoleDot Host Administrators,cn=privileges,cn=pbac,$SUFFIX
+dn: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 default: objectClass: groupofnames
 default: objectClass: nestedgroup
 default: objectClass: top
-default: cn: consoleDot Host Administrators
-default: description: Limited Host Administrators for consoleDot enrollment
-add: member: cn=consoleDot Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
+default: cn: HCC Host Administrators
+default: description: Limited Host Administrators for Hybrid Cloud Console auto-enrollment
+add: member: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 
 dn: cn=System: Add Hosts,cn=permissions,cn=pbac,$SUFFIX
-add: member: cn=consoleDot Host Administrators,cn=privileges,cn=pbac,$SUFFIX
+add: member: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 
-dn: cn=System: Modify consoleDot host attributes,cn=permissions,cn=pbac,$SUFFIX
-add: member: cn=consoleDot Host Administrators,cn=privileges,cn=pbac,$SUFFIX
+dn: cn=System: Modify HCC host attributes,cn=permissions,cn=pbac,$SUFFIX
+add: member: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 
 # Index
-dn: cn=consoleDotSubscriptionId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
-default:cn: consoleDotSubscriptionId
+dn: cn=HCCSubscriptionId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
+default:cn: HCCSubscriptionId
 default:ObjectClass: top
 default:ObjectClass: nsIndex
 default:nsSystemIndex: false
 add:nsIndexType: eq
 add:nsIndexType: pres
 
-dn: cn=consoleDotInventoryId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
-default:cn: consoleDotInventoryId
+dn: cn=HCCInventoryId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
+default:cn: HCCInventoryId
 default:ObjectClass: top
 default:ObjectClass: nsIndex
 default:nsSystemIndex: false
 default:nsIndexType: eq
 default:nsIndexType: pres
 
-dn: cn=consoleDotCertSubject,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
-default:cn: consoleDotCertSubject
+dn: cn=HCCCertSubject,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
+default:cn: HCCCertSubject
 default:ObjectClass: top
 default:ObjectClass: nsIndex
 default:nsSystemIndex: false
 default:nsIndexType: eq
 default:nsIndexType: pres
 
-# Ensure that consoleDotCertSubjects are unique. The unique constraint
+# Ensure that HCCCertSubjects are unique. The unique constraint
 # prevents multiple host entries for a RHSM cert.
-dn: cn=consoleDotCertSubject uniqueness,cn=plugins,cn=config
+dn: cn=HCCCertSubject uniqueness,cn=plugins,cn=config
 default:objectClass: top
 default:objectClass: nsSlapdPlugin
 default:objectClass: extensibleObject
-default:cn: consoleDotCertSubject uniqueness
+default:cn: HCCCertSubject uniqueness
 default:nsslapd-pluginDescription: Enforce unique attribute values
 default:nsslapd-pluginPath: libattr-unique-plugin
 default:nsslapd-pluginInitfunc: NSUniqueAttr_Init
 default:nsslapd-pluginType: preoperation
 default:nsslapd-pluginEnabled: on
-default:uniqueness-attribute-name: consoleDotCertSubject
+default:uniqueness-attribute-name: HCCCertSubject
 default:uniqueness-subtrees: $SUFFIX
 default:uniqueness-exclude-subtrees: cn=compat,$SUFFIX
 default:nsslapd-plugin-depends-on-type: database
@@ -123,8 +123,9 @@ default:nsslapd-pluginId: NSUniqueAttr
 default:nsslapd-pluginVersion: 1.1.0
 default:nsslapd-pluginVendor: Fedora Project
 
-# Retrieve keytab for service principal
-plugin: update_consoledot_service
+# Setup keytab for hcc-enrollment service
+# Auto-configure global HCC organization id
+plugin: update_hcc
 
 # Update Permissions (keep this at the bottom of the file)
 plugin: update_managed_permissions

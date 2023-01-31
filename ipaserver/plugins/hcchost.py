@@ -1,9 +1,9 @@
 #
-# IPA plugin for Red Hat consoleDot
+# IPA plugin for Red Hat Hybrid Cloud Console
 # Copyright (C) 2022  Christian Heimes <cheimes@redhat.com>
 # See COPYING for license
 #
-"""IPA plugin for Red Hat consoleDot
+"""IPA plugin for Red Hat Hybrid Cloud Console
 """
 from ipalib import _
 from ipalib import errors
@@ -17,51 +17,51 @@ from ipaserver.plugins.internal import i18n_messages
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 UUID_ERRMSG = "must be an UUID"
 
-consoledot_hostgroup = "consoledot-enrollment"
+hcc_hostgroup = "hcc-enrollment"
 
-consoledot_host_class = "consoledothost"
+hcc_host_class = "hcchost"
 
-if consoledot_host_class not in host.possible_objectclasses:
-    host.possible_objectclasses.append(consoledot_host_class)
+if hcc_host_class not in host.possible_objectclasses:
+    host.possible_objectclasses.append(hcc_host_class)
 
-consoledot_host_attributes = {
-    "consoledotorgid",
-    "consoledotsubscriptionid",
-    "consoledotinventoryid",
-    "consoledotcertsubject",
+hcc_host_attributes = {
+    "hccorgid",
+    "hccsubscriptionid",
+    "hccinventoryid",
+    "hcccertsubject",
 }
 
-host.default_attributes.extend(list(consoledot_host_attributes))
+host.default_attributes.extend(list(hcc_host_attributes))
 
 
 takes_params = (
     Int(
-        "consoledotorgid?",
-        cli_name="consoledotorgid",
-        label=_("organization id"),
+        "hccorgid?",
+        cli_name="hccorgid",
+        label=_("HCC organization id"),
         minvalue=1,
         # no_option?
         flags={"no_create", "no_update", "no_search"},
     ),
     Str(
-        "consoledotsubscriptionid?",
-        cli_name="consoledotsubscriptionid",
-        label=_("subscription id"),
+        "hccsubscriptionid?",
+        cli_name="hccsubscriptionid",
+        label=_("HCC subscription id"),
         pattern=UUID_RE,
         pattern_errmsg=UUID_ERRMSG,
         normalizer=lambda value: value.strip().lower(),
     ),
     Str(
-        "consoledotinventoryid?",
-        cli_name="consoledotinventoryid",
-        label=_("inventory id"),
+        "hccinventoryid?",
+        cli_name="hccinventoryid",
+        label=_("HCC inventory id"),
         pattern=UUID_RE,
         pattern_errmsg=UUID_ERRMSG,
         normalizer=lambda value: value.strip().lower(),
     ),
     Str(
-        "consoledotcertsubject?",
-        cli_name="consoledotcertsubject",
+        "hcccertsubject?",
+        cli_name="hcccertsubject",
         label=_("RHSM certificate subject"),
         # no_option?
         flags={"no_create", "no_update", "no_search"},
@@ -73,16 +73,16 @@ host.takes_params += takes_params
 
 host.managed_permissions.update(
     {
-        "System: Read consoleDot host attributes": {
+        "System: Read HCC host attributes": {
             "replaces_global_anonymous_aci": True,
             "ipapermbindruletype": "all",
             "ipapermright": {"read", "search", "compare"},
-            "ipapermtargetfilter": [f"(objectclass={consoledot_host_class})"],
-            "ipapermdefaultattr": consoledot_host_attributes,
+            "ipapermtargetfilter": [f"(objectclass={hcc_host_class})"],
+            "ipapermdefaultattr": hcc_host_attributes,
         },
-        "System: Modify consoleDot host attributes": {
+        "System: Modify HCC host attributes": {
             "ipapermright": {"write"},
-            "ipapermdefaultattr": consoledot_host_attributes,
+            "ipapermdefaultattr": hcc_host_attributes,
             "default_privileges": {"Host Administrators"},
         },
     },
@@ -91,70 +91,60 @@ host.managed_permissions.update(
 
 def get_config_orgid(ldap):
     config = ldap.get_ipa_config()
-    cfg_orgids = config.get("consoledotorgid")
+    cfg_orgids = config.get("hccorgid")
     if cfg_orgids is None or len(cfg_orgids) != 1:
-        msg = _("consoleDot is not configured globally")
+        msg = _("HCC org id is not configured globally")
         # raises for subscription id
-        raise errors.ValidationError(
-            name="consoledotsubscriptionid", errors=msg
-        )
+        raise errors.ValidationError(name="hccsubscriptionid", errors=msg)
     else:
         return cfg_orgids[0]
 
 
-def check_consoledot_attr(ldap, dn, entry):
-    """Common function to verify consoleDot host attributes"""
-    subscriptionid = entry.get("consoledotsubscriptionid")
+def check_hcc_attr(ldap, dn, entry):
+    """Common function to verify HCC host attributes"""
+    subscriptionid = entry.get("hccsubscriptionid")
     if subscriptionid is not None:
-        orgid = entry.get("consoledotorgid")
+        orgid = entry.get("hccorgid")
         if orgid is None:
             orgid = get_config_orgid(ldap)
-            entry["consoledotorgid"] = orgid
-        entry["consoledotcertsubject"] = str(
+            entry["hccorgid"] = orgid
+        entry["hcccertsubject"] = str(
             DN(("O", orgid), ("CN", subscriptionid))
         )
     else:
-        entry.pop("consoledotorgid")
-        entry.pop("consoledotcertsubject")
+        entry.pop("hccorgid")
+        entry.pop("hcccertsubject")
 
 
-def host_add_consoledot_precb(
-    self, ldap, dn, entry, attrs_list, *keys, **options
-):
-    if consoledot_host_attributes.intersection(options):
-        # add consoleDot object class
-        if not self.obj.has_objectclass(
-            entry["objectclass"], consoledot_host_class
-        ):
-            entry["objectclass"].append(consoledot_host_class)
-        # check consoleDot attributes
-        check_consoledot_attr(ldap, dn, entry)
+def host_add_hcc_precb(self, ldap, dn, entry, attrs_list, *keys, **options):
+    if hcc_host_attributes.intersection(options):
+        # add HCC object class
+        if not self.obj.has_objectclass(entry["objectclass"], hcc_host_class):
+            entry["objectclass"].append(hcc_host_class)
+        # check HCC attributes
+        check_hcc_attr(ldap, dn, entry)
     return dn
 
 
-host_add.register_pre_callback(host_add_consoledot_precb)
+host_add.register_pre_callback(host_add_hcc_precb)
 
 
-def host_mod_consoledot_precb(
-    self, ldap, dn, entry, attrs_list, *keys, **options
-):
-    if consoledot_host_attributes.intersection(options):
-        # add consoleDot object class
+def host_mod_hcc_precb(self, ldap, dn, entry, attrs_list, *keys, **options):
+    if hcc_host_attributes.intersection(options):
+        # add HCC object class
         if "objectclass" not in entry:
             entry_oc = ldap.get_entry(dn, ["objectclass"])
             entry["objectclass"] = entry_oc["objectclass"]
-        if not self.obj.has_objectclass(
-            entry["objectclass"], consoledot_host_class
-        ):
-            entry["objectclass"].append(consoledot_host_class)
-        # check consoleDot attributes
-        check_consoledot_attr(ldap, dn, entry)
+        if not self.obj.has_objectclass(entry["objectclass"], hcc_host_class):
+            entry["objectclass"].append(hcc_host_class)
+        # check HCC attributes
+        check_hcc_attr(ldap, dn, entry)
     return dn
 
 
-host_mod.register_pre_callback(host_mod_consoledot_precb)
+host_mod.register_pre_callback(host_mod_hcc_precb)
 
-i18n_messages.messages["consoledothost"] = {
-    "name": _("consoleDot host"),
-    "inventory": _("consoleDot inventory"),
+i18n_messages.messages["hcchost"] = {
+    "name": _("Hybrid Cloud Console host"),
+    "inventory": _("Hybrid Cloud Console inventory"),
 }
