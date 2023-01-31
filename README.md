@@ -160,7 +160,7 @@ account.
 6) Install plugin and other services
 
 ```
-dnf copr enable copr.devel.redhat.com/cheimes/hmsidm
+dnf copr enable copr.devel.redhat.com/cheimes/ipa-hcc
 dnf install --refresh ipa-hcc-registration-service ipa-hcc-server-plugin
 ```
 
@@ -169,7 +169,7 @@ dnf install --refresh ipa-hcc-registration-service ipa-hcc-server-plugin
 1) Install packages
 
 ```
-dnf copr enable copr.devel.redhat.com/cheimes/hmsidm
+dnf copr enable copr.devel.redhat.com/cheimes/ipa-hcc
 dnf install --refresh ipa-client ipa-hcc-client-enrollment
 ```
 
