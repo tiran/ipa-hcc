@@ -69,7 +69,7 @@ extension.
 python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
 
 if [ $? -eq 0 ]; then
-    /usr/sbin/ipa-ldap-updater --quiet --log-file=/var/log/ipa-hcc-server-plugin.log \
+    /usr/sbin/ipa-ldap-updater --quiet \
         --schema-file=%{_datadir}/ipa/schema.d/85-hcc.ldif \
         %{_datadir}/ipa/updates/85-hcc.update
 
@@ -118,7 +118,7 @@ python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 i
 
 if [ $? -eq 0 ]; then
     # update/create HCC enrollment service
-    /usr/sbin/ipa-ldap-updater --quiet --log-file=/var/log/ipa-hcc-registration-service.log \
+    /usr/sbin/ipa-ldap-updater --quiet \
         %{_datadir}/ipa/updates/86-hcc-enrollment-service.update
 
     # pick up new gssproxy and HTTPD config (restart if running)

@@ -54,6 +54,9 @@ default: cn: HCC Host Administrators
 default: description: Limited Host Administrators for Hybrid Cloud Console auto-enrollment
 add: member: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 
+# update/create permissions (before modifying any permissions)
+plugin: update_managed_permissions
+
 dn: cn=System: Add Hosts,cn=permissions,cn=pbac,$SUFFIX
 add: member: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 
@@ -108,6 +111,3 @@ default:nsslapd-pluginVendor: Fedora Project
 # Add RHSM cert of KDC config
 # Auto-configure global HCC organization id
 plugin: update_hcc
-
-# Update Permissions (keep this at the bottom of the file)
-plugin: update_managed_permissions
