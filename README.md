@@ -108,24 +108,72 @@ The `update_hcc` update plugin:
 
 ## Server test setup
 
-Create a [Red Hat API](https://access.redhat.com/articles/3626371) refresh
-token and store it in file `refresh_token`. `install.sh` will copy it to
-`/etc/ipa`. **WARNING** the token has the same privileges as your user
+1) Prepare host
+
+```
+$ hostnamectl set-hostname ipaserver.ipahcc.test
+$ vi /etc/hosts
+# add public IPv4 address to /etc/hosts
+$ dnf install ipa-server ipa-server-dns
+```
+
+2) Install an IPA server with DNS
+
+```
+$ ipa-server-install -n ipahcc.test -r IPAHCC.TEST -p DMSecret123 -a Secret123 \
+     --setup-dns --auto-forwarders --no-dnssec-validation -U
+```
+
+3) Configure `trusted_network` ACL in `/etc/named/*.conf` and
+`systemctl restart named.service`, e.g.
+
+```
+# /etc/named/ipa-ext.conf
+acl "trusted_network" {
+   localnets;
+   localhost;
+   10.0.0.0/8;
+};
+```
+
+```
+# /etc/named/ipa-options-ext.conf
+allow-recursion { trusted_network; };
+allow-query-cache { trusted_network; };
+listen-on-v6 { any; };
+dnssec-validation no;
+```
+
+4) Add client hostname to DNS
+
+```
+$ kinit admin
+$ ipa dnsrecord-add ipahcc.test ipaclient1 --a-rec=...
+```
+
+5) Create a [Red Hat API](https://access.redhat.com/articles/3626371) refresh
+token and save it in `/etc/ipa/refresh_token`.
+
+**WARNING** the token has the same privileges as your user
 account.
 
-Install plugin and other services
-```
-./install.sh
-```
+6) Install plugin and other services
 
-- creates `ipahcc` system user
-- copies plugins, UI extension, schema extension, and updates
-- runs updater
-
+```
+dnf copr enable copr.devel.redhat.com/cheimes/hmsidm
+dnf install --refresh ipa-hcc-registration-service ipa-hcc-server-plugin
+```
 
 ## Client test setup
 
-Current RHEL releases of `ipa-client` are missing PKINIT option.
+1) Install packages
+
+```
+dnf copr enable copr.devel.redhat.com/cheimes/hmsidm
+dnf install --refresh ipa-client ipa-hcc-client-enrollment
+```
+
+2) Current RHEL releases of `ipa-client` are missing PKINIT option.
 
 RHEL 9.1 hack:
 
@@ -140,23 +188,16 @@ curl -o /usr/lib/python3.6/site-packages/ipaclient/install/client.py https://raw
 curl -o /usr/lib/python3.6/site-packages/ipalib/install/kinit.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-9-11/ipalib/install/kinit.py
 ```
 
-1) Install packages
-
-```
-dnf copr enable copr.devel.redhat.com/cheimes/hmsidm
-dnf install ipa-hcc-client-enrollment
-```
-
-2) Configure DNS and hostname. The client must be able to discover its
+3) Configure DNS and hostname. The client must be able to discover its
 IPA domain and IPA servers with DNS SRV discovery.
 
-3) Enable the auto-enrollment service
+4) Enable the auto-enrollment service
 
 ```
 systemctl enable ipa-hcc-auto-enrollment.service
 ```
 
-2) Register system with RHSM and Insights
+5) Register system with RHSM and Insights
 
 ```
 rhc connect
