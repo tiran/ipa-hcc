@@ -17,8 +17,6 @@ from ipaserver.plugins.internal import i18n_messages
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 UUID_ERRMSG = "must be an UUID"
 
-hcc_hostgroup = "hcc-enrollment"
-
 hcc_host_class = "hcchost"
 
 if hcc_host_class not in host.possible_objectclasses:

@@ -47,7 +47,13 @@ class update_hcc_enrollment_service(Updater):
             self.api.Command.service_show(name)
         except errors.NotFound:
             logger.info("Adding service '%s'", name)
-            self.api.Command.service_add(name)
+            # force is required to skip the 'verify_host_resolvable' check
+            # in service_add pre-callback. ipa-server-install runs updates
+            # before it installs DNS service.
+            self.api.Command.service_add(
+                name,
+                force=True,
+            )
             logger.info(
                 "Adding service '%s' to role '%s'",
                 name,
