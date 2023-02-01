@@ -48,20 +48,6 @@ ipa-client-install \
 --unattended
 """
 
-# Hybrid Cloud Console Inventory and access token
-# see https://access.redhat.com/articles/3626371
-REFRESH_TOKEN = None
-TOKEN_URL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
-CLIENT_ID = "rhsm-api"
-INVENTORY_HOSTS_API = "https://console.redhat.com/api/inventory/v1/hosts"
-
-
-try:
-    with open("/etc/ipa/refresh_token", "r") as f:
-        REFRESH_TOKEN = f.read().strip()
-except FileNotFoundError:
-    pass
-
 
 class HTTPException(Exception):
     def __init__(self, code, msg):
@@ -108,7 +94,9 @@ class Application:
         return int(nas[0].value), nas[1].value
 
     def get_access_token(
-        self, refresh_token: str, url: str = TOKEN_URL
+        self,
+        refresh_token_file: str = hccplatform.REFRESH_TOKEN_FILE,
+        url: str = hccplatform.TOKEN_URL,
     ) -> str:
         """Get a bearer access token from an offline token
 
@@ -121,13 +109,21 @@ class Application:
         if self.access_token and time.monotonic() < self.valid_until:
             return self.access_token
 
-        logger.debug("Getting refresh token from %s", url)
-        if refresh_token is None:
-            raise ValueError("REFRESH_TOKEN not set")
+        try:
+            with open(refresh_token_file, "r") as f:
+                refresh_token = f.read().strip()
+        except IOError as e:
+            logger.error(
+                "Unable to read refresh token from '%s': %s",
+                refresh_token_file,
+                e,
+            )
+            raise
+
         data = {
             "grant_type": "refresh_token",
-            "client_id": CLIENT_ID,
-            "refresh_token": REFRESH_TOKEN,
+            "client_id": hccplatform.TOKEN_CLIENT_ID,
+            "refresh_token": refresh_token,
         }
         start = time.monotonic()
         resp = self.session.post(url, data)
@@ -144,7 +140,10 @@ class Application:
         return self.access_token
 
     def lookup_inventory(
-        self, rhsm_id: str, access_token: str, url: str = INVENTORY_HOSTS_API
+        self,
+        rhsm_id: str,
+        access_token: str,
+        url: str = hccplatform.INVENTORY_HOSTS_API,
     ) -> Tuple[str, str]:
         """Lookup host by subscription manager id
 
@@ -262,7 +261,7 @@ class Application:
             org_id,
             rhsm_id,
         )
-        access_token = self.get_access_token(REFRESH_TOKEN)
+        access_token = self.get_access_token()
         fqdn, inventory_id = self.lookup_inventory(
             rhsm_id, access_token=access_token
         )
@@ -327,9 +326,18 @@ def test(rhsm_id: str):
     # import urllib3.util.connection
     # urllib3.util.connection.HAS_IPV6 = False
 
-    access_token = application.get_access_token(REFRESH_TOKEN)
+    # switch effective UID for gssproxy
+    if os.geteuid() == 0:
+        uid = hccplatform.HCC_SERVICE_USER.uid
+        os.setreuid(uid, uid)
+
+    access_token = application.get_access_token()
     application.lookup_inventory(rhsm_id, access_token)
     application.lookup_inventory(rhsm_id, access_token)
+
+    application.connect_ipa()
+    print(application.get_ipa_org_id())
+    application.disconnect_ipa()
 
 
 if __name__ == "__main__" and len(sys.argv) == 2:

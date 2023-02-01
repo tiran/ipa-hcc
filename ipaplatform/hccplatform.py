@@ -25,3 +25,10 @@ HMSIDM_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"
 
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
 RHSM_KEY = "/etc/pki/consumer/key.pem"
+
+# Hybrid Cloud Console and Host Based Inventory API
+# see https://access.redhat.com/articles/3626371
+TOKEN_URL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
+TOKEN_CLIENT_ID = "rhsm-api"
+REFRESH_TOKEN_FILE = "/etc/ipa/refresh_token"
+INVENTORY_HOSTS_API = "https://console.redhat.com/api/inventory/v1/hosts"
