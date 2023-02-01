@@ -84,8 +84,11 @@ class update_hcc_enrollment_service(Updater):
             except Exception as e:
                 # keytab from previous installation?
                 logger.debug("keytab %s is outdated: %s", keytab, e)
+                ipautil.remove_file(keytab)
             else:
-                logger.debug("keytab %s exists, nothing to do", keytab)
+                logger.debug(
+                    "keytab %s exists and works, nothing to do", keytab
+                )
                 return False
 
         # fmt: off
