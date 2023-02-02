@@ -3,17 +3,24 @@
 %global package_name ipa-hcc
 %global alt_name freeipa-hcc
 %global ipa_name ipa
-%if 0%{?rhel} < 9
-%global ipa_version 4.9.10
+
+# PKINIT feature was added to ipa-client in 4.9.11 and 4.10.1.
+# The server plugins and registration service does not depend
+# on new features.
+%if 0%{?rhel} == 8
+%global ipa_client_pkinit_version 4.9.11
+%global ipa_version 4.9
 %else
-%global ipa_version 4.10.0
+%global ipa_client_pkinit_version 4.10.1
+%global ipa_version 4.10
 %endif
 %else
 # Fedora
 %global package_name ipa-hcc
 %global alt_name freeipa-hcc
 %global ipa_name freeipa
-%global ipa_version 4.10.0
+%global ipa_client_pkinit_version 4.10.1
+%global ipa_version 4.10
 %endif
 
 Name:           %{package_name}
@@ -89,8 +96,7 @@ BuildArch: noarch
 Provides:       %{alt_name}-registration-service = %{version}
 Conflicts: %{alt_name}-registration-service
 Obsoletes: %{alt_name}-registration-service < %{version}
-# Don't allow installation on an IPA server
-# Conflicts:       {ipa_name}-server
+# Don't allow installation on an IPA server?
 Requires: %{package_name}-common = %{version}
 Requires: httpd
 Requires: python3-mod_wsgi
@@ -137,6 +143,7 @@ Provides:  %{alt_name}-client-enrollment = %{version}
 Conflicts: %{alt_name}-client-enrollment
 Obsoletes: %{alt_name}-client-enrollment < %{version}
 Requires: %{package_name}-common = %{version}
+Requires: %{ipa_name}-client >= %{ipa_client_pkinit_version}
 Requires: python3-requests
 Requires: rhc
 %{?systemd_requires}
