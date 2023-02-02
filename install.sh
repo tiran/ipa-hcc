@@ -16,10 +16,14 @@ getent group ipaapi >/dev/null || groupadd -f -r ipaapi
 getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d /usr/share/ipa-hcc -c "IPA Hybrid Cloud Console enrollment service" ipahcc
 
 # directories, cache directory must be writeable by user
+mkdir /etc/ipa/hcc
 mkdir -p /usr/share/ipa-hcc
 mkdir -p /usr/libexec/ipa-hcc
 mkdir -p /var/cache/ipa-hcc
+chmod 750 -R /var/cache/ipa-hcc
 chown ipahcc:ipaapi -R /var/cache/ipa-hcc
+chmod 750 -R /etc/ipa/hcc
+chown ipahcc:root -R /etc/ipa/hcc
 semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-hcc(/.*)?' || :
 restorecon -R /var/cache/ipa-hcc || :
 

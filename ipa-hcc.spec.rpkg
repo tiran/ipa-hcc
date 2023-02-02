@@ -186,32 +186,35 @@ for j in $(find ui/ -name '*.js') ; do
     %__cp -p $j $destdir/
 done
 
-mkdir -p %{buildroot}%{_sysconfdir}/httpd/conf.d/
+%__mkdir_p %{buildroot}%{_sysconfdir}/httpd/conf.d/
 cp apache/ipa-hcc.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
 
-mkdir -p %{buildroot}%{_sysconfdir}/gssproxy
+%__mkdir_p %{buildroot}%{_sysconfdir}/gssproxy
 cp gssproxy/85-ipa-hcc.conf %{buildroot}%{_sysconfdir}/gssproxy/85-ipa-hcc.conf
 
-mkdir -p %{buildroot}%{_sharedstatedir}/ipa/gssproxy
+%__mkdir_p %{buildroot}%{_sharedstatedir}/ipa/gssproxy
 touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 
-mkdir -p %{buildroot}%{_datadir}/ipa-hcc
-mkdir -p %{buildroot}%{_datadir}/ipa-hcc/cacerts
+%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc
+%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc/cacerts
 cp -p wsgi/hcc_registration_service.py %{buildroot}%{_datadir}/ipa-hcc/
 cp -p rhsm/redhat-candlepin-bundle.pem %{buildroot}%{_datadir}/ipa-hcc/
 cp -pd rhsm/cacerts/* %{buildroot}%{_datadir}/ipa-hcc/cacerts/
 
-mkdir -p %{buildroot}%{_localstatedir}/cache/ipa-hcc
+%__mkdir_p %{buildroot}%{_sysconfdir}/ipa/hcc
 
-mkdir -p %{buildroot}%{_unitdir}
+%__mkdir_p %{buildroot}%{_localstatedir}/cache/ipa-hcc
+
+%__mkdir_p %{buildroot}%{_unitdir}
 cp -p client/ipa-hcc-auto-enrollment.service %{buildroot}%{_unitdir}/
-mkdir -p %{buildroot}%{_libexecdir}/ipa/hcc/
+%__mkdir_p %{buildroot}%{_libexecdir}/ipa/hcc/
 cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
 
 
 %files common
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
+%attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
 %dir %{_datadir}/ipa-hcc/
 %{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-hcc/cacerts

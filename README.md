@@ -157,7 +157,15 @@ $ ipa dnsrecord-add ipahcc.test ipaclient1 --a-rec=...
 ```
 
 5) Create a [Red Hat API](https://access.redhat.com/articles/3626371) refresh
-token and save it in `/etc/ipa/refresh_token`.
+token and save it in `/etc/ipa/hcc/refresh_token`.
+
+```
+cat > /etc/ipa/hcc/refresh_token
+...
+EOF
+chown ipahcc:root /etc/ipa/hcc/refresh_token
+chmod 640 /etc/ipa/hcc/refresh_token
+```
 
 **WARNING** the token has the same privileges as your user
 account.

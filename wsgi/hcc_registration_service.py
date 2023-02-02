@@ -129,9 +129,13 @@ class Application:
         dur = time.monotonic() - start
         if resp.status_code >= 400:
             raise HTTPException(
-                resp.status_code, f"get_access_token() failed: {resp.reason}"
+                resp.status_code,
+                f"get_access_token() failed: {resp.reason}",
             )
-        logger.debug("Got access token from refresh token in %0.3fs.", dur)
+        logger.debug(
+            "Got access token from refresh token in %0.3fs.",
+            dur,
+        )
         j = resp.json()
         self.access_token = j["access_token"]
         # 10 seconds slack
@@ -158,7 +162,8 @@ class Application:
             # reset access token
             self.access_token = None
             raise HTTPException(
-                resp.status_code, f"lookup_inventory() failed: {resp.reason}"
+                resp.status_code,
+                f"lookup_inventory() failed: {resp.reason}",
             )
 
         j = resp.json()
@@ -214,12 +219,17 @@ class Application:
         return self.org_id
 
     def update_ipa(
-        self, org_id: int, rhsm_id: str, inventory_id: str, fqdn: str
+        self,
+        org_id: int,
+        rhsm_id: str,
+        inventory_id: str,
+        fqdn: str,
     ):
         ipa_org_id = self.get_ipa_org_id()
         if org_id != ipa_org_id:
             raise HTTPException(
-                403, f"Invalid org_id: {org_id} != {ipa_org_id}"
+                403,
+                f"Invalid org_id: {org_id} != {ipa_org_id}",
             )
         try:
             api.Command.host_add(
@@ -240,7 +250,10 @@ class Application:
                 )
                 logger.info("Updated IPA host %s", fqdn)
             except errors.EmptyModlist:
-                logger.info("Nothing to update for IPA host %s", fqdn)
+                logger.info(
+                    "Nothing to update for IPA host %s",
+                    fqdn,
+                )
 
     def get_ca_bundle(self):
         with open(paths.IPA_CA_CRT, "r") as f:

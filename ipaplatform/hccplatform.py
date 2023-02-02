@@ -29,10 +29,31 @@ RHSM_KEY = "/etc/pki/consumer/key.pem"
 
 # Hybrid Cloud Console and Host Based Inventory API
 # see https://access.redhat.com/articles/3626371
-TOKEN_URL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
 TOKEN_CLIENT_ID = "rhsm-api"
-REFRESH_TOKEN_FILE = "/etc/ipa/refresh_token"
-INVENTORY_HOSTS_API = "https://console.redhat.com/api/inventory/v1/hosts"
-INVENTORY_HOSTS_CERT_API = (
-    "https://cert.console.redhat.com/api/inventory/v1/hosts"
-)
+REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"
+
+# prod / stage
+TARGET = "prod"
+
+# fmt: off
+if TARGET == "prod":
+    # production
+    SSO_TOKEN_URL = (
+        "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
+    )
+    INVENTORY_HOSTS_API = (
+        "https://console.redhat.com/api/inventory/v1/hosts"
+    )
+    INVENTORY_HOSTS_CERT_API = (
+        "https://cert.console.redhat.com/api/inventory/v1/hosts"
+    )
+elif TARGET == "stage":
+    SSO_TOKEN_URL = (
+        "https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
+    )
+    INVENTORY_HOSTS_API = (
+        "https://console.stage.redhat.com/api/inventory/v1/hosts"
+    )
+    INVENTORY_HOSTS_CERT_API = (
+        "https://cert.stage.console.redhat.com/api/inventory/v1/hosts"
+    )
