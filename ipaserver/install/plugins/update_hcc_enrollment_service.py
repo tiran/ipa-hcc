@@ -47,6 +47,8 @@ class update_hcc_enrollment_service(Updater):
             self.api.Command.service_show(name)
         except errors.NotFound:
             logger.info("Adding service '%s'", name)
+            # Remove stale keytab
+            ipautil.remove_file(hccplatform.HCC_SERVICE_KEYTAB)
             # force is required to skip the 'verify_host_resolvable' check
             # in service_add pre-callback. ipa-server-install runs updates
             # before it installs DNS service.

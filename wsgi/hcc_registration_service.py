@@ -14,7 +14,8 @@ from ipaplatform.paths import paths
 from ipaplatform import hccplatform
 
 # must be set before ipalib or ipapython is imported
-os.environ["XDG_CACHE_HOME"] = "/var/cache/ipa-hcc"
+os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_SERVICE_CACHE_DIR
+os.environ["KRB5CCNAME"] = hccplatform.HCC_SERVICE_KRB5CCNAME
 os.environ["GSS_USE_PROXY"] = "1"
 
 from ipalib import api, errors  # noqa: E402
@@ -22,8 +23,6 @@ from ipalib import api, errors  # noqa: E402
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")
 logger.setLevel(logging.DEBUG)
-
-os.environ["KRB5CCNAME"] = hccplatform.HCC_SERVICE_KRB5CCNAME
 
 SCRIPT = """\
 #!/bin/sh

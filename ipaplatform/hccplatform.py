@@ -12,6 +12,7 @@ from ipaplatform.constants import constants
 HCC_SERVICE = "hcc-enrollment"
 HCC_SERVICE_USER = User("ipahcc")
 HCC_SERVICE_GROUP = constants.IPAAPI_GROUP
+HCC_SERVICE_CACHE_DIR = "/var/cache/ipa-hcc"
 
 # IPA's gssproxy directory comes with correct SELinux rule.
 HCC_SERVICE_KEYTAB = "/var/lib/ipa/gssproxy/hcc-enrollment.keytab"
@@ -32,3 +33,6 @@ TOKEN_URL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-
 TOKEN_CLIENT_ID = "rhsm-api"
 REFRESH_TOKEN_FILE = "/etc/ipa/refresh_token"
 INVENTORY_HOSTS_API = "https://console.redhat.com/api/inventory/v1/hosts"
+INVENTORY_HOSTS_CERT_API = (
+    "https://cert.console.redhat.com/api/inventory/v1/hosts"
+)

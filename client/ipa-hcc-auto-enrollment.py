@@ -12,11 +12,9 @@ from ipaclient import discovery
 from ipalib.constants import FQDN
 from ipaplatform.paths import paths
 
-from ipaplatform.hccplatform import RHSM_CERT, RHSM_KEY
+from ipaplatform import hccplatform
 
 logger = logging.getLogger(__name__)
-
-INVENTORY_HOSTS = "https://cert.console.redhat.com/api/inventory/v1/hosts"
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -71,7 +69,7 @@ def hcc_register(args, server):
     r = requests.get(
         url,
         verify=args.cacert,
-        cert=(RHSM_CERT, RHSM_KEY),
+        cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
     )
     r.raise_for_status()
     return r.content
@@ -83,10 +81,10 @@ def wait_for_inventory_host(args):
     Sometimes it takes a while until a host appears in Insights.
     """
     sess = requests.Session()
-    sess.cert = (RHSM_CERT, RHSM_KEY)
+    sess.cert = (hccplatform.RHSM_CERT, hccplatform.RHSM_KEY)
     for i in range(5):
         try:
-            resp = sess.get(INVENTORY_HOSTS)
+            resp = sess.get(hccplatform.INVENTORY_HOSTS_CERT_API)
             resp.raise_for_status()
             j = resp.json()
             # 'j["total"] != 0' also works. A host sees only its record.
@@ -141,7 +139,7 @@ def main():
 
         cmd = [
             "ipa-client-install",
-            f"--pkinit-identity=FILE:{RHSM_CERT},{RHSM_KEY}",
+            f"--pkinit-identity=FILE:{hccplatform.RHSM_CERT},{hccplatform.RHSM_KEY}",
             # use HMSIDM_CA_BUNDLE_PEM here?
             f"--pkinit-anchor=FILE:{f.name}",
             "--unattended",
