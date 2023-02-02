@@ -69,7 +69,7 @@ TARGET = _detect_environment()
 # fmt: off
 if TARGET == "prod":
     # production
-    SSO_TOKEN_URL = (
+    TOKEN_URL = (
         "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
     )
     INVENTORY_HOSTS_API = (
@@ -79,7 +79,7 @@ if TARGET == "prod":
         "https://cert.console.redhat.com/api/inventory/v1/hosts"
     )
 elif TARGET == "stage":
-    SSO_TOKEN_URL = (
+    TOKEN_URL = (
         "https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
     )
     INVENTORY_HOSTS_API = (
