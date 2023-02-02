@@ -5,6 +5,7 @@
 #
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
+import os
 import configparser
 import logging
 
@@ -17,7 +18,17 @@ logger = logging.getLogger(__name__)
 def _detect_environment(
     rhsm_conf: str = "/etc/rhsm/rhsm.conf", default: str = "prod"
 ) -> str:
-    """Detect environment (stage, prod) from RHSM server name"""
+    """Detect environment (stage, prod) from RHSM server name
+
+    TODO: Does not work, SELinux prevents read access from httpd_t
+    to hsmcertd_config_t context::
+
+       avc:  denied  { read } for  pid=34530 comm="httpd" name="rhsm.conf"
+       dev="vda4" ino=8401286 scontext=system_u:system_r:httpd_t:s0
+       tcontext=system_u:object_r:rhsmcertd_config_t:s0 tclass=file
+       permissive=0
+
+    """
     c = configparser.ConfigParser()
     try:
         with open(rhsm_conf) as f:
@@ -62,12 +73,17 @@ RHSM_KEY = "/etc/pki/consumer/key.pem"
 # see https://access.redhat.com/articles/3626371
 TOKEN_CLIENT_ID = "rhsm-api"
 REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"
+# if file is present, use stage URLs
+STAGE_COOKIE_FILE = "/etc/ipa/hcc/stage"
 
 # prod / stage
-TARGET = _detect_environment()
+if os.path.isfile(STAGE_COOKIE_FILE):
+    ENVIRONMENT = "stage"
+else:
+    ENVIRONMENT = "prod"
 
 # fmt: off
-if TARGET == "prod":
+if ENVIRONMENT == "prod":
     # production
     TOKEN_URL = (
         "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
@@ -78,7 +94,7 @@ if TARGET == "prod":
     INVENTORY_HOSTS_CERT_API = (
         "https://cert.console.redhat.com/api/inventory/v1/hosts"
     )
-elif TARGET == "stage":
+else:
     TOKEN_URL = (
         "https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
     )
