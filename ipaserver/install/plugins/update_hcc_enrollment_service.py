@@ -36,7 +36,10 @@ class update_hcc_enrollment_service(Updater):
     def service_principal(self) -> str:
         return str(
             Principal(
-                (hccplatform.HCC_SERVICE, self.api.env.host),
+                (
+                    hccplatform.HCC_SERVICE,
+                    self.api.env.host,
+                ),
                 self.api.env.realm,
             )
         )
@@ -62,7 +65,8 @@ class update_hcc_enrollment_service(Updater):
                 hccplatform.HCC_ENROLLMENT_ROLE,
             )
             self.api.Command.role_add_member(
-                hccplatform.HCC_ENROLLMENT_ROLE, service=str(name)
+                hccplatform.HCC_ENROLLMENT_ROLE,
+                service=str(name),
             )
             return True
         else:
@@ -89,7 +93,8 @@ class update_hcc_enrollment_service(Updater):
                 ipautil.remove_file(keytab)
             else:
                 logger.debug(
-                    "keytab %s exists and works, nothing to do", keytab
+                    "keytab %s exists and works, nothing to do",
+                    keytab,
                 )
                 return False
 
@@ -107,7 +112,9 @@ class update_hcc_enrollment_service(Updater):
         os.chown(keytab, 0, 0)
 
         logger.debug(
-            "Created keytab '%s' for principal '%s'", keytab, principal
+            "Created keytab '%s' for principal '%s'",
+            keytab,
+            principal,
         )
         return True
 

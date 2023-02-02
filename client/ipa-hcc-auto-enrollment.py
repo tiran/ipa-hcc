@@ -53,7 +53,9 @@ def discover_ipa(args):
         err = discovery.error_names[res]
         parser.error(f"IPA discovery failed: {err}.\n")
     logger.info(
-        "Discovered IPA realm '%s', domain '%s'.", ds.realm, ds.domain
+        "Discovered IPA realm '%s', domain '%s'.",
+        ds.realm,
+        ds.domain,
     )
     logger.info("IPA servers: %s", ", ".join(ds.servers))
     return ds
@@ -81,7 +83,10 @@ def wait_for_inventory_host(args):
     Sometimes it takes a while until a host appears in Insights.
     """
     sess = requests.Session()
-    sess.cert = (hccplatform.RHSM_CERT, hccplatform.RHSM_KEY)
+    sess.cert = (
+        hccplatform.RHSM_CERT,
+        hccplatform.RHSM_KEY,
+    )
     for i in range(5):
         try:
             resp = sess.get(hccplatform.INVENTORY_HOSTS_CERT_API)

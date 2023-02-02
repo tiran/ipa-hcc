@@ -54,7 +54,10 @@ class update_hcc(Updater):
             aug.transform("IPAKrb5", paths.KRB5KDC_KDC_CONF)
             aug.load()
             if not aug.match(expr):
-                aug.set(f"{path}/pkinit_anchors[last()+1]", anchor)
+                aug.set(
+                    f"{path}/pkinit_anchors[last()+1]",
+                    anchor,
+                )
                 modified = True
 
             if modified:
@@ -63,7 +66,10 @@ class update_hcc(Updater):
                     aug.save()
                 except IOError:
                     for error_path in aug.match("/augeas//error"):
-                        logger.error("augeas: %s", aug.get(error_path))
+                        logger.error(
+                            "augeas: %s",
+                            aug.get(error_path),
+                        )
                     raise
             else:
                 logger.debug("KDC already configured.")
@@ -82,12 +88,18 @@ class update_hcc(Updater):
         result = self.api.Command.config_show()["result"]
         org_ids = result.get("hccorgid")
         if org_ids:
-            logger.debug("hccorgid already configured: %s", org_ids[0])
+            logger.debug(
+                "hccorgid already configured: %s",
+                org_ids[0],
+            )
         try:
             with open(hccplatform.RHSM_CERT, "rb") as f:
                 cert = x509.load_pem_x509_certificate(f.read())
         except Exception:
-            logger.exception("Failed to parse '%s'.", hccplatform.RHSM_CERT)
+            logger.exception(
+                "Failed to parse '%s'.",
+                hccplatform.RHSM_CERT,
+            )
             return False
 
         nas = list(cert.subject)
