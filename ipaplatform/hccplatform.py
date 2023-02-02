@@ -5,8 +5,39 @@
 #
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
+import configparser
+import logging
+
 from ipaplatform.base.constants import User
 from ipaplatform.constants import constants
+
+logger = logging.getLogger(__name__)
+
+
+def _detect_environment(
+    rhsm_conf: str = "/etc/rhsm/rhsm.conf", default: str = "prod"
+) -> str:
+    """Detect environment (stage, prod) from RHSM server name"""
+    c = configparser.ConfigParser()
+    try:
+        with open(rhsm_conf) as f:
+            c.read_file(f)
+    except Exception as e:
+        logger.error("Failed to read '%s': %s", rhsm_conf, e)
+        return default
+
+    server_hostname = c.get("server", "hostname", fallback=None)
+    if server_hostname is None:
+        return default
+
+    server_hostname = server_hostname.strip()
+    if server_hostname == "subscription.rhsm.redhat.com":
+        return "prod"
+    elif server_hostname == "subscription.rhsm.stage.redhat.com":
+        return "stage"
+    else:
+        return default
+
 
 # common constants and paths
 HCC_SERVICE = "hcc-enrollment"
@@ -33,7 +64,7 @@ TOKEN_CLIENT_ID = "rhsm-api"
 REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"
 
 # prod / stage
-TARGET = "prod"
+TARGET = _detect_environment()
 
 # fmt: off
 if TARGET == "prod":
