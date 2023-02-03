@@ -157,7 +157,7 @@ def discover(args):
     logger.info("IPA servers: %s", ", ".join(ds.servers))
 
     dnsok = False
-    if not args.server and False:
+    if not args.server:
         server, domain = ds.check_domain(
             ds.domain, set(), "Validating DNS Discovery"
         )

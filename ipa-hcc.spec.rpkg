@@ -288,7 +288,6 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python3}|' %{buildroot}%{_libexecdir}/ipa/
 %files common
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
 %dir %{_datadir}/ipa-hcc/
 %{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-hcc/cacerts
@@ -317,6 +316,7 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python3}|' %{buildroot}%{_libexecdir}/ipa/
 %files registration-service
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
+%attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
 %attr(0755,ipahcc,ipaapi) %dir %{_localstatedir}/cache/ipa-hcc
 %{python3_sitelib}/ipaserver/install/plugins/update_hcc_enrollment_service.py
 %{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_enrollment_service.*.pyc
