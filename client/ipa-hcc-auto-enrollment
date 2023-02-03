@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from ipaclient.hcc.auto_enrollment import main
+
+main()

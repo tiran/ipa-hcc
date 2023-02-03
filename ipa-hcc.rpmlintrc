@@ -3,6 +3,6 @@ addFilter('non-standard-uid .* ipahcc')
 addFilter('non-standard-gid .* ipaapi')
 addFilter('non-standard-dir-perm /etc/ipa/hcc 750')
 # systemd service file in /usr/lib
-addFilter('only-non-binary-in-usr-lib')
+# addFilter('only-non-binary-in-usr-lib')
 # auto-generated source file
 addFilter('invalid-url Source0')

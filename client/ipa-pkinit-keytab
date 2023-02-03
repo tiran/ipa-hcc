@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from ipaclient.hcc.pkinit_keytab import main
+
+main()

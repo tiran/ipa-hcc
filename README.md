@@ -286,11 +286,21 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 
 ## RPM build
 
-[rpkg](https://docs.pagure.org/rpkg-util/v3/index.html)
+This project uses [rpkg](https://docs.pagure.org/rpkg-util/v3/index.html) to
+build SRPM and RPMs from git.
 
 ```
+dnf install rpkg tox
 rpkg spec --outdir .
+dnf builddep --spec ipa-hcc.spec
+rm ipa-hcc.spec
 ```
+
+```
+make rpkg
+```
+
+RHEL 8 builds and COPR need `idm:DL1` module.
 
 ## License
 

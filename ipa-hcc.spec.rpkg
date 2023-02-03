@@ -40,11 +40,17 @@ Source:         {{{ git_dir_pack }}}
 
 %if 0%{?rhel} == 7
 BuildRequires: python2-devel
+BuildRequires: python2-ipaclient >= %{ipa_version}
+BuildRequires: python2-requests
+BuildRequires: python-sssdconfig
 %else
 BuildRequires: python3-devel
+BuildRequires: python3-ipaserver >= %{ipa_version}
+BuildRequires: python3-requests
 %endif
 BuildRequires: systemd-devel
 BuildRequires: selinux-policy-devel
+
 
 %description
 An extension for IPA integration with Red Hat Hybrid Cloud Console.
@@ -182,8 +188,18 @@ This package contains the automatic enrollment service of IPA clients.
 %prep
 {{{ git_dir_setup_macro }}}
 
+
 %build
 touch debugfiles.list
+
+
+%check
+%if 0%{?rhel} == 7
+%{__python2} -m unittest discover
+%else
+%{python3} -Wignore -m unittest discover
+%endif
+
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -246,15 +262,26 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 # RHEL >= 8
 %endif
 
-# client
+# client auto-enrollment
+
+%if 0%{?rhel} == 7
+%__mkdir_p %{buildroot}%{python2_sitelib}/ipaclient/hcc
+cp -p ipaclient/hcc/*.py %{buildroot}%{python2_sitelib}/ipaclient/hcc/
+%else
+%__mkdir_p %{buildroot}%{python3_sitelib}/ipaclient/hcc
+cp -p ipaclient/hcc/*.py %{buildroot}%{python3_sitelib}/ipaclient/hcc/
+%endif
+
 %__mkdir_p %{buildroot}%{_unitdir}
 cp -p client/ipa-hcc-auto-enrollment.service %{buildroot}%{_unitdir}/
 %__mkdir_p %{buildroot}%{_libexecdir}/ipa/hcc/
-cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
-cp -p client/ipa-pkinit-keytab.py %{buildroot}%{_libexecdir}/ipa/hcc/
+cp -p client/ipa-hcc-auto-enrollment %{buildroot}%{_libexecdir}/ipa/hcc/
+cp -p client/ipa-pkinit-keytab %{buildroot}%{_libexecdir}/ipa/hcc/
 
 %if 0%{?rhel} == 7
-sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{__python2}|' %{buildroot}%{_libexecdir}/ipa/hcc/*.py
+sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{__python2}|' %{buildroot}%{_libexecdir}/ipa/hcc/*
+%else
+sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python3}|' %{buildroot}%{_libexecdir}/ipa/hcc/*
 %endif
 
 
@@ -304,13 +331,14 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{__python2}|' %{buildroot}%{_libexecdir}/ip
 %files client-enrollment
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%attr(0755,root,root) %dir %{_libexecdir}/ipa/hcc
-%attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-hcc-auto-enrollment.py
-%attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-pkinit-keytab.py
 %if 0%{?rhel} == 7
-# TODO: get rid of byte-compiled code on RHEL 7
-%{_libexecdir}/ipa/hcc/*.py[co]
+%{python2_sitelib}/ipaclient/hcc/
+%else
+%{python3_sitelib}/ipaclient/hcc/
 %endif
+%attr(0755,root,root) %dir %{_libexecdir}/ipa/hcc
+%attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-hcc-auto-enrollment
+%attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-pkinit-keytab
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
 
 
