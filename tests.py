@@ -1,3 +1,7 @@
+#
+# very basic tests to ensure code is at least importable.
+#
+
 import contextlib
 import importlib
 import io
@@ -36,6 +40,8 @@ def capture_output():
 
 
 class IPABaseTests(unittest.TestCase):
+    register_paths = []
+
     @classmethod
     def setUpClass(cls):
         # initialize first step of IPA API so server imports work
@@ -79,6 +85,18 @@ class IPAClientTests(IPABaseTests):
             self.assertEqual(e.code, 0)
         else:
             self.fail("SystemExit expected")
+
+
+@unittest.skipIf(PY2, "WSGI app is Python 3 only")
+class WSGITests(IPABaseTests):
+    def test_wsgi_imports(self):
+        sys.path.insert(0, os.path.abspath("wsgi"))
+        try:
+            import hcc_registration_service
+        finally:
+            sys.path.pop(0)
+
+        assert callable(hcc_registration_service.application)
 
 
 @unittest.skipUnless(HAS_IPASERVER, "requires ipaserver")
