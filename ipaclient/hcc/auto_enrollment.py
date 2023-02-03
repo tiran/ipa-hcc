@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import logging
 import os
@@ -117,7 +116,8 @@ def wait_for_inventory_host(args):
         logger.warning("Host not found in Insights Inventory inventory")
 
 
-def main():
+def main(*args):
+    args = parser.parse_args(*args)
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
@@ -169,7 +169,3 @@ def main():
         subprocess.check_call(cmd)
 
     logger.info("Done")
-
-
-if __name__ == "__main__":
-    main()

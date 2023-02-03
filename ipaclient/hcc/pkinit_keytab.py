@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Get host keytab with PKINIT
 
 - discover IPA realm, domain, servers, KDCs, and base DN based
@@ -58,7 +57,7 @@ def check_domain(arg):
 
 def check_cafile(arg):
     if not os.path.isfile(arg):
-        raise ValueError("{arg} does not exist".format(arg))
+        raise ValueError("{arg} does not exist".format(arg=arg))
     return os.path.abspath(arg)
 
 
@@ -265,8 +264,8 @@ def ipa_client_cmd(args):
     return cmd
 
 
-def main():
-    args = parser.parse_args()
+def main(*args):
+    args = parser.parse_args(*args)
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
         format="%(levelname)s: %(message)s",
@@ -302,7 +301,3 @@ def main():
         print(shlex.join(cmd))
     else:
         print(" ".join(cmd))
-
-
-if __name__ == "__main__":
-    main()
