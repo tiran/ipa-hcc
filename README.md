@@ -173,6 +173,7 @@ account.
 6) Install plugin and other services
 
 ```
+dnf install 'dnf-command(copr)'
 dnf copr enable copr.devel.redhat.com/cheimes/ipa-hcc
 dnf install --refresh ipa-hcc-registration-service ipa-hcc-server-plugin
 ```
@@ -181,9 +182,17 @@ dnf install --refresh ipa-hcc-registration-service ipa-hcc-server-plugin
 
 1) Install packages
 
+RHEL >= 8
 ```
+dnf install 'dnf-command(copr)'
 dnf copr enable copr.devel.redhat.com/cheimes/ipa-hcc
 dnf install --refresh ipa-client ipa-hcc-client-enrollment
+```
+
+RHEL 7
+```
+curl -o /etc/yum.repos.d/copr-cheimes-ipa-hcc.repo https://copr.devel.redhat.com/coprs/cheimes/ipa-hcc/repo/rhel-7/cheimes-ipa-hcc-rhel-7.repo
+yum install ipa-client ipa-hcc-client-enrollment
 ```
 
 2) Current RHEL releases of `ipa-client` are missing PKINIT option.
@@ -230,6 +239,12 @@ host and finally runs `ipa-client-install`.
 
 ```
 rhc connect
+```
+
+Older RHEL versions may require manual registration with insights
+
+```
+insights-client --register
 ```
 
 3) Self-register host with IdM

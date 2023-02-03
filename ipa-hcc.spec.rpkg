@@ -162,6 +162,7 @@ Requires: python3-requests
 %endif
 Requires: krb5-pkinit
 Requires: rhc
+Requires: insights-client
 %{?systemd_requires}
 
 %description client-enrollment
@@ -250,6 +251,7 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 cp -p client/ipa-hcc-auto-enrollment.service %{buildroot}%{_unitdir}/
 %__mkdir_p %{buildroot}%{_libexecdir}/ipa/hcc/
 cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
+cp -p client/ipa-pkinit-keytab.py %{buildroot}%{_libexecdir}/ipa/hcc/
 
 %if 0%{?rhel} == 7
 sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{__python2}|' %{buildroot}%{_libexecdir}/ipa/hcc/*.py
@@ -304,6 +306,7 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{__python2}|' %{buildroot}%{_libexecdir}/ip
 %license COPYING
 %attr(0755,root,root) %dir %{_libexecdir}/ipa/hcc
 %attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-hcc-auto-enrollment.py
+%attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-pkinit-keytab.py
 %if 0%{?rhel} == 7
 # TODO: get rid of byte-compiled code on RHEL 7
 %{_libexecdir}/ipa/hcc/*.py[co]
