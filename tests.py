@@ -17,6 +17,7 @@ else:
 
 PY2 = sys.version_info.major == 2
 
+
 @contextlib.contextmanager
 def capture_output():
     if PY2:
@@ -91,7 +92,9 @@ class IPAServerTests(IPABaseTests):
         from ipaserver.plugins import hccconfig  # noqa: F401
         from ipaserver.plugins import hcchost  # noqa: F401
         from ipaserver.install.plugins import update_hcc  # noqa: F401
-        from ipaserver.install.plugins import update_hcc_enrollment_service  # noqa: F401
+        from ipaserver.install.plugins import (  # noqa: F401
+            update_hcc_enrollment_service,
+        )
 
 
 if __name__ == "__main__":

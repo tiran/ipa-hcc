@@ -1,7 +1,7 @@
 #!/bin/sh
 set -ex
 
-SITE_PACKAGES=$(python3 -c 'from sys import version_info as v; print(f"/usr/lib/python{v.major}.{v.minor}/site-packages")')
+SITE_PACKAGES=$(python -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
 
 if [ -f /usr/share/ipa/schema.d/85-hcc.ldif -a -f /usr/share/ipa/updates/85-hcc.update ]; then
     NEEDS_UPGRADE=0;

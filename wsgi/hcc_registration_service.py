@@ -78,18 +78,24 @@ class Application:
     def parse_cert(self, env: dict, envname: str) -> x509.Certificate:
         cert_pem = env.get(envname)
         if not cert_pem:
-            raise HTTPException(412, f"{envname} is missing or empty.")
+            raise HTTPException(
+                412, "{envname} is missing or empty.".format(envname=envname)
+            )
         return x509.load_pem_x509_certificate(cert_pem.encode("ascii"))
 
     def parse_subject(self, subject: x509.Name) -> Tuple[int, str]:
         nas = list(subject)
         if len(nas) != 2:
-            raise HTTPException(400, f"Invalid cert subject {subject}.")
+            raise HTTPException(
+                400, "Invalid cert subject {subject}.".format(subject=subject)
+            )
         if (
             nas[0].oid != NameOID.ORGANIZATION_NAME
             or nas[1].oid != NameOID.COMMON_NAME
         ):
-            raise HTTPException(400, f"Invalid cert subject {subject}.")
+            raise HTTPException(
+                400, "Invalid cert subject {subject}.".format(subject=subject)
+            )
         return int(nas[0].value), nas[1].value
 
     def get_access_token(
@@ -130,7 +136,7 @@ class Application:
         if resp.status_code >= 400:
             raise HTTPException(
                 resp.status_code,
-                f"get_access_token() failed: {resp.reason}",
+                "get_access_token() failed: {resp}".format(resp=resp.reason),
             )
         logger.debug(
             "Got access token from refresh token in %0.3fs.",
@@ -153,7 +159,11 @@ class Application:
         Returns FQDN, inventory_id
         """
         logger.debug("Looking up %s in console inventory", rhsm_id)
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers = {
+            "Authorization": "Bearer {access_token}".format(
+                access_token=access_token
+            )
+        }
         params = {"filter[system_profile][owner_id]": rhsm_id}
         start = time.monotonic()
         resp = self.session.get(url, params=params, headers=headers)
@@ -163,12 +173,14 @@ class Application:
             self.access_token = None
             raise HTTPException(
                 resp.status_code,
-                f"lookup_inventory() failed: {resp.reason}",
+                "lookup_inventory() failed: {resp}".format(resp=resp.reason),
             )
 
         j = resp.json()
         if j["total"] != 1:
-            raise HTTPException(404, f"Unknown host {rhsm_id}.")
+            raise HTTPException(
+                404, "Unknown host {rhsm_id}.".format(rhsm_id=rhsm_id)
+            )
         result = j["results"][0]
         fqdn = result["fqdn"]
         inventoryid = result["id"]
@@ -183,7 +195,9 @@ class Application:
 
     def kinit_gssproxy(self):
         service = hccplatform.HCC_SERVICE
-        principal = f"{service}/{api.env.host}@{api.env.realm}"
+        principal = "{service}/{host}@{realm}".format(
+            service=service, host=api.env.host, realm=api.env.realm
+        )
         name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
         store = {"ccache": hccplatform.HCC_SERVICE_KRB5CCNAME}
         return gssapi.Credentials(name=name, store=store, usage="initiate")
@@ -229,7 +243,10 @@ class Application:
         if org_id != ipa_org_id:
             raise HTTPException(
                 403,
-                f"Invalid org_id: {org_id} != {ipa_org_id}",
+                "Invalid org_id: {org_id} != {ipa_org_id}".format(
+                    org_id=org_id,
+                    ipa_org_id=ipa_org_id,
+                ),
             )
         try:
             api.Command.host_add(
@@ -265,7 +282,9 @@ class Application:
     def handle(self, env, start_repose):
         method = env["REQUEST_METHOD"]
         if method != "GET":
-            raise HTTPException(405, f"Method {method} not allowed.")
+            raise HTTPException(
+                405, "Method {method} not allowed.".format(method=method)
+            )
         cert = self.parse_cert(env, "SSL_CLIENT_CERT")
         org_id, rhsm_id = self.parse_subject(cert.subject)
         logger.warn(
@@ -310,7 +329,7 @@ class Application:
             return [e.message]
         except Exception as e:
             logger.exception("Request failed")
-            e = HTTPException(500, f"invalid server error: {e}")
+            e = HTTPException(500, "invalid server error: {e}".format(e=e))
             start_response(str(e), e.headers)
             return [e.message]
 

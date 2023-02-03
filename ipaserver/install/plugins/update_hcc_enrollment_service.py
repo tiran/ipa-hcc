@@ -81,7 +81,9 @@ class update_hcc_enrollment_service(Updater):
         """Create keytab for hcc-enrollment WSGI app"""
         keytab = hccplatform.HCC_SERVICE_KEYTAB
         service = hccplatform.HCC_SERVICE
-        principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
+        principal = "{service}/{host}@{realm}".format(
+            service=service, host=self.api.env.host, realm=self.api.env.realm
+        )
         ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
 
         if os.path.isfile(keytab):

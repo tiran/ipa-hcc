@@ -42,7 +42,9 @@ config.managed_permissions.update(
             "replaces_global_anonymous_aci": True,
             "ipapermbindruletype": "all",
             "ipapermright": {"read", "search", "compare"},
-            "ipapermtargetfilter": [f"(objectclass={hcc_config_class})"],
+            "ipapermtargetfilter": [
+                "(objectclass={})".format(hcc_config_class)
+            ],
             "ipapermdefaultattr": hcc_config_attributes,
         },
     },

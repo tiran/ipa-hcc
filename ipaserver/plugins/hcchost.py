@@ -75,7 +75,9 @@ host.managed_permissions.update(
             "replaces_global_anonymous_aci": True,
             "ipapermbindruletype": "all",
             "ipapermright": {"read", "search", "compare"},
-            "ipapermtargetfilter": [f"(objectclass={hcc_host_class})"],
+            "ipapermtargetfilter": [
+                "(objectclass={})".format(hcc_host_class)
+            ],
             "ipapermdefaultattr": hcc_host_attributes,
         },
         "System: Modify HCC host attributes": {

@@ -33,7 +33,7 @@ class update_hcc(Updater):
 
     def modify_krb5kdc_conf(self) -> bool:
         """Add RHSM cert chain to KDC"""
-        anchor = f"FILE:{hccplatform.HMSIDM_CA_BUNDLE_PEM}"
+        anchor = "FILE:{}".format(hccplatform.HMSIDM_CA_BUNDLE_PEM)
         logger.debug(
             "Checking for 'pkinit_anchors=%s' in '%s'",
             anchor,
@@ -47,15 +47,19 @@ class update_hcc(Updater):
         modified = False
 
         realm = self.api.env.realm
-        path = f"/files{paths.KRB5KDC_KDC_CONF}/realms/{realm}"
-        expr = f'{path}/pkinit_anchors[.="{anchor}"]'
+        path = "/files{conf}/realms/{realm}".format(
+            conf=paths.KRB5KDC_KDC_CONF, realm=realm
+        )
+        expr = '{path}/pkinit_anchors[.="{anchor}"]'.format(
+            path=path, anchor=anchor
+        )
 
         try:
             aug.transform("IPAKrb5", paths.KRB5KDC_KDC_CONF)
             aug.load()
             if not aug.match(expr):
                 aug.set(
-                    f"{path}/pkinit_anchors[last()+1]",
+                    "{path}/pkinit_anchors[last()+1]".format(path=path),
                     anchor,
                 )
                 modified = True
