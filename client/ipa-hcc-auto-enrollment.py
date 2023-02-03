@@ -8,7 +8,15 @@ import time
 
 import requests
 
-from ipaclient import discovery
+try:
+    from ipaclient import discovery
+
+    SUCCESS = discovery.SUCCESS
+except ImportError:
+    from ipaclient.install import ipadiscovery as discovery
+
+    SUCCESS = 0
+
 from ipalib.constants import FQDN
 from ipaplatform.paths import paths
 
@@ -51,7 +59,7 @@ def discover_ipa(args):
     )
     if res != discovery.SUCCESS:
         err = discovery.error_names[res]
-        parser.error(f"IPA discovery failed: {err}.\n")
+        parser.error("IPA discovery failed: {err}.\n".format(err=err))
     logger.info(
         "Discovered IPA realm '%s', domain '%s'.",
         ds.realm,
@@ -66,7 +74,7 @@ def hcc_register(args, server):
 
     TODO: On 404 try next server
     """
-    url = f"https://{server}/hcc"
+    url = "https://{server}/hcc".format(server=server)
     logger.info("Registering host at %s", url)
     r = requests.get(
         url,
@@ -117,7 +125,9 @@ def main():
     )
     if args.cacert:
         if not os.path.isfile(args.cacert):
-            parser.error(f"CA cert {args.cacert} is missing.\n")
+            parser.error(
+                "CA cert {cacert} is missing.\n".format(cacert=args.cacert)
+            )
     elif os.path.isfile(paths.IPA_CA_CRT):
         args.cacert = paths.IPA_CA_CRT
     elif args.insecure:
@@ -128,7 +138,9 @@ def main():
 
     if os.path.isfile(paths.IPA_DEFAULT_CONF):
         parser.error(
-            f"IPA is already installed, '{paths.IPA_DEFAULT_CONF}' exists.\n"
+            "IPA is already installed, '{conf}' exists.\n".format(
+                conf=paths.IPA_DEFAULT_CONF
+            )
         )
 
     # wait until this host appears in ConsoleDont host inventory
@@ -144,13 +156,15 @@ def main():
 
         cmd = [
             "ipa-client-install",
-            f"--pkinit-identity=FILE:{hccplatform.RHSM_CERT},{hccplatform.RHSM_KEY}",
+            "--pkinit-identity=FILE:{cert},{key}".format(
+                cert=hccplatform.RHSM_CERT, key=hccplatform.RHSM_KEY
+            ),
             # use HMSIDM_CA_BUNDLE_PEM here?
-            f"--pkinit-anchor=FILE:{f.name}",
+            "--pkinit-anchor=FILE:{anchor}".format(anchor=f.name),
             "--unattended",
         ]
         if args.cacert:
-            cmd.append(f"--ca-cert-file={args.cacert}")
+            cmd.append("--ca-cert-file={cacert}".format(cacert=args.cacert))
         logger.info("Installing client: %s", " ".join(cmd))
         subprocess.check_call(cmd)
 

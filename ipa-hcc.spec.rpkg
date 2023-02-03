@@ -7,12 +7,15 @@
 # PKINIT feature was added to ipa-client in 4.9.11 and 4.10.1.
 # The server plugins and registration service does not depend
 # on new features.
-%if 0%{?rhel} == 8
-%global ipa_client_pkinit_version 4.9.11
-%global ipa_version 4.9
-%else
-%global ipa_client_pkinit_version 4.10.1
-%global ipa_version 4.10
+%if 0%{?rhel} >= 9
+  %global ipa_client_pkinit_version 4.10.1
+  %global ipa_version 4.10
+%elif 0%{?rhel} == 8
+  %global ipa_client_pkinit_version 4.9.11
+  %global ipa_version 4.9
+%elif 0%{?rhel} == 7
+  %global ipa_client_pkinit_version 4.6
+  %global ipa_version 4.6
 %endif
 %else
 # Fedora
@@ -35,7 +38,11 @@ URL:            https://gitlab.cee.redhat.com/identity-management/idmocp/ipa-con
 VCS:            {{{ git_dir_vcs }}}
 Source:         {{{ git_dir_pack }}}
 
+%if 0%{?rhel} == 7
+BuildRequires: python2-devel
+%else
 BuildRequires: python3-devel
+%endif
 BuildRequires: systemd-devel
 BuildRequires: selinux-policy-devel
 
@@ -55,6 +62,8 @@ Requires: %{ipa_name}-client >= %{ipa_version}
 %description common
 This package contains common files for IPA Hybrid Cloud Console extension.
 
+%if 0%{?rhel} >= 8 || 0%{?fedora}
+# server plugin and registration service are RHEL 8 or newer
 
 %package server-plugin
 Summary: Server plugin for IPA Hybrid Cloud Console extension
@@ -134,6 +143,8 @@ fi
 %postun registration-service
 /usr/sbin/semanage fcontext -d '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
 
+# RHEL >= 8
+%endif
 
 %package client-enrollment
 Summary: Automatic IPA client enrollment for Hybrid Cloud Console
@@ -144,7 +155,12 @@ Conflicts: %{alt_name}-client-enrollment
 Obsoletes: %{alt_name}-client-enrollment < %{version}
 Requires: %{package_name}-common = %{version}
 Requires: %{ipa_name}-client >= %{ipa_client_pkinit_version}
+%if 0%{?rhel} == 7
+Requires: python2-requests
+%else
 Requires: python3-requests
+%endif
+Requires: krb5-pkinit
 Requires: rhc
 %{?systemd_requires}
 
@@ -171,20 +187,35 @@ touch debugfiles.list
 %install
 rm -rf $RPM_BUILD_ROOT
 
+# common
+%__mkdir_p %{buildroot}%{_sysconfdir}/ipa/hcc
+
+%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc
+%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc/cacerts
+cp -p rhsm/redhat-candlepin-bundle.pem %{buildroot}%{_datadir}/ipa-hcc/
+cp -pd rhsm/cacerts/* %{buildroot}%{_datadir}/ipa-hcc/cacerts/
+
+%if 0%{?rhel} == 7
+%__mkdir_p %{buildroot}%{python2_sitelib}/ipaplatform
+cp -p ipaplatform/*.py %{buildroot}%{python2_sitelib}/ipaplatform/
+%else
 %__mkdir_p %{buildroot}%{python3_sitelib}/ipaplatform
 cp -p ipaplatform/*.py %{buildroot}%{python3_sitelib}/ipaplatform/
+%endif
 
+%if 0%{?rhel} >= 8 || 0%{?fedora}
+# server-plugin
 %__mkdir_p %{buildroot}%{python3_sitelib}/ipaserver/plugins
 cp -p ipaserver/plugins/*.py %{buildroot}%{python3_sitelib}/ipaserver/plugins/
 
 %__mkdir_p %{buildroot}%{python3_sitelib}/ipaserver/install/plugins
-cp -p ipaserver/install/plugins/*.py %{buildroot}%{python3_sitelib}/ipaserver/install/plugins/
+cp -p ipaserver/install/plugins/update_hcc.py %{buildroot}%{python3_sitelib}/ipaserver/install/plugins/
 
 %__mkdir_p %buildroot/%{_datadir}/ipa/schema.d
 cp -p schema.d/*.ldif %buildroot/%{_datadir}/ipa/schema.d/
 
 %__mkdir_p %buildroot/%{_datadir}/ipa/updates
-cp -p updates/*.update %buildroot/%{_datadir}/ipa/updates/
+cp -p updates/85-hcc.update %buildroot/%{_datadir}/ipa/updates/
 
 %__mkdir_p %buildroot/%{_datadir}/ipa/ui/js/plugins
 for j in $(find ui/ -name '*.js') ; do
@@ -192,6 +223,15 @@ for j in $(find ui/ -name '*.js') ; do
     %__mkdir_p $destdir
     %__cp -p $j $destdir/
 done
+
+# registration service
+%__mkdir_p %{buildroot}%{_localstatedir}/cache/ipa-hcc
+
+cp -p ipaserver/install/plugins/update_hcc_enrollment_service.py %{buildroot}%{python3_sitelib}/ipaserver/install/plugins/
+
+cp -p wsgi/hcc_registration_service.py %{buildroot}%{_datadir}/ipa-hcc/
+
+cp -p updates/86-hcc-enrollment-service.update %buildroot/%{_datadir}/ipa/updates/
 
 %__mkdir_p %{buildroot}%{_sysconfdir}/httpd/conf.d/
 cp apache/ipa-hcc.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
@@ -202,20 +242,18 @@ cp gssproxy/85-ipa-hcc.conf %{buildroot}%{_sysconfdir}/gssproxy/85-ipa-hcc.conf
 %__mkdir_p %{buildroot}%{_sharedstatedir}/ipa/gssproxy
 touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 
-%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc
-%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc/cacerts
-cp -p wsgi/hcc_registration_service.py %{buildroot}%{_datadir}/ipa-hcc/
-cp -p rhsm/redhat-candlepin-bundle.pem %{buildroot}%{_datadir}/ipa-hcc/
-cp -pd rhsm/cacerts/* %{buildroot}%{_datadir}/ipa-hcc/cacerts/
+# RHEL >= 8
+%endif
 
-%__mkdir_p %{buildroot}%{_sysconfdir}/ipa/hcc
-
-%__mkdir_p %{buildroot}%{_localstatedir}/cache/ipa-hcc
-
+# client
 %__mkdir_p %{buildroot}%{_unitdir}
 cp -p client/ipa-hcc-auto-enrollment.service %{buildroot}%{_unitdir}/
 %__mkdir_p %{buildroot}%{_libexecdir}/ipa/hcc/
 cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
+
+%if 0%{?rhel} == 7
+sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{__python2}|' %{buildroot}%{_libexecdir}/ipa/hcc/*.py
+%endif
 
 
 %files common
@@ -225,9 +263,14 @@ cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
 %dir %{_datadir}/ipa-hcc/
 %{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-hcc/cacerts
+%if 0%{?rhel} == 7
+%{python2_sitelib}/ipaplatform/*.py*
+%else
 %{python3_sitelib}/ipaplatform/*.py
 %{python3_sitelib}/ipaplatform/__pycache__/*.pyc
+%endif
 
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 
 %files server-plugin
 %doc README.md CONTRIBUTORS.txt
@@ -253,12 +296,18 @@ cp -p client/ipa-hcc-auto-enrollment.py %{buildroot}%{_libexecdir}/ipa/hcc/
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-ipa-hcc.conf
 
+# RHEL >= 8
+%endif
 
 %files client-enrollment
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
 %attr(0755,root,root) %dir %{_libexecdir}/ipa/hcc
 %attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-hcc-auto-enrollment.py
+%if 0%{?rhel} == 7
+# TODO: get rid of byte-compiled code on RHEL 7
+%{_libexecdir}/ipa/hcc/*.py[co]
+%endif
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
 
 

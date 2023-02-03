@@ -340,7 +340,9 @@ def test(rhsm_id: str):
 
     # switch effective UID for gssproxy
     if os.geteuid() == 0:
-        uid = hccplatform.HCC_SERVICE_USER.uid
+        import pwd
+
+        uid = pwd.getpwnam(hccplatform.HCC_SERVICE_USER).pw_uid
         os.setreuid(uid, uid)
 
     access_token = application.get_access_token()

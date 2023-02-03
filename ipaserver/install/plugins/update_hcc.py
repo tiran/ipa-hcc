@@ -105,10 +105,12 @@ class update_hcc(Updater):
         nas = list(cert.subject)
         if len(nas) != 2 or nas[0].oid != NameOID.ORGANIZATION_NAME:
             logger.error("Unexpected cert subject %s", cert.subject)
+            return False
         try:
             org_id = int(nas[0].value)
         except (ValueError, TypeError):
             logger.error("Unexpected cert subject %s", cert.subject)
+            return False
 
         try:
             self.api.Command.config_mod(hccorgid=org_id)

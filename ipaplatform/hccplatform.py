@@ -6,18 +6,14 @@
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
 import os
-import configparser
 import logging
 
-from ipaplatform.base.constants import User
 from ipaplatform.constants import constants
 
 logger = logging.getLogger(__name__)
 
 
-def _detect_environment(
-    rhsm_conf: str = "/etc/rhsm/rhsm.conf", default: str = "prod"
-) -> str:
+def _detect_environment(rhsm_conf="/etc/rhsm/rhsm.conf", default="prod"):
     """Detect environment (stage, prod) from RHSM server name
 
     TODO: Does not work, SELinux prevents read access from httpd_t
@@ -29,6 +25,8 @@ def _detect_environment(
        permissive=0
 
     """
+    import configparser
+
     c = configparser.ConfigParser()
     try:
         with open(rhsm_conf) as f:
@@ -52,8 +50,8 @@ def _detect_environment(
 
 # common constants and paths
 HCC_SERVICE = "hcc-enrollment"
-HCC_SERVICE_USER = User("ipahcc")
-HCC_SERVICE_GROUP = constants.IPAAPI_GROUP
+HCC_SERVICE_USER = "ipahcc"
+HCC_SERVICE_GROUP = getattr(constants, "IPAAPI_GROUP", "ipaapi")
 HCC_SERVICE_CACHE_DIR = "/var/cache/ipa-hcc"
 
 # IPA's gssproxy directory comes with correct SELinux rule.
