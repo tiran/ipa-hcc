@@ -234,6 +234,8 @@ def wait_for_inventory_host(args):
         hccplatform.RHSM_KEY,
     )
     sess.verify = True  # RH HCC uses public, trusted cert
+    time.sleep(3)  # short initial sleep
+    sleep_dur = 10  # sleep for 10, 20, 40, ...
     for i in range(5):
         try:
             resp = sess.get(hccplatform.INVENTORY_HOSTS_CERT_API)
@@ -249,13 +251,17 @@ def wait_for_inventory_host(args):
                     )
                     return host
         except Exception:
-            logger.exception("Host inventory lookup failed, sleeping...")
+            logger.exception(
+                "Host inventory lookup failed, try again in %is", sleep_dur
+            )
         else:
             logger.info(
-                "Host '%s' not found in Insights Inventory, sleeping...",
+                "Host '%s' not found in Insights Inventory, wait for %is",
                 args.hostname,
+                sleep_dur,
             )
-        time.sleep(5)
+        time.sleep(sleep_dur)
+        sleep_dur *= 2
     else:
         logger.warning(
             "Host '%s' not found in Insights Inventory inventory",
