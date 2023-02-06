@@ -157,7 +157,8 @@ Requires: mod_ssl
 %endif
 # run transaction after server-plugin IFF the package is installed
 OrderWithRequires: %{package_name}-server-plugin
-%{?selinux_requires}
+Requires: selinux-policy
+Requires(post): selinux-policy
 %{?systemd_requires}
 
 %description registration-service
