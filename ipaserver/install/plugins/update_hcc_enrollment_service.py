@@ -7,7 +7,6 @@
 """
 import os
 import logging
-import sys
 
 from ipalib import errors
 from ipalib import Registry
@@ -30,10 +29,6 @@ from ipaplatform.services import knownservices
 
 logger = logging.getLogger(__name__)
 
-if sys.version_info.major == 2:
-    text = unicode  # noqa: F821
-else:
-    text = str
 
 CANDLEPIN_CHAIN = [
     (
@@ -65,12 +60,13 @@ class update_hcc_enrollment_service(Updater):
     @property
     def service_principal(self):
         return Principal(
-            (hccplatform.HCC_SERVICE, self.api.env.host), self.api.env.realm
+            (hccplatform.HCC_SERVICE, self.api.env.host),
+            self.api.env.realm,
         )
 
     def add_hcc_enrollment_service(self):
         principal = self.service_principal
-        princname = text(principal)
+        princname = hccplatform.text(principal)
         try:
             self.api.Command.service_show(principal)
         except errors.NotFound:
@@ -105,7 +101,7 @@ class update_hcc_enrollment_service(Updater):
     def add_hcc_enrollment_service_keytab(self):
         """Create keytab for hcc-enrollment WSGI app"""
         keytab = hccplatform.HCC_SERVICE_KEYTAB
-        princname = text(self.service_principal)
+        princname = hccplatform.text(self.service_principal)
         ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
 
         if os.path.isfile(keytab):

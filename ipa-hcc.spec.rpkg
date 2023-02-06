@@ -18,6 +18,7 @@
     # RHEL 8.4 EUS has 4.9.2
     # RHEL 8.6 EUS has 4.9.8
     %global ipa_version 4.9.2
+    %global with_platform_python 1
     %global with_server_plugin 1
     %global with_registration_service 1
   %else
@@ -43,7 +44,11 @@
   %global python_sitelib %{python2_sitelib}
   #global with_pycache 0
 %else
-  %global python %{__python3}
+  %if %{with platform_python}
+    %global python /usr/libexec/platform-python
+  %else
+    %global python %{__python3}
+  %endif
   %global python_sitelib %{python3_sitelib}
   %global with_pycache 1
 %endif
