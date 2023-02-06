@@ -49,7 +49,7 @@ def _detect_environment(rhsm_conf="/etc/rhsm/rhsm.conf", default="prod"):
 
 
 # common constants and paths
-HCC_SERVICE = "hcc-enrollment"
+HCC_SERVICE = u"hcc-enrollment"
 HCC_SERVICE_USER = "ipahcc"
 HCC_SERVICE_GROUP = getattr(constants, "IPAAPI_GROUP", "ipaapi")
 HCC_SERVICE_CACHE_DIR = "/var/cache/ipa-hcc"
@@ -58,7 +58,7 @@ HCC_SERVICE_CACHE_DIR = "/var/cache/ipa-hcc"
 HCC_SERVICE_KEYTAB = "/var/lib/ipa/gssproxy/hcc-enrollment.keytab"
 HCC_SERVICE_KRB5CCNAME = "/var/cache/ipa-hcc/krb5ccname"
 
-HCC_ENROLLMENT_ROLE = "HCC Enrollment Administrators"
+HCC_ENROLLMENT_ROLE = u"HCC Enrollment Administrators"
 
 HMSIDM_CA_BUNDLE_PEM = "/usr/share/ipa-hcc/redhat-candlepin-bundle.pem"
 
