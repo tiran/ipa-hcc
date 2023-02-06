@@ -12,7 +12,7 @@ import unittest
 from ipalib import api
 
 try:
-    import ipaserver  # noqa: F401
+    import ipaserver.masters  # noqa: F401
 except ImportError:
     HAS_IPASERVER = False
 else:
@@ -87,7 +87,6 @@ class IPAClientTests(IPABaseTests):
             self.fail("SystemExit expected")
 
 
-@unittest.skipIf(PY2, "WSGI app is Python 3 only")
 class WSGITests(IPABaseTests):
     def test_wsgi_imports(self):
         sys.path.insert(0, os.path.abspath("wsgi"))
@@ -106,10 +105,12 @@ class IPAServerTests(IPABaseTests):
         "ipaserver.install.plugins",
     ]
 
-    def test_server_imports(self):
+    def test_server_plugin_imports(self):
         from ipaserver.plugins import hccconfig  # noqa: F401
         from ipaserver.plugins import hcchost  # noqa: F401
         from ipaserver.install.plugins import update_hcc  # noqa: F401
+
+    def test_registration_service_imports(self):
         from ipaserver.install.plugins import (  # noqa: F401
             update_hcc_enrollment_service,
         )

@@ -5,15 +5,16 @@
 #
 """Configure Hybrid Cloud Console basic settings
 """
+import os
 import logging
 
 from augeas import Augeas
-from cryptography import x509
 from cryptography.x509.oid import NameOID
 
 from ipalib import errors
 from ipalib import Registry
 from ipalib import Updater
+from ipalib import x509
 from ipaplatform import hccplatform
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
@@ -31,7 +32,7 @@ class update_hcc(Updater):
     - auto-configure HCC org id
     """
 
-    def modify_krb5kdc_conf(self) -> bool:
+    def modify_krb5kdc_conf(self):
         """Add RHSM cert chain to KDC"""
         anchor = "FILE:{}".format(hccplatform.HMSIDM_CA_BUNDLE_PEM)
         logger.debug(
@@ -83,7 +84,11 @@ class update_hcc(Updater):
         if modified:
             # restart KDC if running
             logger.debug("Restarting KDC")
-            knownservices.krb5kdc.try_restart()
+            if hasattr(knownservices.krb5kdc, "try_restart"):
+                knownservices.krb5kdc.try_restart()
+            else:
+                if knownservices.krb5kdc.is_running():
+                    knownservices.krb5kdc.restart()
 
         return modified
 
@@ -96,6 +101,15 @@ class update_hcc(Updater):
                 "hccorgid already configured: %s",
                 org_ids[0],
             )
+            return False
+
+        if not os.path.isfile(hccplatform.RHSM_CERT):
+            logger.debug(
+                "RHSM certificate file '%s' does not exist.",
+                hccplatform.RHSM_CERT,
+            )
+            return False
+
         try:
             with open(hccplatform.RHSM_CERT, "rb") as f:
                 cert = x509.load_pem_x509_certificate(f.read())

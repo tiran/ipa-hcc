@@ -149,6 +149,13 @@ parser.add_argument(
     help="force setting of Kerberos conf",
     action="store_true",
 )
+# hidden argument for internal testing
+parser.add_argument(
+    "--upto",
+    metavar="PHASE",
+    help=argparse.SUPPRESS,
+    choices=("discover", "register", "pkinit", "keytab"),
+)
 
 
 def download_cert(args, url, local_cacert):
@@ -186,26 +193,10 @@ def discover_ipa(args, local_cacert):
         err = discovery.error_names[res]
         parser.error("IPA discovery failed: {}.\n".format(err))
 
-    dnsok = False
-    if not args.servers:
-        server, domain = ds.check_domain(
-            ds.domain, set(), "Validating DNS Discovery"
-        )
-        if server and domain:
-            logger.debug("DNS validated, enabling discovery")
-            dnsok = True
-        else:
-            logger.debug("DNS discovery failed, disabling discovery")
-    else:
-        logger.debug(
-            "Using servers from command line, disabling DNS discovery"
-        )
-
     logger.info("Client hostname: %s", args.hostname)
     logger.info("Realm: %s", ds.realm)
     logger.debug("Realm source: %s", ds.realm_source)
     logger.info("DNS Domain: %s", ds.domain)
-    logger.info("DNS discovery works: %s", dnsok)
     logger.debug("DNS Domain source: %s", ds.domain_source)
     logger.info("Preferred IPA Server: %s", ds.server)
     logger.info("IPA Servers: %s", ", ".join(ds.servers))
@@ -213,7 +204,7 @@ def discover_ipa(args, local_cacert):
     logger.info("BaseDN: %s", ds.basedn)
     logger.debug("BaseDN source: %s", ds.basedn_source)
 
-    return ds, dnsok
+    return ds
 
 
 def hcc_register(args, server, local_cacert):
@@ -272,14 +263,14 @@ def wait_for_inventory_host(args):
         )
 
 
-def create_krb5_conf(args, ds, dnsok, krb_name):
+def create_krb5_conf(args, ds, krb_name):
     client_domain = args.hostname.split(".", 1)[1]
     configure_krb5_conf(
         cli_realm=ds.realm,
         cli_domain=ds.domain,
         cli_server=ds.servers,
         cli_kdc=ds.kdc,
-        dnsok=dnsok,
+        dnsok=False,  # hard-code server names
         filename=krb_name,
         client_domain=client_domain,
         client_hostname=args.hostname,
@@ -316,7 +307,8 @@ def pkinit(args, host_principal, local_cacert, env):
     run(cmd, env=env, stdin="\n", raiseonerr=True)
 
 
-def getkeytab(args, keytab, host_principal, ds, local_cacert, env):
+def getkeytab(args, tmpdir, host_principal, ds, local_cacert, env):
+    keytab = os.path.join(tmpdir, "host.keytab")
     # fmt: off
     cmd = [
         paths.IPA_GETKEYTAB,
@@ -327,6 +319,7 @@ def getkeytab(args, keytab, host_principal, ds, local_cacert, env):
     ]
     # fmt: on
     run(cmd, env=env, raiseonerr=True)
+    return keytab
 
 
 def _run_ipa_client(args, local_cacert, extra_args=()):
@@ -384,6 +377,12 @@ def parse_args(*args):
     return args
 
 
+def check_upto(args, phase):
+    if args.upto is not None and args.upto == phase:
+        logger.info("Stopping at phase %s", phase)
+        parser.exit(0)
+
+
 def main(*args):
     args = parse_args(*args)
 
@@ -411,7 +410,7 @@ def main(*args):
         logger.debug("Using local CA cert %s", local_cacert)
 
         # discover IPA realm, domain, and servers
-        ds, dnsok = discover_ipa(args, local_cacert)
+        ds = discover_ipa(args, local_cacert)
 
         # if CA cert is not available yet, download it from IPA server
         if local_cacert is None:
@@ -422,6 +421,8 @@ def main(*args):
             local_cacert = os.path.join(tmpdir, "ca.crt")
             download_cert(args, url=url, local_cacert=local_cacert)
 
+        check_upto(args, "discover")
+
         # wait until this host appears in ConsoleDont host inventory
         wait_for_inventory_host(args)
 
@@ -429,11 +430,12 @@ def main(*args):
         # TODO: check other servers if server returns 400
         hcc_register(args, server=ds.server, local_cacert=local_cacert)
 
-        if HAS_KINIT_PKINIT:
+        check_upto(args, "register")
+
+        if HAS_KINIT_PKINIT and args.upto is None:
             ipa_client_pkinit(args, local_cacert)
         else:
             krb_name = os.path.join(tmpdir, "krb5.conf")
-            keytab = os.path.join(tmpdir, "host.keytab")
             env = {
                 "LC_ALL": "C",
                 "KRB5_CONFIG": krb_name,
@@ -443,16 +445,20 @@ def main(*args):
                 env["KRB5_TRACE"] = "/dev/stderr"
 
             host_principal = "host/{}@{}".format(args.hostname, ds.realm)
-            create_krb5_conf(args, ds, dnsok, krb_name)
+            create_krb5_conf(args, ds, krb_name)
             pkinit(args, host_principal, local_cacert=local_cacert, env=env)
-            getkeytab(
+            check_upto(args, "pkinit")
+
+            keytab = getkeytab(
                 args,
-                keytab,
+                tmpdir,
                 host_principal,
                 ds=ds,
                 local_cacert=local_cacert,
                 env=env,
             )
+            check_upto(args, "keytab")
+
             ipa_client_keytab(args, keytab, local_cacert)
     finally:
         if args.debug >= 2:

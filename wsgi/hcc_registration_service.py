@@ -1,17 +1,23 @@
-import http.client
 import logging
 import os
 import sys
-import time
-from typing import Optional, Tuple
 
-from cryptography import x509
 from cryptography.x509.oid import NameOID
 import gssapi
 import requests
 
+from ipalib import x509
 from ipaplatform.paths import paths
 from ipaplatform import hccplatform
+
+PY2 = sys.version_info.major == 2
+
+if PY2:
+    from httplib import responses as http_responses
+    from time import time as monotonic_time
+else:
+    from http.client import responses as http_responses
+    from time import monotonic as monotonic_time
 
 # must be set before ipalib or ipapython is imported
 os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_SERVICE_CACHE_DIR
@@ -62,20 +68,20 @@ class HTTPException(Exception):
         self.headers = headers
 
     def __str__(self):
-        return "{} {}".format(self.code, http.client.responses[self.code])
+        return "{} {}".format(self.code, http_responses[self.code])
 
 
 class Application:
     def __init__(self):
         # inventory bearer token + validity timestamp
-        self.access_token: Optional[str] = None
-        self.valid_until: int = 0
+        self.access_token = None
+        self.valid_until = 0
         # cached org_id from IPA config_show
-        self.org_id: Optional[int] = None
+        self.org_id = None
         # requests session for persistent HTTP connection
         self.session = requests.Session()
 
-    def parse_cert(self, env: dict, envname: str) -> x509.Certificate:
+    def parse_cert(self, env, envname):
         cert_pem = env.get(envname)
         if not cert_pem:
             raise HTTPException(
@@ -83,7 +89,7 @@ class Application:
             )
         return x509.load_pem_x509_certificate(cert_pem.encode("ascii"))
 
-    def parse_subject(self, subject: x509.Name) -> Tuple[int, str]:
+    def parse_subject(self, subject):
         nas = list(subject)
         if len(nas) != 2:
             raise HTTPException(
@@ -100,9 +106,9 @@ class Application:
 
     def get_access_token(
         self,
-        refresh_token_file: str = hccplatform.REFRESH_TOKEN_FILE,
-        url: str = hccplatform.TOKEN_URL,
-    ) -> str:
+        refresh_token_file=hccplatform.REFRESH_TOKEN_FILE,
+        url=hccplatform.TOKEN_URL,
+    ):
         """Get a bearer access token from an offline token
 
         TODO: Poor man's OAuth2 workflow. Replace with
@@ -111,7 +117,7 @@ class Application:
         https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html#refreshing-tokens
         """
         # use cached access token
-        if self.access_token and time.monotonic() < self.valid_until:
+        if self.access_token and monotonic_time() < self.valid_until:
             return self.access_token
 
         try:
@@ -130,9 +136,9 @@ class Application:
             "client_id": hccplatform.TOKEN_CLIENT_ID,
             "refresh_token": refresh_token,
         }
-        start = time.monotonic()
+        start = monotonic_time()
         resp = self.session.post(url, data)
-        dur = time.monotonic() - start
+        dur = monotonic_time() - start
         if resp.status_code >= 400:
             raise HTTPException(
                 resp.status_code,
@@ -145,15 +151,15 @@ class Application:
         j = resp.json()
         self.access_token = j["access_token"]
         # 10 seconds slack
-        self.valid_until = time.monotonic() + j["expires_in"] - 10
+        self.valid_until = monotonic_time() + j["expires_in"] - 10
         return self.access_token
 
     def lookup_inventory(
         self,
-        rhsm_id: str,
-        access_token: str,
-        url: str = hccplatform.INVENTORY_HOSTS_API,
-    ) -> Tuple[str, str]:
+        rhsm_id,
+        access_token,
+        url=hccplatform.INVENTORY_HOSTS_API,
+    ):
         """Lookup host by subscription manager id
 
         Returns FQDN, inventory_id
@@ -165,9 +171,9 @@ class Application:
             )
         }
         params = {"filter[system_profile][owner_id]": rhsm_id}
-        start = time.monotonic()
+        start = monotonic_time()
         resp = self.session.get(url, params=params, headers=headers)
-        dur = time.monotonic() - start
+        dur = monotonic_time() - start
         if resp.status_code >= 400:
             # reset access token
             self.access_token = None
@@ -219,7 +225,7 @@ class Application:
         if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
             api.Backend.rpcclient.disconnect()
 
-    def get_ipa_org_id(self) -> int:
+    def get_ipa_org_id(self):
         """Get and cache global org_id from IPA config"""
         if self.org_id is not None:
             return self.org_id
@@ -234,10 +240,10 @@ class Application:
 
     def update_ipa(
         self,
-        org_id: int,
-        rhsm_id: str,
-        inventory_id: str,
-        fqdn: str,
+        org_id,
+        rhsm_id,
+        inventory_id,
+        fqdn,
     ):
         ipa_org_id = self.get_ipa_org_id()
         if org_id != ipa_org_id:
@@ -337,7 +343,7 @@ class Application:
 application = Application()
 
 
-def test(rhsm_id: str):
+def test(rhsm_id):
     logging.basicConfig(
         level=logging.DEBUG,
         format="[%(asctime)s %(name)s] <%(levelname)s>: %(message)s",
@@ -361,8 +367,10 @@ def test(rhsm_id: str):
     if os.geteuid() == 0:
         import pwd
 
-        uid = pwd.getpwnam(hccplatform.HCC_SERVICE_USER).pw_uid
-        os.setreuid(uid, uid)
+        user = pwd.getpwnam(hccplatform.HCC_SERVICE_USER)
+        os.setreuid(user.pw_uid, user.pw_uid)
+        os.environ["HOME"] = user.pw_dir
+        os.environ["USER"] = user.pw_name
 
     access_token = application.get_access_token()
     application.lookup_inventory(rhsm_id, access_token)

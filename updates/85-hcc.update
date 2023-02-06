@@ -31,11 +31,8 @@ default: objectClass: top
 default: cn: rhsm-cert
 default: description: Rule for Red Hat Subscription Manager (RHSM) certificates (/etc/pki/consumer/cert.pem).
 default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX))(!(krbprincipalkey=*)))
-# NSS uses E= instead of emailAddress, sss-certmap(5) suggests to skip this field
-# "," in "Red Hat, Inc." must be quoted as "\\,"
-# "$" is quoted as "$$" for ipa-ldap-updater
-# matches certificates that are signed by "Red Hat Candlepin Authority" or "Red Hat Candlepin Authority R2"
-default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority( R2)?,OU=Red Hat Network,O=Red Hat\\, Inc\.,ST=North Carolina,C=US$$
+# simplified rule for backwards compatibility with RHEL 7
+default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority,OU=Red Hat Network,.*
 default: ipaEnabledFlag: TRUE
 
 # roles and privileges for HCC enrollment

@@ -7,18 +7,48 @@
 """
 import os
 import logging
+import sys
 
 from ipalib import errors
 from ipalib import Registry
 from ipalib import Updater
 from ipalib.install.kinit import kinit_keytab
+
+try:
+    from ipapython.ipaldap import realm_to_ldapi_uri
+    from ipapython.ipautil import remove_file
+except ImportError:
+    # IPA 4.6
+    from ipaserver.install.installutils import realm_to_ldapi_uri, remove_file
+from ipapython.certdb import NSSDatabase, parse_trust_flags
 from ipapython.kerberos import Principal
-from ipapython.ipaldap import realm_to_ldapi_uri
 from ipapython import ipautil
+from ipapython.version import VERSION
 from ipaplatform import hccplatform
 from ipaplatform.paths import paths
+from ipaplatform.services import knownservices
 
 logger = logging.getLogger(__name__)
+
+if sys.version_info.major == 2:
+    text = unicode  # noqa: F821
+else:
+    text = str
+
+CANDLEPIN_CHAIN = [
+    (
+        "redhat-entitlement-master",
+        "/usr/share/ipa-hcc/cacerts/redhat-entitlement-master-ca.pem",
+    ),
+    (
+        "redhat-entitlement-authority",
+        "/usr/share/ipa-hcc/cacerts/redhat-entitlement-authority-2022.pem",
+    ),
+    (
+        "redhat-candlepin",
+        "/usr/share/ipa-hcc/cacerts/candlepin-redhat-ca-sha256.pem",
+    ),
+]
 
 register = Registry()
 
@@ -33,66 +63,58 @@ class update_hcc_enrollment_service(Updater):
     """
 
     @property
-    def service_principal(self) -> str:
-        return str(
-            Principal(
-                (
-                    hccplatform.HCC_SERVICE,
-                    self.api.env.host,
-                ),
-                self.api.env.realm,
-            )
+    def service_principal(self):
+        return Principal(
+            (hccplatform.HCC_SERVICE, self.api.env.host), self.api.env.realm
         )
 
-    def add_hcc_enrollment_service(self) -> bool:
-        name = self.service_principal
+    def add_hcc_enrollment_service(self):
+        principal = self.service_principal
+        princname = text(principal)
         try:
-            self.api.Command.service_show(name)
+            self.api.Command.service_show(principal)
         except errors.NotFound:
-            logger.info("Adding service '%s'", name)
+            logger.info("Adding service '%s'", principal)
             # Remove stale keytab
-            ipautil.remove_file(hccplatform.HCC_SERVICE_KEYTAB)
+            remove_file(hccplatform.HCC_SERVICE_KEYTAB)
             # force is required to skip the 'verify_host_resolvable' check
             # in service_add pre-callback. ipa-server-install runs updates
             # before it installs DNS service.
             self.api.Command.service_add(
-                name,
+                principal,
                 force=True,
             )
             logger.info(
                 "Adding service '%s' to role '%s'",
-                name,
+                principal,
                 hccplatform.HCC_ENROLLMENT_ROLE,
             )
             self.api.Command.role_add_member(
                 hccplatform.HCC_ENROLLMENT_ROLE,
-                service=str(name),
+                service=princname,
             )
             return True
         else:
             logger.info(
                 "Service '%s' already exists. Not updating role '%s'.",
-                name,
+                principal,
                 hccplatform.HCC_ENROLLMENT_ROLE,
             )
             return (False,)
 
-    def add_hcc_enrollment_service_keytab(self) -> bool:
+    def add_hcc_enrollment_service_keytab(self):
         """Create keytab for hcc-enrollment WSGI app"""
         keytab = hccplatform.HCC_SERVICE_KEYTAB
-        service = hccplatform.HCC_SERVICE
-        principal = "{service}/{host}@{realm}".format(
-            service=service, host=self.api.env.host, realm=self.api.env.realm
-        )
+        princname = text(self.service_principal)
         ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
 
         if os.path.isfile(keytab):
             try:
-                kinit_keytab(principal, keytab, "MEMORY:")
+                kinit_keytab(princname, keytab, "MEMORY:")
             except Exception as e:
                 # keytab from previous installation?
                 logger.debug("keytab %s is outdated: %s", keytab, e)
-                ipautil.remove_file(keytab)
+                remove_file(keytab)
             else:
                 logger.debug(
                     "keytab %s exists and works, nothing to do",
@@ -104,7 +126,7 @@ class update_hcc_enrollment_service(Updater):
         args = [
             paths.IPA_GETKEYTAB,
             "-k", keytab,
-            "-p", principal,
+            "-p", princname,
             "-H", ldap_uri,
             "-Y", "EXTERNAL"
         ]
@@ -116,11 +138,40 @@ class update_hcc_enrollment_service(Updater):
         logger.debug(
             "Created keytab '%s' for principal '%s'",
             keytab,
-            principal,
+            princname,
         )
+        if knownservices.gssproxy.is_running():
+            logger.debug("Restarting gssproxy")
+            knownservices.gssproxy.restart()
+
         return True
+
+    def add_ca_to_httpd_nssdb(self):
+        db = NSSDatabase(paths.HTTPD_ALIAS_DIR)
+        if not os.path.isfile(db.certdb):
+            logger.debug("Cert DB %s does not exist.", db.certdb)
+            return False
+
+        nicknames = set(nick for nick, _trust in db.list_certs())
+        # CA valid for client cert auth
+        trustflags = parse_trust_flags("T,,")
+        modified = False
+
+        for nick, certpath in CANDLEPIN_CHAIN:
+            if nick not in nicknames:
+                logger.debug(
+                    "Adding %s (%s) to %s", nick, certpath, db.secdir
+                )
+                db.import_pem_cert(nick, trustflags, certpath)
+                modified = True
+
+        if modified and knownservices.httpd.is_running():
+            logger.debug("Restarting httpd")
+            knownservices.httpd.restart()
 
     def execute(self, **options):
         self.add_hcc_enrollment_service()
         self.add_hcc_enrollment_service_keytab()
+        if VERSION.startswith("4.6"):
+            self.add_ca_to_httpd_nssdb()
         return False, []
