@@ -30,7 +30,8 @@ default: objectClass: ipacertmaprule
 default: objectClass: top
 default: cn: rhsm-cert
 default: description: Rule for Red Hat Subscription Manager (RHSM) certificates (/etc/pki/consumer/cert.pem).
-default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX))(!(krbprincipalkey=*)))
+# default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX))(!(krbprincipalkey=*)))
+default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX)))
 # simplified rule for backwards compatibility with RHEL 7
 default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority,OU=Red Hat Network,.*
 default: ipaEnabledFlag: TRUE
