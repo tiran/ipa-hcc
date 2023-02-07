@@ -22,15 +22,20 @@ import tempfile
 
 
 from ipaplatform.paths import paths
+from ipaplatform import hccplatform
 from ipaclient.hcc.auto_enrollment import (
+    DEFAULT_PKINIT_ANCHOR,
     discover_ipa,
     create_krb5_conf,
     pkinit,
     getkeytab,
     FQDN,
-    check_hostname,
-    check_realm,
-    check_domain,
+    check_arg_cafile,
+    check_arg_hostname,
+    check_arg_realm,
+    check_arg_domain,
+    check_arg_pkinit_identity,
+    check_arg_pkinit_anchor,
 )
 
 
@@ -56,10 +61,9 @@ parser.add_argument(
 parser.add_argument(
     "--ca-cert-file",
     metavar="FILE",
-    required=True,
-    help="load the CA certificate from this file",
+    help="load the CA certificate from this file or URL",
     dest="cacert",
-    type=check_cafile,
+    type=check_arg_cafile,
 )
 parser.add_argument(
     "--insecure",
@@ -69,41 +73,47 @@ parser.add_argument(
 parser.add_argument(
     "--server",
     metavar="SERVER",
-    help="FQDN of IPA server",
-    type=check_hostname,
+    dest="servers",
+    action="append",  # support multiple
+    help="FQDN of IPA server(s)",
+    type=check_arg_hostname,
 )
 parser.add_argument(
     "--domain",
     metavar="DOMAIN_NAME",
     help="primary DNS domain of the IPA deployment",
-    type=check_domain,
+    type=check_arg_domain,
 )
 parser.add_argument(
     "--realm",
     metavar="REALM",
     help="Kerberos realm name of the IPA deployment",
-    type=check_realm,
+    type=check_arg_realm,
 )
 parser.add_argument(
     "--hostname",
     metavar="HOST_NAME",
     help="The hostname of this machine (FQDN)",
     default=FQDN,
-    type=check_hostname,
+    type=check_arg_hostname,
 )
 parser.add_argument(
     "--pkinit-identity",
     metavar="IDENTITY",
-    help="PKINIT identity information",
-    default="FILE:/etc/pki/consumer/cert.pem,/etc/pki/consumer/key.pem",
+    help="PKINIT identity information (default: RHSM cert/key)",
+    default="FILE:{cert},{key}".format(
+        cert=hccplatform.RHSM_CERT, key=hccplatform.RHSM_KEY
+    ),
+    type=check_arg_pkinit_identity,
 )
 parser.add_argument(
     "--pkinit-anchor",
     metavar="FILEDIR",
     help=(
         "PKINIT trust anchors, prefixed with FILE: for CA PEM bundle file or "
-        "DIR: for an OpenSSL hash dir."
+        "DIR: for an OpenSSL hash dir (default: Red Hat Candlepin bundle)."
     ),
+    type=check_arg_pkinit_anchor,
     dest="pkinit_anchors",
     action="append",  # support multiple
 )
@@ -120,8 +130,6 @@ parser.add_argument(
     help="force setting of Kerberos conf",
     action="store_true",
 )
-
-DEFAULT_PKINIT_ANCHOR = "FILE:/usr/share/ipa-hcc/redhat-candlepin-bundle.pem"
 
 
 def ipa_client_cmd(args):

@@ -27,8 +27,6 @@ try:
 except ImportError:
     from ipaclient.install import ipadiscovery as discovery
 
-from ipaclient.install.client import configure_krb5_conf
-
 # from ipalib.constants import FQDN
 from ipalib.install import kinit
 from ipalib.util import validate_domain_name, validate_hostname
@@ -46,27 +44,61 @@ FQDN = socket.gethostname()
 logger = logging.getLogger(__name__)
 
 
-def check_hostname(arg):
-    validate_hostname(arg)
+def check_arg_hostname(arg):
+    try:
+        validate_hostname(arg)
+    except ValueError as e:
+        raise argparse.ArgumentError("--hostname", str(e))
     return arg.lower()
 
 
-def check_realm(arg):
-    validate_domain_name(arg, entity="realm")
+def check_arg_realm(arg):
+    try:
+        validate_domain_name(arg, entity="realm")
+    except ValueError as e:
+        raise argparse.ArgumentError("--realm", str(e))
     return arg.upper()
 
 
-def check_domain(arg):
-    validate_domain_name(arg, entity="domain")
+def check_arg_domain(arg):
+    try:
+        validate_domain_name(arg, entity="domain")
+    except ValueError as e:
+        raise argparse.ArgumentError("--domain", str(e))
     return arg.lower()
 
 
-def check_cafile(arg):
+def check_arg_cafile(arg):
     if arg.startswith(("http://", "https://")):
         return arg
     if not os.path.isfile(arg):
-        raise ValueError("CA file {arg} does not exist".format(arg=arg))
+        raise argparse.ArgumentError(
+            "--ca-cert-file",
+            "CA file {arg} does not exist".format(arg=arg),
+        )
     return os.path.abspath(arg)
+
+
+def check_arg_pkinit_identity(arg):
+    if not arg.startswith(("FILE:", "PKCS11:", "PKCS12:", "DIR:", "ENV:")):
+        raise argparse.ArgumentError(
+            "--pkinit-identity",
+            "Invalid value '{arg}', must start with FILE:, PKCS11:, PKCS12: DIR:, ENV:".format(
+                arg=arg
+            ),
+        )
+    return arg
+
+
+def check_arg_pkinit_anchor(arg):
+    if not arg.startswith(("FILE:", "DIR:", "ENV:")):
+        raise argparse.ArgumentError(
+            "--pkinit-anchor",
+            "Invalid value '{arg}', must start with FILE:, DIR:, ENV:".format(
+                arg=arg
+            ),
+        )
+    return arg
 
 
 parser = argparse.ArgumentParser()
@@ -84,7 +116,7 @@ parser.add_argument(
     metavar="FILE",
     help="load the CA certificate from this file or URL",
     dest="cacert",
-    type=check_cafile,
+    type=check_arg_cafile,
 )
 parser.add_argument(
     "--insecure",
@@ -97,26 +129,26 @@ parser.add_argument(
     dest="servers",
     action="append",  # support multiple
     help="FQDN of IPA server(s)",
-    type=check_hostname,
+    type=check_arg_hostname,
 )
 parser.add_argument(
     "--domain",
     metavar="DOMAIN_NAME",
     help="primary DNS domain of the IPA deployment",
-    type=check_domain,
+    type=check_arg_domain,
 )
 parser.add_argument(
     "--realm",
     metavar="REALM",
     help="Kerberos realm name of the IPA deployment",
-    type=check_realm,
+    type=check_arg_realm,
 )
 parser.add_argument(
     "--hostname",
     metavar="HOST_NAME",
     help="The hostname of this machine (FQDN)",
     default=FQDN,
-    type=check_hostname,
+    type=check_arg_hostname,
 )
 parser.add_argument(
     "--pkinit-identity",
@@ -125,6 +157,7 @@ parser.add_argument(
     default="FILE:{cert},{key}".format(
         cert=hccplatform.RHSM_CERT, key=hccplatform.RHSM_KEY
     ),
+    type=check_arg_pkinit_identity,
 )
 parser.add_argument(
     "--pkinit-anchor",
@@ -133,6 +166,7 @@ parser.add_argument(
         "PKINIT trust anchors, prefixed with FILE: for CA PEM bundle file or "
         "DIR: for an OpenSSL hash dir (default: Red Hat Candlepin bundle)."
     ),
+    type=check_arg_pkinit_anchor,
     dest="pkinit_anchors",
     action="append",  # support multiple
 )
@@ -158,7 +192,40 @@ parser.add_argument(
 )
 
 
+# configure_krb5_conf() adds unwanted entries and sometimes creates a
+# bad krb5.conf.
+KRB5_CONF = """\
+# includedir /etc/krb5.conf.d/
+
+[libdefaults]
+  default_realm = {realm}
+  dns_lookup_realm = false
+  rdns = false
+  dns_canonicalize_hostname = false
+  dns_lookup_kdc = true
+  ticket_lifetime = 24h
+  forwardable = true
+  udp_preference_limit = 0
+
+[realms]
+  {realm} = {{
+    kdc = {server}:88
+    master_kdc = {server}:88
+    admin_server = {server}:749
+    kpasswd_server = {server}:464
+    {extra_kdcs}
+    default_domain = {domain}
+  }}
+
+[domain_realm]
+  {hostname} = {realm}
+  .{domain} = {realm}
+  {domain} = {realm}
+"""
+
+
 def download_cert(args, url, local_cacert):
+    """Download CA cert and write it to 'local_cacert' file"""
     verify = not args.insecure
     logger.debug("Downloading CA certs from %s (secure: %s)", url, verify)
     try:
@@ -182,16 +249,26 @@ def discover_ipa(args, local_cacert):
     servers.
     """
     ds = discovery.IPADiscovery()
-    res = ds.search(
-        domain=args.domain if args.domain else "",
-        servers=args.servers if args.servers else "",
-        realm=args.realm,
+    kwargs = dict(
         hostname=args.hostname,
         ca_cert_path=local_cacert,
     )
+    if args.domain:
+        kwargs["domain"] = args.domain
+    if args.realm:
+        kwargs["realm"] = args.realm
+    if args.servers:
+        assert args.domain
+        kwargs["servers"] = args.servers
+
+    res = ds.search(**kwargs)
     if res != SUCCESS:
         err = discovery.error_names[res]
         parser.error("IPA discovery failed: {}.\n".format(err))
+
+    # servers, domain = ds.check_domain(
+    #     ds.domain, set(), "Validating DNS Discovery"
+    # )
 
     logger.info("Client hostname: %s", args.hostname)
     logger.info("Realm: %s", ds.realm)
@@ -270,34 +347,26 @@ def wait_for_inventory_host(args):
 
 
 def create_krb5_conf(args, ds, krb_name):
-    client_domain = args.hostname.split(".", 1)[1]
-    configure_krb5_conf(
-        cli_realm=ds.realm,
-        cli_domain=ds.domain,
-        cli_server=ds.servers,
-        cli_kdc=ds.kdc,
-        dnsok=False,  # hard-code server names
-        filename=krb_name,
-        client_domain=client_domain,
-        client_hostname=args.hostname,
-        configure_sssd=False,
-        force=args.force,
+    """Create a temporary krb5.conf"""
+    extra_kdcs = [
+        "kdc = {server}:88".format(server=server)
+        for server in ds.servers
+        if server != ds.server
+    ]
+    conf = KRB5_CONF.format(
+        realm=ds.realm,
+        domain=ds.domain,
+        server=ds.server,
+        extra_kdcs="\n    ".join(extra_kdcs).strip(),
+        hostname=args.hostname,
     )
-
-    # remove pkinit anchors and pool lines. The files do not exist, yet.
-    with open(krb_name) as f:
-        lines = list(f)
+    logger.debug("Creating %s with content:\n%s", krb_name, conf)
     with open(krb_name, "w") as f:
-        for line in lines:
-            if line.strip().startswith(("pkinit_anchors", "pkinit_pool")):
-                logger.debug(
-                    "Removed line '%s' from %s", line.strip(), krb_name
-                )
-                continue
-            f.write(line)
+        f.write(conf)
 
 
 def pkinit(args, host_principal, local_cacert, env):
+    """Perform kinit with X509_user_identity (PKINIT)"""
     cmd = [paths.KINIT]
     # CA cert signs KDC cert
     anchors = ["FILE:{}".format(local_cacert)]
@@ -314,6 +383,7 @@ def pkinit(args, host_principal, local_cacert, env):
 
 
 def getkeytab(args, tmpdir, host_principal, ds, local_cacert, env):
+    """Retrieve keytab with ipa-getkeytab"""
     keytab = os.path.join(tmpdir, "host.keytab")
     # fmt: off
     cmd = [
@@ -352,11 +422,13 @@ def _run_ipa_client(args, local_cacert, extra_args=()):
 
 
 def ipa_client_keytab(args, keytab, local_cacert):
+    """Install IPA client with existing keytab"""
     extra_args = ["--keytab", keytab]
     return _run_ipa_client(args, local_cacert, extra_args)
 
 
 def ipa_client_pkinit(args, local_cacert):
+    """Install IPA client with PKINIT"""
     extra_args = [
         "--pkinit-identity={}".format(args.pkinit_identity),
     ]
@@ -373,6 +445,8 @@ def parse_args(*args):
         level=logging.DEBUG if args.debug else logging.INFO,
         format="%(levelname)s: %(message)s",
     )
+    if args.servers and not (args.domain or args.realm):
+        parser.error("--server requires --domain or --realm option\n")
     if args.realm and not args.domain:
         args.domain = args.realm.lower()
     if args.domain and not args.realm:
@@ -392,7 +466,7 @@ def check_upto(args, phase):
 def main(*args):
     args = parse_args(*args)
 
-    if os.path.isfile(paths.IPA_DEFAULT_CONF):
+    if os.path.isfile(paths.IPA_DEFAULT_CONF) and not args.upto:
         parser.error(
             "IPA is already installed, '{conf}' exists.\n".format(
                 conf=paths.IPA_DEFAULT_CONF
@@ -442,11 +516,15 @@ def main(*args):
             ipa_client_pkinit(args, local_cacert)
         else:
             krb_name = os.path.join(tmpdir, "krb5.conf")
+            # pass KRB5 and OpenSSL env vars
             env = {
-                "LC_ALL": "C",
-                "KRB5_CONFIG": krb_name,
-                "KRB5CCNAME": os.path.join(tmpdir, "ccache"),
+                k: v
+                for k, v in os.environ.items()
+                if k.startswith(("KRB5", "GSS", "OPENSSL"))
             }
+            env["LC_ALL"] = "C"
+            env["KRB5_CONFIG"] = krb_name
+            env["KRB5CCNAME"] = os.path.join(tmpdir, "ccache")
             if args.debug >= 2:
                 env["KRB5_TRACE"] = "/dev/stderr"
 
