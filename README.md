@@ -302,6 +302,27 @@ make rpkg
 
 RHEL 8 builds and COPR need `idm:DL1` module.
 
+## RHEL 9 clients with RHEL 7 / 8 servers
+
+RHEL 9 clients do not support SHA-1 signatures. Older RHEL 7 and 8 Kerberos
+KDC servers have SHA-1 hard-coded, see
+[RHBZ#2060798](https://bugzilla.redhat.com/show_bug.cgi?id=2060798). kinit
+against an old server fails with an error message such as `Failed to verify
+CMS message: content type not enveloped data`. The problem is fixed in
+7.9.z build `krb5-server-1.15.1-53.el7_9`
+[RHBA-2022:5231](https://access.redhat.com/errata/RHBA-2022:5231)
+and 8.7 build `krb5-server-1.18.2-15.el8`
+[RHBA-2022:7696](https://access.redhat.com/errata/RHBA-2022:7696).
+
+Workarounds:
+
+* update IPA servers (7.9.z, 8.7)
+* modify crypto policies on RHEL 9 clients to allow SHA1
+  `update-crypto-policies --set DEFAULT:SHA1`,
+  [RHBZ#2060798 comment 31](https://bugzilla.redhat.com/show_bug.cgi?id=2060798#c31).
+* **hack:** temporarily disable crypto policies by setting `OPENSSL_CONFIG` env var
+
+
 ## License
 
 See file 'COPYING' for use and warranty information
