@@ -320,7 +320,8 @@ Workarounds:
 * modify crypto policies on RHEL 9 clients to allow SHA1
   `update-crypto-policies --set DEFAULT:SHA1`,
   [RHBZ#2060798 comment 31](https://bugzilla.redhat.com/show_bug.cgi?id=2060798#c31).
-* **hack:** temporarily disable crypto policies by setting `OPENSSL_CONFIG` env var
+* **hack:** temporarily disable crypto policies on RHEL 9 clients by setting
+  the env var `OPENSSL_CONF=/dev/null` during client auto-enrollment.
 
 
 ## License
