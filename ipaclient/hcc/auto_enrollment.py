@@ -80,24 +80,56 @@ def check_arg_cafile(arg):
 
 
 def check_arg_pkinit_identity(arg):
+    argname = "--pkinit-identity"
     if not arg.startswith(("FILE:", "PKCS11:", "PKCS12:", "DIR:", "ENV:")):
         raise argparse.ArgumentError(
-            "--pkinit-identity",
+            argname,
             "Invalid value '{arg}', must start with FILE:, PKCS11:, PKCS12: DIR:, ENV:".format(
                 arg=arg
             ),
         )
+    if arg.startswith("FILE:"):
+        cert = arg[5:]
+        if "," in cert:
+            cert, key = arg.split(",", 1)
+        else:
+            key = None
+        if not os.path.isfile(cert):
+            raise argparse.ArgumentError(
+                argname,
+                "Invalid value '{arg}', cert file {cert} does not exist.".format(
+                    arg=arg, cert=cert
+                ),
+            )
+        if not os.path.isfile(key):
+            raise argparse.ArgumentError(
+                argname,
+                "Invalid value '{arg}', key file {key} does not exist.".format(
+                    arg=arg, key=key
+                ),
+            )
     return arg
 
 
 def check_arg_pkinit_anchor(arg):
+    argname = "--pkinit-anchor"
     if not arg.startswith(("FILE:", "DIR:", "ENV:")):
         raise argparse.ArgumentError(
-            "--pkinit-anchor",
+            argname,
             "Invalid value '{arg}', must start with FILE:, DIR:, ENV:".format(
                 arg=arg
             ),
         )
+    if arg.startswith("FILE:"):
+        bundle = arg[5:]
+        if not os.path.isfile(bundle):
+            raise argparse.ArgumentError(
+                argname,
+                "Invalid value '{arg}', bundle file {bundle} does not exist.".format(
+                    arg=arg, bundle=bundle
+                ),
+            )
+
     return arg
 
 
