@@ -16,9 +16,16 @@ account is missing EBS number, and you have to contact Red Hat support.
 
 ## Testing ipa-hcc with 1minutetip
 
-All commands must be run from this directory. 1minutetip executes the
+All commands must be run from **this** directory. 1minutetip executes the
 Ansible playbook `tests/tests.yaml` with help of `standard-test-roles`
 package.
+
+```
+cd contrib/1minutetip
+```
+
+1minutetip uses Kerberos authentication to provision machines. You must have
+a valid Kerberos TGT (`kinit ...`).
 
 ### Install a new server
 
@@ -26,12 +33,13 @@ package.
    ```
    1minutetip --flavor ci.m1.medium.rng rhel-8.7
    ```
-2) Connect to RHC and Insights`rhc connect -o ORGID -a KEY`
-3) RHEL 7: `insights-client --register`
-4) `dnf install ipa-hcc-registration-service ipa-hcc-server-plugin`
+2) SSH into the machine (press `s`)
+3) Connect to RHC and Insights`rhc connect -o ORGID -a KEY`
+4) RHEL 7: `insights-client --register`
+5) `dnf install ipa-hcc-registration-service ipa-hcc-server-plugin`
    Package installation reads the org id from the RHSM cert and updates
    IPA's global configuration.
-5) Write refresh token to `/etc/ipa/hcc/refresh_token`.
+6) Write refresh token to `/etc/ipa/hcc/refresh_token`.
 
 ### Install a client (in a separate session)
 
@@ -40,9 +48,11 @@ package.
    ```
    IPASERVER_IP=$IP 1minutetip rhel-8.7
    ```
-3) Enable service `systemctl enable ipa-hcc-auto-enrollment.service`
-4) `rhc connect -o ORGID -a KEY`
-5) Watch the magic happen: `journalctl -f -u ipa-hcc-auto-enrollment.service`
+3) SSH into the machine (press `s`)
+4) Enable service `systemctl enable ipa-hcc-auto-enrollment.service`
+5) `rhc connect -o ORGID -a KEY`
+6) RHEL 7: `insights-client --register`
+7) Watch the magic happen: `journalctl -f -u ipa-hcc-auto-enrollment.service`
 
 ## Tips
 

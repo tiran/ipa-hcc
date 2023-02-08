@@ -5,7 +5,7 @@
     upgrade: true
     install_server: true
     install_client: false
-    server_ip: "{{ lookup('env', 'IPASERVER_IP', default=undef()) }}"
+    server_ip: "{{ lookup('env', 'IPASERVER_IP', default='') }}"
     domain: hmsipa.test
     realm: "{{ domain | upper }}"
     passwd: Secret123
@@ -18,7 +18,7 @@
       server_hostname: "host-{{ server_ip | replace('.', '-') }}.{{ domain }}"
       install_server: false
       install_client: true
-    when: server_ip is defined
+    when: server_ip is defined and server_ip
 
   - name: Show info
     debug:
@@ -28,7 +28,7 @@
         - "host: {{ hostname }} {{ ipv4 }}"
         - "install_server: {{ install_server }}"
         - "install_client: {{ install_client }}"
-        - "server: {{ server_hostname | default('n/a') }} {{ server_ip | default('n/a') }}"
+        - "server: {{ server_hostname | default('n/a') }}"
 
   - name: Enable DL1 module
     shell: "dnf -y module enable idm:DL1"
@@ -112,7 +112,7 @@
             - "dnf install ipa-hcc-registration-service ipa-hcc-server-plugin"
 
   # CLIENT specific
-  - name: IPA server installation
+  - name: IPA client installation
     when: install_client|bool
     block:
       - name: install IPA client package
