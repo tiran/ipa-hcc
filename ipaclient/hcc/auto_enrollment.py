@@ -48,7 +48,7 @@ def check_arg_hostname(arg):
     try:
         validate_hostname(arg)
     except ValueError as e:
-        raise argparse.ArgumentError("--hostname", str(e))
+        raise argparse.ArgumentError(None, str(e))
     return arg.lower()
 
 
@@ -56,7 +56,7 @@ def check_arg_realm(arg):
     try:
         validate_domain_name(arg, entity="realm")
     except ValueError as e:
-        raise argparse.ArgumentError("--realm", str(e))
+        raise argparse.ArgumentError(None, str(e))
     return arg.upper()
 
 
@@ -64,7 +64,7 @@ def check_arg_domain(arg):
     try:
         validate_domain_name(arg, entity="domain")
     except ValueError as e:
-        raise argparse.ArgumentError("--domain", str(e))
+        raise argparse.ArgumentError(None, str(e))
     return arg.lower()
 
 
@@ -73,17 +73,16 @@ def check_arg_cafile(arg):
         return arg
     if not os.path.isfile(arg):
         raise argparse.ArgumentError(
-            "--ca-cert-file",
+            None,
             "CA file {arg} does not exist".format(arg=arg),
         )
     return os.path.abspath(arg)
 
 
 def check_arg_pkinit_identity(arg):
-    argname = "--pkinit-identity"
     if not arg.startswith(("FILE:", "PKCS11:", "PKCS12:", "DIR:", "ENV:")):
         raise argparse.ArgumentError(
-            argname,
+            None,
             "Invalid value '{arg}', must start with FILE:, PKCS11:, PKCS12: DIR:, ENV:".format(
                 arg=arg
             ),
@@ -91,19 +90,19 @@ def check_arg_pkinit_identity(arg):
     if arg.startswith("FILE:"):
         cert = arg[5:]
         if "," in cert:
-            cert, key = arg.split(",", 1)
+            cert, key = cert.split(",", 1)
         else:
             key = None
         if not os.path.isfile(cert):
             raise argparse.ArgumentError(
-                argname,
+                None,
                 "Invalid value '{arg}', cert file {cert} does not exist.".format(
                     arg=arg, cert=cert
                 ),
             )
-        if not os.path.isfile(key):
+        if key is not None and not os.path.isfile(key):
             raise argparse.ArgumentError(
-                argname,
+                None,
                 "Invalid value '{arg}', key file {key} does not exist.".format(
                     arg=arg, key=key
                 ),
@@ -112,10 +111,9 @@ def check_arg_pkinit_identity(arg):
 
 
 def check_arg_pkinit_anchor(arg):
-    argname = "--pkinit-anchor"
     if not arg.startswith(("FILE:", "DIR:", "ENV:")):
         raise argparse.ArgumentError(
-            argname,
+            None,
             "Invalid value '{arg}', must start with FILE:, DIR:, ENV:".format(
                 arg=arg
             ),
@@ -124,7 +122,7 @@ def check_arg_pkinit_anchor(arg):
         bundle = arg[5:]
         if not os.path.isfile(bundle):
             raise argparse.ArgumentError(
-                argname,
+                None,
                 "Invalid value '{arg}', bundle file {bundle} does not exist.".format(
                     arg=arg, bundle=bundle
                 ),
