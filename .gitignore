@@ -9,3 +9,5 @@ __pycache__
 
 /refresh_token
 /ipa-hcc.spec
+
+/contrib/1minutetip/artifacts/
