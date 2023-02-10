@@ -11,8 +11,10 @@ If you are unable to access Insights and other services on Console, then your
 account is missing EBS number, and you have to contact Red Hat support.
 
 * Create an activation key at https://access.redhat.com/management/activation_keys
-  and make note or your org id, too.
-* Create a refresh token https://access.redhat.com/management/api and safe it.
+  and make note of your org id, too. `ORGID` and `KEY` are later used to
+  connect hosts `rhc connect`.
+* Create a refresh token https://access.redhat.com/management/api and save
+  the string.
 
 ## Testing ipa-hcc with 1minutetip
 
@@ -53,6 +55,15 @@ a valid Kerberos TGT (`kinit ...`).
 5) `rhc connect -o ORGID -a KEY`
 6) RHEL 7: `insights-client --register`
 7) Watch the magic happen: `journalctl -f -u ipa-hcc-auto-enrollment.service`
+
+### Unregister from RHSM, RHC, and Insights
+
+```
+insight-client --unregister
+rhc disconnect
+```
+
+or remove stale hosts from https://console.redhat.com/insights/inventory
 
 ## Tips
 
