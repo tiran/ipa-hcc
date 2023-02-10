@@ -3,6 +3,7 @@
   - classic
   vars:
     upgrade: true
+    stage: "{{ lookup('env', 'STAGE', default='0') | bool }}"
     install_server: true
     install_client: false
     server_ip: "{{ lookup('env', 'IPASERVER_IP', default='') }}"
@@ -29,6 +30,7 @@
         - "install_server: {{ install_server }}"
         - "install_client: {{ install_client }}"
         - "server: {{ server_hostname | default('n/a') }}"
+        - "Console stage env: {{ stage }}"
 
   - name: Enable DL1 module
     shell: "dnf -y module enable idm:DL1"
@@ -57,6 +59,35 @@
       name:
         - rhc
         - insights-client
+
+  - name: Configure system for stage environment
+    when: stage|bool
+    tasks:
+      - name: Configure RHSM for stage environment
+        shell: |
+          subscription-manager config \
+            --server.hostname subscription.rhsm.stage.redhat.com \
+            --rhsm.baseurl https://cdn.stage.redhat.com
+      - name: Configure /etc/rhc/config.toml broker for stage environment
+        lineinfile:
+          path: /etc/rhc/config.toml
+          regexp: '^broker\s*='
+          line: 'broker = ["wss://connect.stage.cloud.redhat.com:443"]'
+      - name: Configure /etc/rhc/config.toml data-host for stage environment
+        lineinfile:
+          path: /etc/rhc/config.toml
+          regexp: '^data-host\s*='
+          line: 'data-host = "cert.cloud.stage.redhat.com"'
+      - name: Create /etc/ipa/hcc directory
+        file:
+          dest: /etc/ipa/hcc
+          state: directory
+          mode: '0755'
+      - name: Create /etc/ipa/hcc/stage cookie file
+        copy:
+          dest: /etc/ipa/hcc/stage
+          content: "# stage environment"
+          mode: '0644'
 
   # SERVER specific
   - name: IPA server installation

@@ -108,5 +108,5 @@ else:
         "https://console.stage.redhat.com/api/inventory/v1/hosts"
     )
     INVENTORY_HOSTS_CERT_API = (
-        "https://cert.stage.console.redhat.com/api/inventory/v1/hosts"
+        "https://cert.console.stage.redhat.com/api/inventory/v1/hosts"
     )

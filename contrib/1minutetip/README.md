@@ -16,6 +16,13 @@ account is missing EBS number, and you have to contact Red Hat support.
 * Create a refresh token https://access.redhat.com/management/api and save
   the string.
 
+## Testing in stage environment
+
+- https://console.stage.redhat.com/
+- https://access.stage.redhat.com/management/activation_keys
+- https://access.stage.redhat.com/management/api
+- set env var `STAGE=1`
+
 ## Testing ipa-hcc with 1minutetip
 
 All commands must be run from **this** directory. 1minutetip executes the
