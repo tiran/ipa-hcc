@@ -1,17 +1,12 @@
-image: fedora:37
+stages:
+  - checks
 
-variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-
-cache:
-  paths:
-    - .cache/pip
-    - venv/
-
-before_script:
-  - sudo dnf install --setopt=install_weak_deps=False tox make rpkg rpmlint python3-devel systemd-devel selinux-policy-devel
-  - python3 --version  # For debugging
-
-test:
+tox_check:
+  tags:
+  - shared
+  image: quay.io/tiran/ipa-hcc-ci:latest
+  stage: checks
   script:
-    - tox
+  - tox
+  only:
+  - merge_requests
