@@ -4,7 +4,7 @@
   become_method: sudo
   tasks:
     - include_vars:
-        file: "{{ twd }}/idm-ci/config/hmsidm-config.yaml"
+        file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
         name: hmsidm_config
 
     - name: Check for RHEL 7 or newer

@@ -1,0 +1,5 @@
+---
+rhel87_server:
+  extends: .mr_template
+  variables:
+    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel87.yaml
