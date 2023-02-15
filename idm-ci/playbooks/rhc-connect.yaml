@@ -3,10 +3,10 @@
   become: true
   become_method: sudo
   tasks:
-    - name: Register host with RHSM and connect to Insights
+    - name: Register host with RHSM and connect to Insights (rhc connect)
       block:
         - include_vars:
-            file: "{{ twd }}/idm-ci/config/hmsidm-config.yaml"
+            file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
             name: hmsidm_config
 
         - name: Install rhc and insights-client
@@ -56,6 +56,5 @@
           debug:
             msg: "RHSM cert: {{ rhsm_cert_content.stdout | trim }}"
       when: >
-        rhc_org is defined
+        ansible_distribution == 'RedHat' and ansible_distribution_major_version >= '7'
         and (target_group is undefined or meta_fqdn in groups[target_group])
-        and ansible_distribution == 'RedHat' and ansible_distribution_major_version >= '7'
