@@ -1,0 +1,61 @@
+---
+- hosts: all:!ad
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Register host with RHSM and connect to Insights
+      block:
+        - include_vars:
+            file: "{{ twd }}/idm-ci/config/hmsidm-config.yaml"
+            name: hmsidm_config
+
+        - name: Install rhc and insights-client
+          yum:
+            name:
+              - rhc
+              - insights-client
+            state: latest
+
+        - name: Configure RHSM for stage environment
+          shell: |
+            subscription-manager config \
+              --server.hostname subscription.rhsm.stage.redhat.com \
+              --rhsm.baseurl https://cdn.stage.redhat.com
+          when: hmsidm_config.rhc_env == 'stage'
+
+        - name: Configure /etc/rhc/config.toml broker for stage environment
+          lineinfile:
+            path: /etc/rhc/config.toml
+            regexp: '^broker\s*='
+            line: 'broker = ["wss://connect.cloud.stage.redhat.com:443"]'
+          when: hmsidm_config.rhc_env == 'stage'
+
+        - name: Configure /etc/rhc/config.toml data-host for stage environment
+          lineinfile:
+            path: /etc/rhc/config.toml
+            regexp: '^data-host\s*='
+            line: 'data-host = "cert.cloud.stage.redhat.com"'
+          when: hmsidm_config.rhc_env == 'stage'
+
+        - name: Register host with RHC and subscription manager
+          shell: "rhc connect -o {{ hmsidm_config.rhc_org }} -a {{ hmsidm_config.rhc_key }}"
+          args:
+            creates: /etc/pki/consumer/cert.pem
+
+        - name: Register host with Insights (RHEL 7)
+          shell: "insights-client --register"
+          args:
+            creates: /var/lib/insights/host-details.json
+          when: ansible_distribution_major_version == '7'
+
+        - name: Get subject of RHSM cert
+          shell: "openssl x509 -subject -noout -in /etc/pki/consumer/cert.pem"
+          register: rhsm_cert_content
+
+        - name: Print subject of RHSM cert
+          debug:
+            msg: "RHSM cert: {{ rhsm_cert_content.stdout | trim }}"
+      when: >
+        rhc_org is defined
+        and (target_group is undefined or meta_fqdn in groups[target_group])
+        and ansible_distribution == 'RedHat' and ansible_distribution_major_version >= '7'
