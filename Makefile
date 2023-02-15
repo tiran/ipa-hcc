@@ -13,6 +13,7 @@ clean:
 .PHONY: lint
 lint:
 	$(BLACK) --check .
+	yamllint --strict .
 
 .PHONY: black
 black:

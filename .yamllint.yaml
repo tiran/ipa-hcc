@@ -1,0 +1,10 @@
+---
+extends: default
+
+ignore:
+  - ".venv"
+  - config
+  - credentials
+
+rules:
+  line-length: disable
