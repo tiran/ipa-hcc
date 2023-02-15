@@ -5,3 +5,6 @@ addFilter('non-standard-dir-perm /etc/ipa/hcc 750')
 
 # auto-generated source file
 addFilter('invalid-url Source0')
+
+# gitlab CI workaround
+addFilter('no-changelogname-tag')

@@ -1,12 +1,20 @@
+---
 stages:
   - checks
 
 tox_check:
   tags:
-  - shared
+    - shared
   image: quay.io/tiran/ipa-hcc-ci:latest
   stage: checks
+  parallel:
+    matrix:
+      - TOXENV:
+        - py,py27,py36
+        - lint,format,bandit
+        - jslint,yamllint,maketest
+        - rpkg
   script:
-  - tox
+    - tox -e $TOXENV
   only:
-  - merge_requests
+    - merge_requests

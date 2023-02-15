@@ -1,6 +1,7 @@
+---
 - hosts: localhost
   tags:
-  - classic
+    - classic
   vars:
     upgrade: true
     stage: "{{ lookup('env', 'STAGE', default='0') | bool }}"
@@ -14,169 +15,169 @@
     ipv4: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
     hostname: "host-{{ ipv4 | replace('.', '-') }}.{{ domain }}"
   tasks:
-  - name: set IPA server hostname and install facts
-    set_fact:
-      server_hostname: "host-{{ server_ip | replace('.', '-') }}.{{ domain }}"
-      install_server: false
-      install_client: true
-    when: server_ip is defined and server_ip
+    - name: set IPA server hostname and install facts
+      set_fact:
+        server_hostname: "host-{{ server_ip | replace('.', '-') }}.{{ domain }}"
+        install_server: false
+        install_client: true
+      when: server_ip is defined and server_ip
 
-  - name: Show info
-    debug:
-      msg:
-        - "domain: {{ domain }}"
-        - "realm: {{ realm }}"
-        - "host: {{ hostname }} {{ ipv4 }}"
-        - "install_server: {{ install_server }}"
-        - "install_client: {{ install_client }}"
-        - "server: {{ server_hostname | default('n/a') }}"
-        - "Console stage env: {{ stage }}"
+    - name: Show info
+      debug:
+        msg:
+          - "domain: {{ domain }}"
+          - "realm: {{ realm }}"
+          - "host: {{ hostname }} {{ ipv4 }}"
+          - "install_server: {{ install_server }}"
+          - "install_client: {{ install_client }}"
+          - "server: {{ server_hostname | default('n/a') }}"
+          - "Console stage env: {{ stage }}"
 
-  - name: Enable DL1 module
-    shell: "dnf -y module enable idm:DL1"
-    when: "ansible_distribution == 'RedHat' and ansible_distribution_major_version == '8'"
+    - name: Enable DL1 module
+      shell: "dnf -y module enable idm:DL1"
+      when: "ansible_distribution == 'RedHat' and ansible_distribution_major_version == '8'"
 
-  - name: Enable ipa-hcc COPR
-    shell: "dnf -y copr enable copr.devel.redhat.com/cheimes/ipa-hcc"
+    - name: Enable ipa-hcc COPR
+      shell: "dnf -y copr enable copr.devel.redhat.com/cheimes/ipa-hcc"
 
-  - name: upgrade all packages
-    package:
-      name: "*"
-      state: latest
-    when: upgrade|bool
+    - name: upgrade all packages
+      package:
+        name: "*"
+        state: latest
+      when: upgrade|bool
 
-  - name: set hostname
-    hostname:
-     name: "{{ hostname }}"
+    - name: set hostname
+      hostname:
+        name: "{{ hostname }}"
 
-  - name: add hostname to /etc/hosts
-    lineinfile:
-      path: /etc/hosts
-      line: "{{ ipv4 }}  {{ hostname }}"
+    - name: add hostname to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ ipv4 }}  {{ hostname }}"
 
-  - name: install RHC and insights-client
-    package:
-      name:
-        - rhc
-        - insights-client
+    - name: install RHC and insights-client
+      package:
+        name:
+          - rhc
+          - insights-client
 
-  - name: Configure system for stage environment
-    when: stage|bool
-    tasks:
-      - name: Configure RHSM for stage environment
-        shell: |
-          subscription-manager config \
-            --server.hostname subscription.rhsm.stage.redhat.com \
-            --rhsm.baseurl https://cdn.stage.redhat.com
-      - name: Configure /etc/rhc/config.toml broker for stage environment
-        lineinfile:
-          path: /etc/rhc/config.toml
-          regexp: '^broker\s*='
-          line: 'broker = ["wss://connect.stage.cloud.redhat.com:443"]'
-      - name: Configure /etc/rhc/config.toml data-host for stage environment
-        lineinfile:
-          path: /etc/rhc/config.toml
-          regexp: '^data-host\s*='
-          line: 'data-host = "cert.cloud.stage.redhat.com"'
-      - name: Create /etc/ipa/hcc directory
-        file:
-          dest: /etc/ipa/hcc
-          state: directory
-          mode: '0755'
-      - name: Create /etc/ipa/hcc/stage cookie file
-        copy:
-          dest: /etc/ipa/hcc/stage
-          content: "# stage environment"
-          mode: '0644'
+    - name: Configure system for stage environment
+      when: stage|bool
+      tasks:
+        - name: Configure RHSM for stage environment
+          shell: |
+            subscription-manager config \
+              --server.hostname subscription.rhsm.stage.redhat.com \
+              --rhsm.baseurl https://cdn.stage.redhat.com
+        - name: Configure /etc/rhc/config.toml broker for stage environment
+          lineinfile:
+            path: /etc/rhc/config.toml
+            regexp: '^broker\s*='
+            line: 'broker = ["wss://connect.stage.cloud.redhat.com:443"]'
+        - name: Configure /etc/rhc/config.toml data-host for stage environment
+          lineinfile:
+            path: /etc/rhc/config.toml
+            regexp: '^data-host\s*='
+            line: 'data-host = "cert.cloud.stage.redhat.com"'
+        - name: Create /etc/ipa/hcc directory
+          file:
+            dest: /etc/ipa/hcc
+            state: directory
+            mode: '0755'
+        - name: Create /etc/ipa/hcc/stage cookie file
+          copy:
+            dest: /etc/ipa/hcc/stage
+            content: "# stage environment"
+            mode: '0644'
 
-  # SERVER specific
-  - name: IPA server installation
-    when: install_server|bool
-    block:
-      - name: install IPA server packages
-        package:
-          name:
-            - ipa-server
-            - ipa-server-dns
-          state: present
+    # SERVER specific
+    - name: IPA server installation
+      when: install_server|bool
+      block:
+        - name: install IPA server packages
+          package:
+            name:
+              - ipa-server
+              - ipa-server-dns
+            state: present
 
-      # install with DNS to enable auto-discovery
-      - name: install IPA server (may take 10-15 minutes)
-        shell: >
-          ipa-server-install \
-            -p {{ dmpasswd }} \
-            -a {{ passwd }} \
-            -r {{ realm }} \
-            -n {{ domain }} \
-            --setup-dns --no-dnssec-validation --auto-reverse --auto-forwarders \
-            --no-ntp \
-            -U
-        args:
-          creates: /etc/ipa/default.conf
+        # install with DNS to enable auto-discovery
+        - name: install IPA server (may take 10-15 minutes)
+          shell: >
+            ipa-server-install \
+              -p {{ dmpasswd }} \
+              -a {{ passwd }} \
+              -r {{ realm }} \
+              -n {{ domain }} \
+              --setup-dns --no-dnssec-validation --auto-reverse --auto-forwarders \
+              --no-ntp \
+              -U
+          args:
+            creates: /etc/ipa/default.conf
 
-      - name: Allow DNS query from all hosts
-        lineinfile:
-          path: /etc/named/ipa-options-ext.conf
-          line: "{{ item }}"
-        with_items:
-          - 'allow-recursion { any; };'
-          - 'allow-query { any; };'
-          - 'allow-query-cache { any; };'
+        - name: Allow DNS query from all hosts
+          lineinfile:
+            path: /etc/named/ipa-options-ext.conf
+            line: "{{ item }}"
+          with_items:
+            - 'allow-recursion { any; };'
+            - 'allow-query { any; };'
+            - 'allow-query-cache { any; };'
 
-      - name: Restart named-pkcs11
-        systemd:
-          name: named-pkcs11
-          state: restarted
-        when: "ansible_distribution == 'RedHat' and ansible_distribution_major_version == '8'"
+        - name: Restart named-pkcs11
+          systemd:
+            name: named-pkcs11
+            state: restarted
+          when: "ansible_distribution == 'RedHat' and ansible_distribution_major_version == '8'"
 
-      - name: Restart named
-        systemd:
-          name: named
-          state: restarted
-        when: "ansible_distribution == 'RedHat' and ansible_distribution_major_version == '9'"
+        - name: Restart named
+          systemd:
+            name: named
+            state: restarted
+          when: "ansible_distribution == 'RedHat' and ansible_distribution_major_version == '9'"
 
-      - name: Show next steps
-        debug:
-          msg:
-            - "rhc connect -o ORGID -a KEY"
-            - "Create /etc/ipa/hcc/refresh_token (owned by ipahcc:root)"
-            - "dnf install ipa-hcc-registration-service ipa-hcc-server-plugin"
+        - name: Show next steps
+          debug:
+            msg:
+              - "rhc connect -o ORGID -a KEY"
+              - "Create /etc/ipa/hcc/refresh_token (owned by ipahcc:root)"
+              - "dnf install ipa-hcc-registration-service ipa-hcc-server-plugin"
 
-  # CLIENT specific
-  - name: IPA client installation
-    when: install_client|bool
-    block:
-      - name: install IPA client package
-        package:
-          name:
-            - ipa-client
-          state: present
+    # CLIENT specific
+    - name: IPA client installation
+      when: install_client|bool
+      block:
+        - name: install IPA client package
+          package:
+            name:
+              - ipa-client
+            state: present
 
-      - name: install IPA HCC client enrollment package
-        package:
-          name:
-            - ipa-hcc-client-enrollment
-          state: present
+        - name: install IPA HCC client enrollment package
+          package:
+            name:
+              - ipa-hcc-client-enrollment
+            state: present
 
-      - name: add server to /etc/hosts
-        lineinfile:
-          path: /etc/hosts
-          line: "{{ server_ip }}  {{ server_hostname }}"
+        - name: add server to /etc/hosts
+          lineinfile:
+            path: /etc/hosts
+            line: "{{ server_ip }}  {{ server_hostname }}"
 
-      - name: add server to /etc/resolv.conf
-        copy:
-          dest: /etc/resolv.conf
-          content: |
-            search {{ domain }}
-            nameserver {{ server_ip }}
+        - name: add server to /etc/resolv.conf
+          copy:
+            dest: /etc/resolv.conf
+            content: |
+              search {{ domain }}
+              nameserver {{ server_ip }}
 
-      - name: Show next steps
-        debug:
-          msg:
-            - "systemctl enable ipa-hcc-auto-enrollment.service"
-            - "rhc connect -o ORGID -a KEY"
-            - "journalctl -f -u ipa-hcc-auto-enrollment.service"
+        - name: Show next steps
+          debug:
+            msg:
+              - "systemctl enable ipa-hcc-auto-enrollment.service"
+              - "rhc connect -o ORGID -a KEY"
+              - "journalctl -f -u ipa-hcc-auto-enrollment.service"
 
-  - name: echo /etc/hosts
-    debug:
-     msg: "echo {{ ipv4 }}  {{ hostname }} | sudo tee -a /etc/hosts"
+    - name: echo /etc/hosts
+      debug:
+      msg: "echo {{ ipv4 }}  {{ hostname }} | sudo tee -a /etc/hosts"
