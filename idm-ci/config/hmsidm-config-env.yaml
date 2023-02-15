@@ -1,0 +1,7 @@
+---
+rhc_env: "{{ lookup('env', 'RHC_ENV', default=undef()) }}"
+rhc_org: "{{ lookup('env', 'RHC_ORG', default=undef()) }}"
+rhc_key: "{{ lookup('env', 'RHC_KEY', default=undef()) }}"
+rh_api_token: "{{ lookup('env', 'RH_API_TOKEN', default=undef()) }}"
+ipa_hcc_copr: copr.devel.redhat.com/cheimes/ipa-hcc
+ipa_hcc_rhel7_repo: https://copr.devel.redhat.com/coprs/cheimes/ipa-hcc/repo/rhel-7/cheimes-ipa-hcc-rhel-7.repo

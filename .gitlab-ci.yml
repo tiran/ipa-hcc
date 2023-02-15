@@ -10,10 +10,10 @@ tox_check:
   parallel:
     matrix:
       - TOXENV:
-        - py,py27,py36
-        - lint,format,bandit
-        - jslint,yamllint,maketest
-        - rpkg
+          - py,py27,py36
+          - lint,format,bandit
+          - jslint,yamllint,maketest
+          - rpkg
   script:
     - tox -e $TOXENV
   only:

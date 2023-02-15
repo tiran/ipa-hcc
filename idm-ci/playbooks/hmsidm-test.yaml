@@ -1,0 +1,30 @@
+---
+- hosts: ipaclient
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Test ipa-hcc-auto-enrollment --upto pkinit
+      command: "/usr/libexec/ipa/hcc/ipa-hcc-auto-enrollment --insecure --upto pkinit --server {{ item }} --domain {{ meta_domain }}"
+      loop: "{{ groups.ipaserver }}"
+      register: out
+
+    - name: "Show output"
+      debug:
+        msg: "{{ out }}"
+
+    - name: Perform auto-enrollment
+      command: "/usr/libexec/ipa/hcc/ipa-hcc-auto-enrollment --insecure"
+      args:
+        creates: /etc/ipa/default.conf
+
+    - name: kinit admin
+      shell: |
+        echo "Secret123" | kinit admin
+
+    - name: Show host record
+      command: "ipa host-show {{ meta_fqdn }}"
+      register: out
+
+    - name: "Show output"
+      debug:
+        msg: "{{ out.stdout }}\n{{ out.stderr }}"

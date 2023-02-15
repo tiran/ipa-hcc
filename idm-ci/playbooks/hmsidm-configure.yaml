@@ -1,0 +1,39 @@
+---
+- hosts: all:!ad
+  become: true
+  become_method: sudo
+  tasks:
+    - include_vars:
+        file: "{{ twd }}/idm-ci/config/hmsidm-config.yaml"
+        name: hmsidm_config
+
+    - name: Create /etc/ipa/hcc directory
+      file:
+        dest: /etc/ipa/hcc
+        state: directory
+        mode: '0755'
+      when: hmsidm_config.rhc_env == 'stage'
+
+    - name: Create /etc/ipa/hcc/stage cookie file
+      copy:
+        dest: /etc/ipa/hcc/stage
+        content: "# stage environment"
+        mode: '0644'
+      when: hmsidm_config.rhc_env == 'stage'
+
+- hosts: ipaserver
+  become: true
+  become_method: sudo
+  tasks:
+    - include_vars:
+        file: "{{ twd }}/idm-ci/config/hmsidm-config.yaml"
+        name: hmsidm_config
+
+    # See https://access.redhat.com/articles/3626371
+    - name: Write Red Hat API offline token to /etc/ipa/hcc/refresh_token
+      copy:
+        dest: /etc/ipa/hcc/refresh_token
+        content: "{{ hmsidm_config.rh_api_token }}"
+        mode: '0640'
+        owner: ipahcc
+        group: root

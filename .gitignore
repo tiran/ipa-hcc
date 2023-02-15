@@ -11,3 +11,10 @@ __pycache__
 /ipa-hcc.spec
 
 /contrib/1minutetip/artifacts/
+
+# idm-ci te
+/config/
+/credentials/
+/mrack.conf
+/mrack.log
+/runner.log

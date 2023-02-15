@@ -1,0 +1,69 @@
+---
+- hosts: ipaserver:ipaclient
+  become: true
+  become_method: sudo
+  tasks:
+    - include_vars:
+        file: "{{ twd }}/idm-ci/config/hmsidm-config.yaml"
+        name: hmsidm_config
+
+    - name: Check for RHEL 7 or newer
+      fail:
+        msg: HMSIDM / ipa-hcc is only supported on RHEL 7 or newer
+      when: ansible_distribution != 'RedHat' or ansible_distribution_major_version < '7'
+
+    - name: Install dnf copr command
+      yum:
+        name:
+          - dnf-command(copr)
+        state: latest
+      when: ansible_distribution_major_version >= '8'
+
+    - name: Enable ipa-hcc COPR repository with dnf copr
+      shell: "dnf copr enable -y {{ hmsidm_config.ipa_hcc_copr }}"
+      when: ansible_distribution_major_version >= '8'
+
+    - name: Enable ipa-hcc COPR repo for RHEL 7
+      get_url:
+        url: "{{ hmsidm_config.ipa_hcc_rhel7_repo }}"
+        dest: /etc/yum.repos.d/ipa-hcc.repo
+        mode: '0644'
+      when: ansible_distribution_major_version == '7'
+
+- hosts: ipaserver
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Install ipa-hcc server plugin and registration service
+      yum:
+        name:
+          - ipa-hcc-registration-service
+          - ipa-hcc-server-plugin
+        state: latest
+
+- hosts: ipaclient
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Install ipa-hcc client auto-enrollment service
+      yum:
+        name:
+          - ipa-hcc-client-enrollment
+        state: latest
+
+- hosts: ipaserver:ipaclient
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Gather the rpm package facts
+      package_facts:
+        manager: auto
+
+    - name: List installed ipa-hcc packages version
+      debug:
+        msg: "{{ ansible_facts.packages[item] }}"
+      with_items:
+        - ipa-hcc-registration-service
+        - ipa-hcc-server-plugin
+        - ipa-hcc-client-enrollment
+      when: item in ansible_facts.packages

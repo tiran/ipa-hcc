@@ -1,0 +1,9 @@
+---
+- hosts: ipaclient
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Enable ipa-hcc-auto-enrollment service
+      systemd:
+        name: ipa-hcc-auto-enrollment
+        enabled: true
