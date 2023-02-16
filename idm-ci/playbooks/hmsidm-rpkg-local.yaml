@@ -70,3 +70,9 @@
       copy:
         src: "{{ playbook_dir }}/files/ipa-hcc.repo"
         dest: /etc/yum.repos.d/
+
+    - name: Remove ipa-hcc packages to force reinstallation
+      yum:
+        name:
+          - ipa-hcc-common
+        state: absent

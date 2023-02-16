@@ -31,14 +31,16 @@ phases:
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-rpkg-local.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
-  - name: test
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-configure.yaml
+  - name: server
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaserver
-      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-configure.yaml
       - playbook: prep/ipa-server-install.yaml
       - playbook: prep/ipa-replica-install.yaml
+  - name: test
+    steps:
       # - playbook: prep/hmsidm-auto-enrollment.yaml
       # trigger auto-enrollment
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml

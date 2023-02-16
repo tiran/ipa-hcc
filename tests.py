@@ -83,28 +83,23 @@ class IPAClientTests(IPABaseTests):
         else:
             self.fail("SystemExit expected")
 
-    @unittest.skipUnless(HAS_IPACLIENT_INSTALL, "ipaclient.install")
-    def test_pkinit_keytab_help(self):
-        from ipaclient.hcc import pkinit_keytab
-
-        try:
-            with capture_output():
-                pkinit_keytab.main(["--help"])
-        except SystemExit as e:
-            self.assertEqual(e.code, 0)
-        else:
-            self.fail("SystemExit expected")
-
 
 class WSGITests(IPABaseTests):
-    def test_wsgi_imports(self):
+    @classmethod
+    def setUpClass(cls):
+        cls.orig_sys_path = sys.path[:]
         sys.path.insert(0, os.path.abspath("wsgi"))
-        try:
-            import hcc_registration_service
-        finally:
-            sys.path.pop(0)
+
+    @classmethod
+    def tearDownClass(cls):
+        sys.path[:] = cls.orig_sys_path
+
+    def test_wsgi_imports(self):
+        import hcc_registration_service
+        import hcc_mockapi
 
         assert callable(hcc_registration_service.application)
+        assert callable(hcc_mockapi.application)
 
 
 @unittest.skipUnless(HAS_IPASERVER, "requires ipaserver")

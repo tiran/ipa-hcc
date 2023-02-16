@@ -31,8 +31,12 @@ cp etc/ipa/hcc.conf /etc/ipa/
 
 # WSGI app and configuration
 cp wsgi/hcc_registration_service.py /usr/share/ipa-hcc/
-cp etc/apache/ipa-hcc.conf /etc/httpd/conf.d/ipa-hcc.conf
+cp apache/ipa-hcc.conf /etc/httpd/conf.d/ipa-hcc.conf
 cp refresh_token /etc/ipa || true
+
+# Mock API WSGI app
+cp etc/apache/ipa-hcc-mockapi.conf /etc/httpd/conf.d/
+cp wsgi/hcc_mockapi.py /usr/share/ipa-hcc/
 
 # CA certs
 cp rhsm/redhat-candlepin-bundle.pem /usr/share/ipa-hcc/redhat-candlepin-bundle.pem
