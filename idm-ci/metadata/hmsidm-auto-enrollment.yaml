@@ -38,6 +38,7 @@ phases:
       - playbook: prep/redhat-base.yaml
       - playbook: prep/repos.yaml
       - playbook: prep/install-ipa-packages.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-enable-copr.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml

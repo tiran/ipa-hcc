@@ -1,0 +1,8 @@
+# quay.io/tiran/ipa-hcc-ci:8
+FROM quay.io/centos/centos:stream8
+RUN dnf -y module enable idm:DL1
+RUN dnf --setopt=install_weak_deps=False -y --best install \
+        rpm-build createrepo dnf-utils python3-devel ipa-client python3-ipaserver python3-sssdconfig python3-requests systemd-devel selinux-policy-devel \
+    && dnf clean all
+VOLUME /ipa-hcc
+WORKDIR /ipa-hcc

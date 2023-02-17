@@ -34,6 +34,7 @@ phases:
       - playbook: provision/wait.yaml
   - name: prep
     steps:
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-local-rpms.yaml
       - playbook: prep/prefer-ipv4.yaml
       - playbook: prep/redhat-base.yaml
       - playbook: prep/repos.yaml

@@ -1,5 +1,6 @@
 ---
 rhel87_server:
   extends: .mr_template
+  needs: ["rpms", "tox_check"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel87.yaml

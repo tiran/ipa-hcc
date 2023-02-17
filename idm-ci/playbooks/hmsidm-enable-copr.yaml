@@ -1,0 +1,31 @@
+---
+- hosts: ipaserver:ipaclient
+  become: true
+  become_method: sudo
+  tasks:
+    - include_vars:
+        file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
+        name: hmsidm_config
+
+    - name: Check for RHEL 7 or newer
+      fail:
+        msg: HMSIDM / ipa-hcc is only supported on RHEL 7 or newer
+      when: ansible_distribution != 'RedHat' or ansible_distribution_major_version < '7'
+
+    - name: Install dnf copr command
+      yum:
+        name:
+          - dnf-command(copr)
+        state: latest
+      when: ansible_distribution_major_version >= '8'
+
+    - name: Enable ipa-hcc COPR repository with dnf copr
+      shell: "dnf copr enable -y {{ hmsidm_config.ipa_hcc_copr }}"
+      when: ansible_distribution_major_version >= '8'
+
+    - name: Enable ipa-hcc COPR repo for RHEL 7
+      get_url:
+        url: "{{ hmsidm_config.ipa_hcc_rhel7_repo }}"
+        dest: /etc/yum.repos.d/ipa-hcc.repo
+        mode: '0644'
+      when: ansible_distribution_major_version == '7'
