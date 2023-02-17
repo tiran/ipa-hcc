@@ -1,17 +1,16 @@
 ---
 stages:
   - check
+  - srpm
+  - rpms
   - test
-
-include:
-  - remote: 'https://gitlab.cee.redhat.com/identity-management/idm-ci/-/raw/production/gitlab_template/qew.yml'
-  - local: '.gitlab-idm-ci.yml'
 
 tox_check:
   tags:
     - shared
   image: quay.io/tiran/ipa-hcc-ci:latest
   stage: check
+  needs: []
   parallel:
     matrix:
       - TOXENV:
@@ -23,3 +22,78 @@ tox_check:
     - tox -e $TOXENV
   only:
     - merge_requests
+
+srpm:
+  tags:
+    - shared
+  stage: srpm
+  needs: []
+  image: quay.io/tiran/ipa-hcc-ci:fedora
+  before_script:
+    - mkdir -p $CI_PROJECT_DIR/rpkg
+  script:
+    - rpkg local --outdir $CI_PROJECT_DIR/rpkg
+  artifacts:
+    name: srpm
+    when: on_success
+    expire_in: "30 days"
+    paths:
+      - rpkg/ipa-hcc.spec
+      - rpkg/ipa-hcc*.src.rpm
+  only:
+    - merge_requests
+
+rpms:
+  tags:
+    - shared
+  stage: rpms
+  needs: ["srpm"]
+  parallel:
+    matrix:
+      - VERSION:
+          - 7
+          - 8
+          - 9
+  image: quay.io/tiran/ipa-hcc-ci:$VERSION
+  before_script:
+    - export RPMBUILD=$CI_PROJECT_DIR/rpmbuild/$VERSION
+    - export RPKG_DIR=$CI_PROJECT_DIR/rpkg
+    - echo $RPMBUILD
+    - find $RPKG_DIR -type f
+    # use our RPM build dir as top directory for rpmbuild
+    - echo "%_topdir $RPMBUILD" > ~/.rpmmacros
+    - mkdir -p $RPMBUILD
+  script:
+    # install deps
+    - yum-builddep -y $RPKG_DIR/ipa-hcc.spec
+    # rebuild binary packages from source file
+    - rpmbuild --rebuild $RPKG_DIR/ipa-hcc*.src.rpm
+    - find $RPMBUILD/RPMS -type f
+    # create repo structure
+    - createrepo $RPMBUILD/RPMS
+    - |
+      cat > $CI_PROJECT_DIR/ipa-hcc-$VERSION.repo << EOF
+      [ipa-hcc-$VERSION]
+      name=ipa-hcc-$VERSION
+      baseurl=file://$RPMBUILD/RPMS
+      gpgcheck=0
+      enabled=1
+      EOF
+    # test repo installation
+    - cp $CI_PROJECT_DIR/ipa-hcc-$VERSION.repo /etc/yum.repos.d/
+    - yum search -q ipa-hcc
+  artifacts:
+    name: rpm-$VERSION
+    when: on_success
+    expire_in: "30 days"
+    paths:
+      - rpmbuild/$VERSION/RPMS/
+      - ipa-hcc-$VERSION.repo
+  only:
+    - merge_requests
+
+
+# stage: test
+include:
+  - remote: 'https://gitlab.cee.redhat.com/identity-management/idm-ci/-/raw/production/gitlab_template/qew.yml'
+  - local: '.gitlab-idm-ci.yml'

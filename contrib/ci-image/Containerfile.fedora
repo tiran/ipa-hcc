@@ -1,0 +1,3 @@
+# see quay.io/tiran/ipa-hcc-ci
+FROM registry.fedoraproject.org/fedora:37
+RUN dnf --setopt=install_weak_deps=False -y --best install tox python2.7 python3.6 npm rpkg rpmlint openssl make python3-devel ipa-client python3-ipaserver python3-requests python3-sssdconfig selinux-policy-devel systemd-devel yamllint && dnf clean all

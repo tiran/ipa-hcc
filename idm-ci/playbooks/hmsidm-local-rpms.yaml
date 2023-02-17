@@ -1,0 +1,16 @@
+---
+- hosts: ipaserver:ipaclient
+  become: true
+  become_method: sudo
+  vars:
+    project_dir: "{{ lookup('env', 'CI_PROJECT_DIR', default=undef()) }}"
+  tasks:
+    - name: Copy repo file
+      copy:
+        src: "{{ project_dir }}/ipa-hcc-{{ ansible_distribution_major_version }}.repo"
+        dest: /etc/yum.repos.d/
+
+    - name: "Repo data for {{ ansible_distribution_major_version }}"
+      copy:
+        src: "{{ project_dir }}/rpmbuild/{{ ansible_distribution_major_version }}/"
+        dest: "{{ project_dir }}/rpmbuild/{{ ansible_distribution_major_version }}/"
