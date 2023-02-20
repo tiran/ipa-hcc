@@ -1,0 +1,6 @@
+[ipa-hcc-local]
+name=ipa-hcc-local
+baseurl=file:///root/rpmbuild/RPMS
+gpgcheck=0
+enabled=1
+skip_if_unavailable=True

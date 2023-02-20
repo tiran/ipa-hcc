@@ -1,0 +1,51 @@
+---
+domains:
+  - name: hmsidm-dev.test
+    type: IPA
+    hosts:
+      - name: server.hmsidm-dev.test
+        role: master
+        group: ipaserver
+        os: rhel-9.1
+      - name: client.hmsidm-dev.test
+        role: client
+        group: ipaclient
+        os: rhel-9.1
+phases:
+  - name: init
+    steps:
+      - playbook: init/testrunner-dir.yaml
+  - name: provision
+    steps:
+      - playbook: provision/mrack-up.yaml
+      - playbook: provision/wait.yaml
+  - name: prep
+    steps:
+      - playbook: prep/prefer-ipv4.yaml
+      - playbook: prep/redhat-base.yaml
+      - playbook: prep/repos.yaml
+      - playbook: prep/install-ipa-packages.yaml
+      - playbook: prep/firewall.yaml
+      - playbook: prep/ipa-network.yaml
+  - name: pkg
+    steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-rpkg-local.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
+  - name: test
+    steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
+        extra_vars:
+          target_group: ipaserver
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-configure.yaml
+      - playbook: prep/ipa-server-install.yaml
+      - playbook: prep/ipa-replica-install.yaml
+      # - playbook: prep/hmsidm-auto-enrollment.yaml
+      # trigger auto-enrollment
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
+        extra_vars:
+          target_group: ipaclient
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
+  - name: teardown
+    steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
+      - playbook: teardown/mrack-destroy.yaml

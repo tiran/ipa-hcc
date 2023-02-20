@@ -14,6 +14,13 @@
         option: environment
         value: "{{ hmsidm_config.rhc_env }}"
 
+    - name: Configure mockapi in /ec/ipa/hcc.conf
+      ini_file:
+        path: /etc/ipa/hcc.conf
+        section: hcc
+        option: hcc_api_url
+        value: "https://{{ hostvars[groups.ipaserver.0].meta_fqdn }}/mockapi"
+
 - hosts: ipaserver
   become: true
   become_method: sudo
