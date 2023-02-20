@@ -79,16 +79,12 @@
             path: /etc/rhc/config.toml
             regexp: '^data-host\s*='
             line: 'data-host = "cert.cloud.stage.redhat.com"'
-        - name: Create /etc/ipa/hcc directory
-          file:
-            dest: /etc/ipa/hcc
-            state: directory
-            mode: '0755'
-        - name: Create /etc/ipa/hcc/stage cookie file
+        - name: Configure env in /etc/ipa/hcc.conf
           copy:
-            dest: /etc/ipa/hcc/stage
-            content: "# stage environment"
-            mode: '0644'
+            path: /etc/ipa/hcc.conf
+            section: hcc
+            option: environment
+            value: stage
 
     # SERVER specific
     - name: IPA server installation

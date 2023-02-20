@@ -27,9 +27,11 @@ chown ipahcc:root -R /etc/ipa/hcc
 semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-hcc(/.*)?' || :
 restorecon -R /var/cache/ipa-hcc || :
 
+cp etc/ipa/hcc.conf /etc/ipa/
+
 # WSGI app and configuration
 cp wsgi/hcc_registration_service.py /usr/share/ipa-hcc/
-cp apache/ipa-hcc.conf /etc/httpd/conf.d/ipa-hcc.conf
+cp etc/apache/ipa-hcc.conf /etc/httpd/conf.d/ipa-hcc.conf
 cp refresh_token /etc/ipa || true
 
 # CA certs
@@ -38,7 +40,7 @@ mkdir -p /usr/share/ipa-hcc/cacerts
 cp rhsm/cacerts/* /usr/share/ipa-hcc/cacerts/
 
 # gssproxy
-cp gssproxy/85-ipa-hcc.conf /etc/gssproxy/
+cp etc/gssproxy/85-ipa-hcc.conf /etc/gssproxy/
 systemctl restart gssproxy.service
 
 # IPA plugins, UI, schema, and update

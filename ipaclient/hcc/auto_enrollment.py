@@ -41,6 +41,7 @@ SUCCESS = getattr(discovery, "SUCCESS", 0)
 DEFAULT_PKINIT_ANCHOR = "FILE:{}".format(hccplatform.HMSIDM_CA_BUNDLE_PEM)
 FQDN = socket.gethostname()
 
+hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
 
 
@@ -345,7 +346,7 @@ def wait_for_inventory_host(args):
     sleep_dur = 10  # sleep for 10, 20, 40, ...
     for i in range(5):
         try:
-            resp = sess.get(hccplatform.INVENTORY_HOSTS_CERT_API)
+            resp = sess.get(hccconfig.inventory_hosts_cert_api)
             resp.raise_for_status()
             j = resp.json()
             # 'j["total"] != 0' also works. A host sees only its record.
