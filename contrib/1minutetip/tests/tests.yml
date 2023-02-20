@@ -80,7 +80,7 @@
             regexp: '^data-host\s*='
             line: 'data-host = "cert.cloud.stage.redhat.com"'
         - name: Configure env in /etc/ipa/hcc.conf
-          copy:
+          ini_file:
             path: /etc/ipa/hcc.conf
             section: hcc
             option: environment

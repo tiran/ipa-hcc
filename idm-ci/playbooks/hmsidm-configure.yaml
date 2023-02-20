@@ -8,7 +8,7 @@
         name: hmsidm_config
 
     - name: Configure env in /etc/ipa/hcc.conf
-      copy:
+      ini_file:
         path: /etc/ipa/hcc.conf
         section: hcc
         option: environment
