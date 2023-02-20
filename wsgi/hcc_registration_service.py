@@ -24,6 +24,8 @@ os.environ["GSS_USE_PROXY"] = "1"
 
 from ipalib import api, errors  # noqa: E402
 
+hccconfig = hccplatform.HCCConfig()
+
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")
 logger.setLevel(logging.DEBUG)
@@ -105,7 +107,7 @@ class Application:
     def get_access_token(
         self,
         refresh_token_file=hccplatform.REFRESH_TOKEN_FILE,
-        url=hccplatform.TOKEN_URL,
+        url=hccconfig.token_url,
     ):
         """Get a bearer access token from an offline token
 
@@ -156,7 +158,7 @@ class Application:
         self,
         rhsm_id,
         access_token,
-        url=hccplatform.INVENTORY_HOSTS_API,
+        url=hccconfig.inventory_hosts_api,
     ):
         """Lookup host by subscription manager id
 

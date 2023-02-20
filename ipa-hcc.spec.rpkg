@@ -247,7 +247,8 @@ touch debugfiles.list
 rm -rf $RPM_BUILD_ROOT
 
 # common
-%__mkdir_p %{buildroot}%{_sysconfdir}/ipa/hcc
+%__mkdir_p %{buildroot}%{_sysconfdir}/ipa
+cp -p etc/ipa/hcc.conf %{buildroot}%{_sysconfdir}/ipa/hcc.conf
 
 %__mkdir_p %{buildroot}%{_datadir}/ipa-hcc
 %__mkdir_p %{buildroot}%{_datadir}/ipa-hcc/cacerts
@@ -283,6 +284,7 @@ done
 
 %if %{with registration_service}
 # registration service
+%__mkdir_p %{buildroot}%{_sysconfdir}/ipa/hcc
 %__mkdir_p %{buildroot}%{_localstatedir}/cache/ipa-hcc
 
 %__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/install/plugins
@@ -294,10 +296,10 @@ cp -p wsgi/hcc_registration_service.py %{buildroot}%{_datadir}/ipa-hcc/
 cp -p updates/86-hcc-enrollment-service.update %buildroot/%{_datadir}/ipa/updates/
 
 %__mkdir_p %{buildroot}%{_sysconfdir}/httpd/conf.d/
-cp apache/ipa-hcc.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
+cp etc/apache/ipa-hcc.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
 
 %__mkdir_p %{buildroot}%{_sysconfdir}/gssproxy
-cp gssproxy/85-ipa-hcc.conf %{buildroot}%{_sysconfdir}/gssproxy/85-ipa-hcc.conf
+cp etc/gssproxy/85-ipa-hcc.conf %{buildroot}%{_sysconfdir}/gssproxy/85-ipa-hcc.conf
 
 %__mkdir_p %{buildroot}%{_sharedstatedir}/ipa/gssproxy
 touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
@@ -321,6 +323,7 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %files common
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
 %dir %{_datadir}/ipa-hcc/
 %{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-hcc/cacerts

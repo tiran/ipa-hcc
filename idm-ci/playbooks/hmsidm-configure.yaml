@@ -7,19 +7,12 @@
         file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
         name: hmsidm_config
 
-    - name: Create /etc/ipa/hcc directory
-      file:
-        dest: /etc/ipa/hcc
-        state: directory
-        mode: '0755'
-      when: hmsidm_config.rhc_env == 'stage'
-
-    - name: Create /etc/ipa/hcc/stage cookie file
-      copy:
-        dest: /etc/ipa/hcc/stage
-        content: "# stage environment"
-        mode: '0644'
-      when: hmsidm_config.rhc_env == 'stage'
+    - name: Configure env in /etc/ipa/hcc.conf
+      ini_file:
+        path: /etc/ipa/hcc.conf
+        section: hcc
+        option: environment
+        value: "{{ hmsidm_config.rhc_env }}"
 
 - hosts: ipaserver
   become: true

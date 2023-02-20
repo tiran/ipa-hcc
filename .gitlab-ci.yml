@@ -8,7 +8,7 @@ stages:
 tox_check:
   tags:
     - shared
-  image: quay.io/tiran/ipa-hcc-ci:latest
+  image: quay.io/tiran/ipa-hcc-ci:fedora
   stage: check
   needs: []
   parallel:

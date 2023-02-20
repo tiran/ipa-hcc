@@ -12,6 +12,13 @@ import unittest
 from ipalib import api
 
 try:
+    import ipaclient.install  # noqa: F401
+except ImportError:
+    HAS_IPACLIENT_INSTALL = False
+else:
+    HAS_IPACLIENT_INSTALL = True
+
+try:
     import ipaserver.masters  # noqa: F401
 except ImportError:
     HAS_IPASERVER = False
@@ -64,6 +71,7 @@ class IPAClientTests(IPABaseTests):
         # noqa: F401
         from ipaplatform import hccplatform  # noqa: F401
 
+    @unittest.skipUnless(HAS_IPACLIENT_INSTALL, "ipaclient.install")
     def test_auto_enrollment_help(self):
         from ipaclient.hcc import auto_enrollment
 
@@ -75,6 +83,7 @@ class IPAClientTests(IPABaseTests):
         else:
             self.fail("SystemExit expected")
 
+    @unittest.skipUnless(HAS_IPACLIENT_INSTALL, "ipaclient.install")
     def test_pkinit_keytab_help(self):
         from ipaclient.hcc import pkinit_keytab
 
