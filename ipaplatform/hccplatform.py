@@ -5,7 +5,6 @@
 #
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
-import configparser
 import logging
 import sys
 
@@ -18,8 +17,10 @@ PY2 = sys.version_info.major == 2
 
 if PY2:
     text = unicode  # noqa: F821
+    from ConfigParser import SafeConfigParser as ConfigParser  # noqa: F821
 else:
     text = str
+    from configparser import ConfigParser
 
 # common constants and paths
 HCC_SERVICE = text("hcc-enrollment")
@@ -63,10 +64,7 @@ class HCCConfig:
     _section = "hcc"
 
     def __init__(self):
-        if PY2:
-            self._cp = configparser.SafeConfigParser(defaults=self._defaults)
-        else:
-            self._cp = configparser.ConfigParser(defaults=self._defaults)
+        self._cp = ConfigParser(defaults=self._defaults)
         self._cp.add_section(self._section)
         self._cp.read(HCC_CONFIG)
         self._environment = self._cp.get(self._section, "environment")
