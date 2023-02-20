@@ -1,0 +1,72 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Install local dependencies
+      yum:
+        name:
+          - make
+          - rpkg
+
+    - name: Clean rpkg outdir
+      file:
+        path: /tmp/rpkg
+        state: absent
+
+    - name: Build local spec
+      command: rpkg spec --outdir /tmp/rpkg/
+      args:
+        chdir: "{{ playbook_dir }}/../.."
+
+    - name: Build local SRPM
+      command: rpkg srpm --outdir /tmp/rpkg/
+      args:
+        chdir: "{{ playbook_dir }}/../.."
+
+- hosts: all:!ad
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Enable module
+      command: yum module enable idm:DL1 -y
+      when: ansible_distribution == 'RedHat' and ansible_distribution_major_version == '8'
+
+    - name: Install RPM build
+      yum:
+        name:
+          - rpm-build
+          - createrepo
+        state: latest
+
+    - name: Clean rpkg outdir
+      file:
+        path: /tmp/rpkg
+        state: absent
+
+    - name: Copy spec file
+      copy:
+        src: /tmp/rpkg/ipa-hcc.spec
+        dest: /tmp/rpkg/
+
+    - name: Copy source RPM file
+      copy:
+        src: /tmp/rpkg/
+        dest: /tmp/rpkg/
+
+    - name: Install build dependencies
+      command: yum-builddep -y /tmp/rpkg/ipa-hcc.spec
+
+    - name: Clean rpmbuild directory
+      file:
+        path: /root/rpmbuild
+        state: absent
+
+    - name: Rebuild packages
+      shell: rpmbuild --rebuild /tmp/rpkg/ipa-hcc*.src.rpm
+
+    - name: Create repo
+      command: createrepo /root/rpmbuild/RPMS/
+
+    - name: Add local build repo to yum
+      copy:
+        src: "{{ playbook_dir }}/files/ipa-hcc.repo"
+        dest: /etc/yum.repos.d/

@@ -32,6 +32,10 @@ Create RHSM API token at https://access.stage.redhat.com/management/api
 ## idm-ci Quay container
 
 ```
+$ podman login quay.io
+```
+
+```
 $ make run-idm-ci
 ```
 
@@ -44,11 +48,11 @@ Log into RH Kerberos realm. mrack uses Kerberos to provision machines.
 Run test environment
 
 ```
-# te --upto install /ipa-hcc/idm-ci/metadata/hmsidm-auto-enrollment-metadata.yaml
+# te --upto test idm-ci/metadata/hmsidm-dev.yaml
 ```
 
 Unregister hosts from Insights and tear down VMs
 
 ```
-# te --upto teardown /ipa-hcc/idm-ci/metadata/hmsidm-auto-enrollment-metadata.yaml
+# te --upto teardown idm-ci/metadata/hmsidm-dev.yaml
 ```
