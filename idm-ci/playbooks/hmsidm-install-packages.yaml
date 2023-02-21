@@ -8,6 +8,7 @@
         name:
           - ipa-hcc-registration-service
           - ipa-hcc-server-plugin
+          - ipa-hcc-mockapi
         state: latest
         update_cache: yes
 

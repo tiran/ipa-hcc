@@ -18,9 +18,10 @@ PY2 = sys.version_info.major == 2
 if PY2:
     text = unicode  # noqa: F821
     from ConfigParser import SafeConfigParser as ConfigParser  # noqa: F821
+    from ConfigParser import NoOptionError  # noqa: F821
 else:
     text = str
-    from configparser import ConfigParser
+    from configparser import ConfigParser, NoOptionError
 
 # common constants and paths
 HCC_SERVICE = text("hcc-enrollment")
@@ -82,8 +83,11 @@ class HCCConfig:
         return self._environment
 
     @property
-    def refresh_token(self):
-        return self._cp.get(self._section, "refresh_token") or None
+    def hcc_api_url(self):
+        try:
+            return self._cp.get(self._section, "hcc_api_url")
+        except NoOptionError:
+            return None
 
     @property
     def token_url(self):

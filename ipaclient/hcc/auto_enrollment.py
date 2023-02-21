@@ -2,12 +2,11 @@
 
 Installation with older clients that lack PKINIT:
 
-- discover IPA realm, domain, servers, KDCs, and base DN based
-  on CLI arguments and DNS SRV records (pretty much like ipa-client).
+- get configuration from remote api /hostconf
 - write a temporary krb5.conf for kinit and ipa-getkeytab commands
 - with kinit using PKINIT identity and host principal 'host/$FQDN'
 - ipa-getkeytab for host principal 'host/$FQDN' using the first
-  IPA server from auto-discovery / CLI
+  IPA server from remote configuration
 """
 
 import argparse
@@ -22,23 +21,16 @@ import time
 import requests
 import requests.exceptions
 
-try:
-    from ipaclient import discovery
-except ImportError:
-    from ipaclient.install import ipadiscovery as discovery
 
 # from ipalib.constants import FQDN
 from ipalib.install import kinit
-from ipalib.util import validate_domain_name, validate_hostname
+from ipalib.util import validate_hostname
 from ipaplatform.paths import paths
 from ipaplatform import hccplatform
 from ipapython.ipautil import run
 
 # IPA >= 4.9.10 / 4.10.1
 HAS_KINIT_PKINIT = hasattr(kinit, "kinit_pkinit")
-# IPA 4.6 has no SUCCESS
-SUCCESS = getattr(discovery, "SUCCESS", 0)
-DEFAULT_PKINIT_ANCHOR = "FILE:{}".format(hccplatform.HMSIDM_CA_BUNDLE_PEM)
 FQDN = socket.gethostname()
 
 hccconfig = hccplatform.HCCConfig()
@@ -53,85 +45,6 @@ def check_arg_hostname(arg):
     return arg.lower()
 
 
-def check_arg_realm(arg):
-    try:
-        validate_domain_name(arg, entity="realm")
-    except ValueError as e:
-        raise argparse.ArgumentError(None, str(e))
-    return arg.upper()
-
-
-def check_arg_domain(arg):
-    try:
-        validate_domain_name(arg, entity="domain")
-    except ValueError as e:
-        raise argparse.ArgumentError(None, str(e))
-    return arg.lower()
-
-
-def check_arg_cafile(arg):
-    if arg.startswith(("http://", "https://")):
-        return arg
-    if not os.path.isfile(arg):
-        raise argparse.ArgumentError(
-            None,
-            "CA file {arg} does not exist".format(arg=arg),
-        )
-    return os.path.abspath(arg)
-
-
-def check_arg_pkinit_identity(arg):
-    if not arg.startswith(("FILE:", "PKCS11:", "PKCS12:", "DIR:", "ENV:")):
-        raise argparse.ArgumentError(
-            None,
-            "Invalid value '{arg}', must start with FILE:, PKCS11:, PKCS12: DIR:, ENV:".format(
-                arg=arg
-            ),
-        )
-    if arg.startswith("FILE:"):
-        cert = arg[5:]
-        if "," in cert:
-            cert, key = cert.split(",", 1)
-        else:
-            key = None
-        if not os.path.isfile(cert):
-            raise argparse.ArgumentError(
-                None,
-                "Invalid value '{arg}', cert file {cert} does not exist.".format(
-                    arg=arg, cert=cert
-                ),
-            )
-        if key is not None and not os.path.isfile(key):
-            raise argparse.ArgumentError(
-                None,
-                "Invalid value '{arg}', key file {key} does not exist.".format(
-                    arg=arg, key=key
-                ),
-            )
-    return arg
-
-
-def check_arg_pkinit_anchor(arg):
-    if not arg.startswith(("FILE:", "DIR:", "ENV:")):
-        raise argparse.ArgumentError(
-            None,
-            "Invalid value '{arg}', must start with FILE:, DIR:, ENV:".format(
-                arg=arg
-            ),
-        )
-    if arg.startswith("FILE:"):
-        bundle = arg[5:]
-        if not os.path.isfile(bundle):
-            raise argparse.ArgumentError(
-                None,
-                "Invalid value '{arg}', bundle file {bundle} does not exist.".format(
-                    arg=arg, bundle=bundle
-                ),
-            )
-
-    return arg
-
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
@@ -143,36 +56,9 @@ parser.add_argument(
     type=int,
 )
 parser.add_argument(
-    "--ca-cert-file",
-    metavar="FILE",
-    help="load the CA certificate from this file or URL",
-    dest="cacert",
-    type=check_arg_cafile,
-)
-parser.add_argument(
     "--insecure",
     action="store_true",
-    help="Use insecure download of CA cert chain",
-)
-parser.add_argument(
-    "--server",
-    metavar="SERVER",
-    dest="servers",
-    action="append",  # support multiple
-    help="FQDN of IPA server(s)",
-    type=check_arg_hostname,
-)
-parser.add_argument(
-    "--domain",
-    metavar="DOMAIN_NAME",
-    help="primary DNS domain of the IPA deployment",
-    type=check_arg_domain,
-)
-parser.add_argument(
-    "--realm",
-    metavar="REALM",
-    help="Kerberos realm name of the IPA deployment",
-    type=check_arg_realm,
+    help="Use insecure connection to Console API",
 )
 parser.add_argument(
     "--hostname",
@@ -182,44 +68,22 @@ parser.add_argument(
     type=check_arg_hostname,
 )
 parser.add_argument(
-    "--pkinit-identity",
-    metavar="IDENTITY",
-    help="PKINIT identity information (default: RHSM cert/key)",
-    default="FILE:{cert},{key}".format(
-        cert=hccplatform.RHSM_CERT, key=hccplatform.RHSM_KEY
-    ),
-    type=check_arg_pkinit_identity,
-)
-parser.add_argument(
-    "--pkinit-anchor",
-    metavar="FILEDIR",
-    help=(
-        "PKINIT trust anchors, prefixed with FILE: for CA PEM bundle file or "
-        "DIR: for an OpenSSL hash dir (default: Red Hat Candlepin bundle)."
-    ),
-    type=check_arg_pkinit_anchor,
-    dest="pkinit_anchors",
-    action="append",  # support multiple
-)
-# parser.add_argument(
-#     "--keytab",
-#     "-k",
-#     metavar="FILE",
-#     help="The keytab file to append the new key to (will be created if it does not exist)",
-#     required=True,
-#     dest="keytab",
-# )
-parser.add_argument(
     "--force",
     help="force setting of Kerberos conf",
     action="store_true",
 )
-# hidden argument for internal testing
+# hidden arguments for internal testing
 parser.add_argument(
     "--upto",
     metavar="PHASE",
     help=argparse.SUPPRESS,
-    choices=("discover", "register", "pkinit", "keytab"),
+    choices=("hostconf", "register", "pkinit", "keytab"),
+)
+parser.add_argument(
+    "--override-server",
+    metavar="SERVER",
+    help=argparse.SUPPRESS,
+    type=check_arg_hostname,
 )
 
 
@@ -255,80 +119,60 @@ KRB5_CONF = """\
 """
 
 
-def download_cert(args, url, local_cacert):
-    """Download CA cert and write it to 'local_cacert' file"""
+def hcc_hostconf(args):
+    body = {}
+    api_url = hccconfig.hcc_api_url.rstrip("/")
+    url = "/".join((api_url, "hostconf", args.hostname))
     verify = not args.insecure
-    logger.debug("Downloading CA certs from %s (secure: %s)", url, verify)
+    logger.info(
+        "Getting host configuration from %s (secure: %s).", url, verify
+    )
     try:
-        r = requests.get(url, verify=verify)
-        r.raise_for_status()
-    except requests.exceptions.SSLError as e:
-        logger.error("Secure connection to %s failed: %s", url, e)
-        raise SystemExit(2)
+        resp = requests.post(
+            url,
+            verify=verify,
+            cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
+            json=body,
+        )
+        resp.raise_for_status()
     except requests.exceptions.RequestException as e:
         logger.error("Request to %s failed: %s: %s", url, type(e).__name__, e)
         raise SystemExit(2)
-    with open(local_cacert, "wb") as f:
-        f.write(r.content)
-    logger.debug("Stored %i bytes in %s", len(r.content), local_cacert)
+    j = resp.json()
+    args.ipa_cacert = os.path.join(args.tmpdir, "ca.crt")
+    with open(args.ipa_cacert, "w") as f:
+        f.write(j["ipa"]["ca_cert"])
+    args.domain = j["domain_name"]
+    args.realm = j["ipa"]["realm_name"]
+    args.servers = j["ipa"]["enrollment_servers"]
+    # TODO: use all servers
+    if args.override_server is None:
+        args.server = args.servers[0]
+    else:
+        args.server = args.override_server
+    logger.info("Domain: %s", args.domain)
+    logger.info("Realm: %s", args.realm)
+    logger.info("Servers: %s", ", ".join(args.servers))
 
 
-def discover_ipa(args, local_cacert):
-    """Discover IPA servers
-
-    Uses DNS SRV records and LDAP query to detect IPA domain, realm and
-    servers.
-    """
-    ds = discovery.IPADiscovery()
-    kwargs = dict(
-        hostname=args.hostname,
-        ca_cert_path=local_cacert,
-    )
-    if args.domain:
-        kwargs["domain"] = args.domain
-    if args.realm:
-        kwargs["realm"] = args.realm
-    if args.servers:
-        assert args.domain
-        kwargs["servers"] = args.servers
-
-    res = ds.search(**kwargs)
-    if res != SUCCESS:
-        err = discovery.error_names[res]
-        parser.error("IPA discovery failed: {}.\n".format(err))
-
-    # servers, domain = ds.check_domain(
-    #     ds.domain, set(), "Validating DNS Discovery"
-    # )
-
-    logger.info("Client hostname: %s", args.hostname)
-    logger.info("Realm: %s", ds.realm)
-    logger.debug("Realm source: %s", ds.realm_source)
-    logger.info("DNS Domain: %s", ds.domain)
-    logger.debug("DNS Domain source: %s", ds.domain_source)
-    logger.info("Preferred IPA Server: %s", ds.server)
-    logger.info("IPA Servers: %s", ", ".join(ds.servers))
-    logger.debug("IPA Server source: %s", ds.server_source)
-    logger.info("BaseDN: %s", ds.basedn)
-    logger.debug("BaseDN source: %s", ds.basedn_source)
-
-    return ds
-
-
-def hcc_register(args, server, local_cacert):
+def hcc_register(args):
     """Register this host with /hcc API endpoint
 
     TODO: On 404 try next server
     """
-    url = "https://{server}/hcc".format(server=server)
-    logger.info("Registering host at %s", url)
-    r = requests.get(
-        url,
-        verify=local_cacert,
-        cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
+    url = "https://{server}/hcc/{hostname}".format(
+        server=args.server, hostname=args.hostname
     )
-    r.raise_for_status()
-    return r.content
+    body = {}
+    logger.info("Registering host at %s", url)
+    resp = requests.post(
+        url,
+        verify=args.ipa_cacert,
+        cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
+        json=body,
+    )
+    resp.raise_for_status()
+    return resp.json()
 
 
 def wait_for_inventory_host(args):
@@ -377,17 +221,17 @@ def wait_for_inventory_host(args):
         )
 
 
-def create_krb5_conf(args, ds, krb_name):
+def create_krb5_conf(args, krb_name):
     """Create a temporary krb5.conf"""
     extra_kdcs = [
         "kdc = {server}:88".format(server=server)
-        for server in ds.servers
-        if server != ds.server
+        for server in args.servers
+        if server != args.server
     ]
     conf = KRB5_CONF.format(
-        realm=ds.realm,
-        domain=ds.domain,
-        server=ds.server,
+        realm=args.realm,
+        domain=args.domain,
+        server=args.server,
         extra_kdcs="\n    ".join(extra_kdcs).strip(),
         hostname=args.hostname,
     )
@@ -396,16 +240,15 @@ def create_krb5_conf(args, ds, krb_name):
         f.write(conf)
 
 
-def pkinit(args, host_principal, local_cacert, env):
+def pkinit(args, host_principal, env):
     """Perform kinit with X509_user_identity (PKINIT)"""
     cmd = [paths.KINIT]
-    # CA cert signs KDC cert
-    anchors = ["FILE:{}".format(local_cacert)]
-    if args.pkinit_anchors:
-        anchors.extend(args.pkinit_anchors)
+    anchors = [
+        # IPA CA signs KDC cert
+        "FILE:{}".format(args.ipa_cacert),
+    ]
+    anchors.extend(args.pkinit_anchors)
     for pkinit_anchor in anchors:
-        if not pkinit_anchor.startswith(("FILE:", "DIR:", "ENV:")):
-            raise ValueError(pkinit_anchor)
         cmd.extend(["-X", "X509_anchors={}".format(pkinit_anchor)])
     cmd.extend(["-X", "X509_user_identity={}".format(args.pkinit_identity)])
     cmd.append(host_principal)
@@ -413,27 +256,27 @@ def pkinit(args, host_principal, local_cacert, env):
     run(cmd, env=env, stdin="\n", raiseonerr=True)
 
 
-def getkeytab(args, tmpdir, host_principal, ds, local_cacert, env):
+def getkeytab(args, host_principal, env):
     """Retrieve keytab with ipa-getkeytab"""
-    keytab = os.path.join(tmpdir, "host.keytab")
+    keytab = os.path.join(args.tmpdir, "host.keytab")
     # fmt: off
     cmd = [
         paths.IPA_GETKEYTAB,
-        "-s", ds.server,
+        "-s", args.server,
         "-p", host_principal,
         "-k", keytab,
-        "--cacert", local_cacert,
+        "--cacert", args.ipa_cacert,
     ]
     # fmt: on
     run(cmd, env=env, raiseonerr=True)
     return keytab
 
 
-def _run_ipa_client(args, local_cacert, extra_args=()):
+def _run_ipa_client(args, extra_args=()):
     # fmt: off
     cmd = [
         paths.IPA_CLIENT_INSTALL,
-        "--ca-cert-file", local_cacert,
+        "--ca-cert-file", args.ipa_cacert,
         "--hostname", args.hostname,
     ]
     # fmt: on
@@ -452,13 +295,13 @@ def _run_ipa_client(args, local_cacert, extra_args=()):
     return run(cmd, raiseonerr=True)
 
 
-def ipa_client_keytab(args, keytab, local_cacert):
+def ipa_client_keytab(args, keytab):
     """Install IPA client with existing keytab"""
     extra_args = ["--keytab", keytab]
-    return _run_ipa_client(args, local_cacert, extra_args)
+    return _run_ipa_client(args, extra_args)
 
 
-def ipa_client_pkinit(args, local_cacert):
+def ipa_client_pkinit(args):
     """Install IPA client with PKINIT"""
     extra_args = [
         "--pkinit-identity={}".format(args.pkinit_identity),
@@ -467,7 +310,7 @@ def ipa_client_pkinit(args, local_cacert):
         extra_args.append(
             "--pkinit-anchor=FILE:{anchor}".format(anchor=anchor),
         )
-    return _run_ipa_client(args, local_cacert, extra_args)
+    return _run_ipa_client(args, extra_args)
 
 
 def parse_args(*args):
@@ -476,14 +319,19 @@ def parse_args(*args):
         level=logging.DEBUG if args.debug else logging.INFO,
         format="%(levelname)s: %(message)s",
     )
-    if args.servers and not (args.domain or args.realm):
-        parser.error("--server requires --domain or --realm option\n")
-    if args.realm and not args.domain:
-        args.domain = args.realm.lower()
-    if args.domain and not args.realm:
-        args.realm = args.domain.upper()
-    if args.pkinit_anchors is None:
-        args.pkinit_anchors = [DEFAULT_PKINIT_ANCHOR]
+
+    # Candlepin CA signs RHSM client cert
+    args.pkinit_anchors = ["FILE:{}".format(hccplatform.HMSIDM_CA_BUNDLE_PEM)]
+    args.pkinit_identity = "FILE:{cert},{key}".format(
+        cert=hccplatform.RHSM_CERT, key=hccplatform.RHSM_KEY
+    )
+
+    # initialized later
+    args.tmpdir = None
+    args.ipa_cacert = None
+    args.servers = None
+    args.domain = None
+    args.realm = None
 
     return args
 
@@ -506,45 +354,21 @@ def main(*args):
 
     tmpdir = tempfile.mkdtemp()  # Python 2
     try:
-        # get remote CA cert file first
-        if args.cacert:
-            if args.cacert.startswith(("http://", "https://")):
-                local_cacert = os.path.join(tmpdir, "ca.crt")
-                download_cert(
-                    args, url=args.cacert, local_cacert=local_cacert
-                )
-            else:
-                # it's a file
-                local_cacert = args.cacert
-        else:
-            local_cacert = None
-        logger.debug("Using local CA cert %s", local_cacert)
+        args.tmpdir = tmpdir
+        # wait until this host appears in ConsoleDot host inventory
+        # wait_for_inventory_host(args)
 
-        # discover IPA realm, domain, and servers
-        ds = discover_ipa(args, local_cacert)
-
-        # if CA cert is not available yet, download it from IPA server
-        if local_cacert is None:
-            # download cert from IPA server
-            url = "https://{server}/ipa/config/ca.crt".format(
-                server=ds.server
-            )
-            local_cacert = os.path.join(tmpdir, "ca.crt")
-            download_cert(args, url=url, local_cacert=local_cacert)
-
-        check_upto(args, "discover")
-
-        # wait until this host appears in ConsoleDont host inventory
-        wait_for_inventory_host(args)
+        # set local_cacert, servers, domain, realm
+        hcc_hostconf(args)
+        check_upto(args, "hostconf")
 
         # self-register host with IPA
         # TODO: check other servers if server returns 400
-        hcc_register(args, server=ds.server, local_cacert=local_cacert)
-
+        hcc_register(args)
         check_upto(args, "register")
 
         if HAS_KINIT_PKINIT and args.upto is None:
-            ipa_client_pkinit(args, local_cacert)
+            ipa_client_pkinit(args)
         else:
             krb_name = os.path.join(tmpdir, "krb5.conf")
             # pass KRB5 and OpenSSL env vars
@@ -559,22 +383,15 @@ def main(*args):
             if args.debug >= 2:
                 env["KRB5_TRACE"] = "/dev/stderr"
 
-            host_principal = "host/{}@{}".format(args.hostname, ds.realm)
-            create_krb5_conf(args, ds, krb_name)
-            pkinit(args, host_principal, local_cacert=local_cacert, env=env)
+            host_principal = "host/{}@{}".format(args.hostname, args.realm)
+            create_krb5_conf(args, krb_name)
+            pkinit(args, host_principal, env=env)
             check_upto(args, "pkinit")
 
-            keytab = getkeytab(
-                args,
-                tmpdir,
-                host_principal,
-                ds=ds,
-                local_cacert=local_cacert,
-                env=env,
-            )
+            keytab = getkeytab(args, host_principal, env=env)
             check_upto(args, "keytab")
 
-            ipa_client_keytab(args, keytab, local_cacert)
+            ipa_client_keytab(args, keytab)
     finally:
         if args.debug >= 2:
             logger.info("Keeping temporary directory %s", tmpdir)

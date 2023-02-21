@@ -39,6 +39,9 @@
   %global with_registration_service 1
 %endif
 
+# --without mockapi (enabled by default)
+%bcond_without mockapi
+
 %if %{with python2}
   %global python %{__python2}
   %global python_sitelib %{python2_sitelib}
@@ -197,6 +200,35 @@ fi
 # registration-service
 %endif
 
+%if %{with mockapi}
+%package mockapi
+Summary: Automatic IPA client enrollment: Mock API
+BuildArch: noarch
+
+Provides:  %{alt_name}-mockapi = %{version}
+Conflicts: %{alt_name}-mockapi
+Obsoletes: %{alt_name}-mockapi < %{version}
+Requires: %{package_name}-registration-service = %{version}
+Requires: %{ipa_name}-client >= %{ipa_version}
+%if 0%{?with_python2}
+Requires: python2-requests
+%else
+Requires: python3-requests
+%endif
+%{?systemd_requires}
+
+
+%description mockapi
+This package contains a Mock API for testing of automatic enrollment service
+of IPA clients.
+
+
+%posttrans mockapi
+/bin/systemctl try-restart httpd.service
+
+# mockapi
+%endif
+
 %package client-enrollment
 Summary: Automatic IPA client enrollment for Hybrid Cloud Console
 BuildArch: noarch
@@ -307,6 +339,13 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 # registration service
 %endif
 
+%if %{with mockapi}
+cp -p wsgi/hcc_mockapi.py %{buildroot}%{_datadir}/ipa-hcc/
+
+%__mkdir_p %{buildroot}%{_sysconfdir}/httpd/conf.d/
+cp etc/apache/ipa-hcc-mockapi.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
+%endif
+
 # client auto-enrollment
 %__mkdir_p %{buildroot}%{python_sitelib}/ipaclient/hcc
 cp -p ipaclient/hcc/*.py %{buildroot}%{python_sitelib}/ipaclient/hcc/
@@ -315,7 +354,6 @@ cp -p ipaclient/hcc/*.py %{buildroot}%{python_sitelib}/ipaclient/hcc/
 cp -p client/ipa-hcc-auto-enrollment.service %{buildroot}%{_unitdir}/
 %__mkdir_p %{buildroot}%{_libexecdir}/ipa/hcc/
 cp -p client/ipa-hcc-auto-enrollment %{buildroot}%{_libexecdir}/ipa/hcc/
-cp -p client/ipa-pkinit-keytab %{buildroot}%{_libexecdir}/ipa/hcc/
 
 sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/hcc/*
 
@@ -367,13 +405,22 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %endif
 
 
+%if %{with mockapi}
+%files mockapi
+%doc README.md CONTRIBUTORS.txt
+%license COPYING
+%{_datadir}/ipa-hcc/hcc_mockapi.py*
+%{_datadir}/ipa/updates/86-hcc-enrollment-service.update
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
+%endif
+
+
 %files client-enrollment
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
 %{python_sitelib}/ipaclient/hcc/
 %attr(0755,root,root) %dir %{_libexecdir}/ipa/hcc
 %attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-hcc-auto-enrollment
-%attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-pkinit-keytab
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
 
 

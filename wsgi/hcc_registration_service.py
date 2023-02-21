@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -7,15 +8,12 @@ import gssapi
 import requests
 
 from ipalib import x509
-from ipaplatform.paths import paths
 from ipaplatform import hccplatform
 
 if hccplatform.PY2:
     from httplib import responses as http_responses
-    from time import time as monotonic_time
 else:
     from http.client import responses as http_responses
-    from time import monotonic as monotonic_time
 
 # must be set before ipalib or ipapython is imported
 os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_SERVICE_CACHE_DIR
@@ -30,36 +28,13 @@ logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")
 logger.setLevel(logging.DEBUG)
 
-SCRIPT = """\
-#!/bin/sh
-set -e
-
-CABUNDLE=$(mktemp)
-trap "rm -f $CABUNDLE" EXIT
-
-cat >$CABUNDLE << EOF
-{cabundle_pem}
-EOF
-
-set -x
-ipa-client-install \
---ca-cert-file=$CABUNDLE \
---server={server} \
---domain={domain} \
---realm={realm} \
---pkinit-identity=FILE:/etc/pki/consumer/cert.pem,/etc/pki/consumer/key.pem \
---pkinit-anchor=FILE:$CABUNDLE \
---no-ntp \
---unattended
-"""
-
 
 class HTTPException(Exception):
-    def __init__(self, code, msg):
+    def __init__(self, code, msg, content_type="text/plain; charset=utf-8"):
         if isinstance(msg, str):
             msg = msg.encode("utf-8")
         headers = [
-            ("Content-Type", "text/plain; charset=utf-8"),
+            ("Content-Type", content_type),
             ("Content-Length", str(len(msg))),
         ]
         super(HTTPException, self).__init__(code, msg, headers)
@@ -73,9 +48,6 @@ class HTTPException(Exception):
 
 class Application:
     def __init__(self):
-        # inventory bearer token + validity timestamp
-        self.access_token = None
-        self.valid_until = 0
         # cached org_id from IPA config_show
         self.org_id = None
         # requests session for persistent HTTP connection
@@ -104,100 +76,17 @@ class Application:
             )
         return int(nas[0].value), nas[1].value
 
-    def get_access_token(
-        self,
-        refresh_token_file=hccplatform.REFRESH_TOKEN_FILE,
-        url=hccconfig.token_url,
-    ):
-        """Get a bearer access token from an offline token
-
-        TODO: Poor man's OAuth2 workflow. Replace with
-        requests-oauthlib.
-
-        https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html#refreshing-tokens
-        """
-        # use cached access token
-        if self.access_token and monotonic_time() < self.valid_until:
-            return self.access_token
-
-        try:
-            with open(refresh_token_file, "r") as f:
-                refresh_token = f.read().strip()
-        except IOError as e:
-            logger.error(
-                "Unable to read refresh token from '%s': %s",
-                refresh_token_file,
-                e,
-            )
-            raise
-
-        data = {
-            "grant_type": "refresh_token",
-            "client_id": hccplatform.TOKEN_CLIENT_ID,
-            "refresh_token": refresh_token,
+    def check_host(self, rhsm_id, fqdn):
+        body = {
+            "domain_type": "ipa",
+            "domain_name": api.env.domain,
         }
-        start = monotonic_time()
-        resp = self.session.post(url, data)
-        dur = monotonic_time() - start
-        if resp.status_code >= 400:
-            raise HTTPException(
-                resp.status_code,
-                "get_access_token() failed: {resp}".format(resp=resp.reason),
-            )
-        logger.debug(
-            "Got access token from refresh token in %0.3fs.",
-            dur,
-        )
+        api_url = hccconfig.hcc_api_url.rstrip("/")
+        url = "/".join((api_url, "check_host", rhsm_id, fqdn))
+        resp = self.session.post(url, json=body)
+        resp.raise_for_status()
         j = resp.json()
-        self.access_token = j["access_token"]
-        # 10 seconds slack
-        self.valid_until = monotonic_time() + j["expires_in"] - 10
-        return self.access_token
-
-    def lookup_inventory(
-        self,
-        rhsm_id,
-        access_token,
-        url=hccconfig.inventory_hosts_api,
-    ):
-        """Lookup host by subscription manager id
-
-        Returns FQDN, inventory_id
-        """
-        logger.debug("Looking up %s in console inventory", rhsm_id)
-        headers = {
-            "Authorization": "Bearer {access_token}".format(
-                access_token=access_token
-            )
-        }
-        params = {"filter[system_profile][owner_id]": rhsm_id}
-        start = monotonic_time()
-        resp = self.session.get(url, params=params, headers=headers)
-        dur = monotonic_time() - start
-        if resp.status_code >= 400:
-            # reset access token
-            self.access_token = None
-            raise HTTPException(
-                resp.status_code,
-                "lookup_inventory() failed: {resp}".format(resp=resp.reason),
-            )
-
-        j = resp.json()
-        if j["total"] != 1:
-            raise HTTPException(
-                404, "Unknown host {rhsm_id}.".format(rhsm_id=rhsm_id)
-            )
-        result = j["results"][0]
-        fqdn = result["fqdn"]
-        inventoryid = result["id"]
-        logger.warning(
-            "Resolved %s to fqdn %s / inventory %s in %0.3fs",
-            rhsm_id,
-            fqdn,
-            inventoryid,
-            dur,
-        )
-        return fqdn, inventoryid
+        return j["inventory_id"]
 
     def kinit_gssproxy(self):
         service = hccplatform.HCC_SERVICE
@@ -208,10 +97,12 @@ class Application:
         store = {"ccache": hccplatform.HCC_SERVICE_KRB5CCNAME}
         return gssapi.Credentials(name=name, store=store, usage="initiate")
 
-    def connect_ipa(self):
-        logger.debug("Connecting to IPA")
+    def bootstrap_ipa(self):
         if not api.isdone("bootstrap"):
             api.bootstrap(in_server=False)
+
+    def connect_ipa(self):
+        logger.debug("Connecting to IPA")
         self.kinit_gssproxy()
         if not api.isdone("finalize"):
             api.finalize()
@@ -278,19 +169,43 @@ class Application:
                     fqdn,
                 )
 
-    def get_ca_bundle(self):
-        with open(paths.IPA_CA_CRT, "r") as f:
-            ipa_ca_pem = f.read()
-        with open(hccplatform.HMSIDM_CA_BUNDLE_PEM, "r") as f:
-            hsmidm_ca_bundle_pem = f.read()
-        return ipa_ca_pem + "\n" + hsmidm_ca_bundle_pem
+    def get_json(self, env, maxlength=10240):
+        content_type = env["CONTENT_TYPE"]
+        if content_type != "application/json":
+            raise HTTPException(
+                406,
+                "Unsupported content type {content_type}.".format(
+                    content_type=content_type
+                ),
+            )
+        try:
+            length = int(env["CONTENT_LENGTH"])
+        except (KeyError, ValueError):
+            length = -1
+        if length < 0:
+            raise HTTPException(411, "Length required.")
+        if length > maxlength:
+            raise HTTPException(413, "Request entity too large.")
+        result = json.load(env["wsgi.input"])
+        if not isinstance(result, dict):
+            raise HTTPException(403, "JSON object expected")
+        return result
 
     def handle(self, env, start_repose):
         method = env["REQUEST_METHOD"]
-        if method != "GET":
+        if method != "POST":
             raise HTTPException(
                 405, "Method {method} not allowed.".format(method=method)
             )
+        # verify it's valid JSON body
+        self.get_json(env)
+        print(env)
+        fqdn = env["PATH_INFO"][1:]
+        if not fqdn or "/" in fqdn:
+            raise HTTPException(404, "host not found")
+
+        self.bootstrap_ipa()
+
         cert = self.parse_cert(env, "SSL_CLIENT_CERT")
         org_id, rhsm_id = self.parse_subject(cert.subject)
         logger.warn(
@@ -298,31 +213,25 @@ class Application:
             org_id,
             rhsm_id,
         )
-        access_token = self.get_access_token()
-        fqdn, inventory_id = self.lookup_inventory(
-            rhsm_id, access_token=access_token
-        )
+        inventory_id = self.check_host(rhsm_id, fqdn)
         try:
             self.connect_ipa()
             self.update_ipa(org_id, rhsm_id, inventory_id, fqdn)
         finally:
             self.disconnect_ipa()
-        cabundle_pem = self.get_ca_bundle()
-        script = SCRIPT.format(
-            server=api.env.host,
-            domain=api.env.domain,
-            realm=api.env.realm,
-            cabundle_pem=cabundle_pem,
-        )
+
         logger.info(
             "Self-registration of %s (O=%s, CN=%s) was successful",
             fqdn,
             org_id,
             rhsm_id,
         )
+        # TODO: return value?
+        result = {}
         raise HTTPException(
             200,
-            script,
+            json.dumps(result),
+            content_type="application/json",
         )
 
     def __call__(self, env, start_response):
@@ -343,7 +252,7 @@ class Application:
 application = Application()
 
 
-def test(rhsm_id):
+def test(rhsm_id, fqdn):
     logging.basicConfig(
         level=logging.DEBUG,
         format="[%(asctime)s %(name)s] <%(levelname)s>: %(message)s",
@@ -372,11 +281,8 @@ def test(rhsm_id):
         os.environ["HOME"] = user.pw_dir
         os.environ["USER"] = user.pw_name
 
-    access_token = application.get_access_token()
-    application.lookup_inventory(rhsm_id, access_token)
-    application.lookup_inventory(rhsm_id, access_token)
-
     application.connect_ipa()
+    print(application.check_host(rhsm_id, fqdn))
     print(application.get_ipa_org_id())
     application.disconnect_ipa()
 
