@@ -139,9 +139,15 @@ def hcc_hostconf(args):
         logger.error("Request to %s failed: %s: %s", url, type(e).__name__, e)
         raise SystemExit(2)
     j = resp.json()
+
     args.ipa_cacert = os.path.join(args.tmpdir, "ca.crt")
     with open(args.ipa_cacert, "w") as f:
         f.write(j["ipa"]["ca_cert"])
+    # IPA CA signs KDC cert
+    args.pkinit_anchors.append(
+        "FILE:{}".format(args.ipa_cacert),
+    )
+
     args.domain = j["domain_name"]
     args.realm = j["ipa"]["realm_name"]
     args.servers = j["ipa"]["enrollment_servers"]
@@ -243,13 +249,8 @@ def create_krb5_conf(args, krb_name):
 def pkinit(args, host_principal, env):
     """Perform kinit with X509_user_identity (PKINIT)"""
     cmd = [paths.KINIT]
-    anchors = [
-        # IPA CA signs KDC cert
-        "FILE:{}".format(args.ipa_cacert),
-    ]
-    anchors.extend(args.pkinit_anchors)
-    for pkinit_anchor in anchors:
-        cmd.extend(["-X", "X509_anchors={}".format(pkinit_anchor)])
+    for anchor in args.pkinit_anchors:
+        cmd.extend(["-X", "X509_anchors={anchor}".format(anchor=anchor)])
     cmd.extend(["-X", "X509_user_identity={}".format(args.pkinit_identity)])
     cmd.append(host_principal)
     # send \n on stdin in case we get a password prompt
@@ -308,7 +309,7 @@ def ipa_client_pkinit(args):
     ]
     for anchor in args.pkinit_anchors:
         extra_args.append(
-            "--pkinit-anchor=FILE:{anchor}".format(anchor=anchor),
+            "--pkinit-anchor={anchor}".format(anchor=anchor),
         )
     return _run_ipa_client(args, extra_args)
 
