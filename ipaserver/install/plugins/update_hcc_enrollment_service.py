@@ -26,6 +26,7 @@ from ipapython.version import VERSION
 from ipaplatform import hccplatform
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
+from ipaserver.plugins.hccserverroles import hccenrollment_attribute
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ class update_hcc_enrollment_service(Updater):
         try:
             self.api.Command.service_show(principal)
         except errors.NotFound:
-            logger.info("Adding service '%s'", principal)
+            logger.info("Adding service '%s'.", principal)
             # Remove stale keytab
             remove_file(hccplatform.HCC_SERVICE_KEYTAB)
             # force is required to skip the 'verify_host_resolvable' check
@@ -81,7 +82,7 @@ class update_hcc_enrollment_service(Updater):
                 force=True,
             )
             logger.info(
-                "Adding service '%s' to role '%s'",
+                "Adding service '%s' to role '%s'.",
                 principal,
                 hccplatform.HCC_ENROLLMENT_ROLE,
             )
@@ -89,6 +90,19 @@ class update_hcc_enrollment_service(Updater):
                 hccplatform.HCC_ENROLLMENT_ROLE,
                 service=princname,
             )
+
+            host = self.api.env.host
+            server_role = self.api.Object.server_role
+            hcc_servers = server_role.get_hcc_enrollment_servers()
+            if host not in hcc_servers:
+                logger.info(
+                    "Adding '%s' to server role '%s'.",
+                    host,
+                    hccenrollment_attribute.name,
+                )
+                hcc_servers.add(host)
+                server_role.set_hcc_enrollment_servers(hcc_servers)
+
             return True
         else:
             logger.info(

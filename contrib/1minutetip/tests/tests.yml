@@ -79,6 +79,14 @@
             path: /etc/rhc/config.toml
             regexp: '^data-host\s*='
             line: 'data-host = "cert.cloud.stage.redhat.com"'
+        - name: Configure /etc/insights-client/insights-client.conf base_url for stage environment
+          ini_file:
+            path: /etc/insights-client/insights-client.conf
+            section: insights-client
+            option: base_url
+            value: "cert.console.stage.redhat.com"
+            no_extra_spaces: true
+            create: false
         - name: Configure env in /etc/ipa/hcc.conf
           ini_file:
             path: /etc/ipa/hcc.conf
