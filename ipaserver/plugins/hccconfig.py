@@ -6,11 +6,10 @@
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
 from ipalib import _
-from ipalib.parameters import Int
+from ipalib.parameters import Int, Str
 from ipaserver.plugins.config import config
 from ipaserver.plugins.config import config_mod
 from ipaserver.plugins.internal import i18n_messages
-
 
 hcc_config_class = "hccconfig"
 
@@ -30,6 +29,12 @@ takes_params = (
         cli_name="hccorgid",
         label=_("HCC organization id"),
         minvalue=1,
+    ),
+    Str(
+        "hcc_enrollment_server_server*",
+        label=_("IPA master capable of HCC auto-enrollment"),
+        doc=_("IPA master which can process HCC auto-enrollment requests"),
+        flags={"virtual_attribute", "no_create", "no_update"},
     ),
 )
 

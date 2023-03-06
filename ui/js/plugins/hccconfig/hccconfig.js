@@ -31,6 +31,15 @@ function(phases, IPA) {
         };
         var facet = get_item(IPA.serverconfig.entity_spec.facets, '$type', 'details');
         facet.sections.push(section);
+
+        var field = {
+            $type: 'multivalued',
+            name: 'hcc_enrollment_server_server',
+            read_only: true
+        };
+        var server_section = get_item(facet.sections, 'name', 'server');
+        server_section.fields.push(field);
+
         return true;
     };
 

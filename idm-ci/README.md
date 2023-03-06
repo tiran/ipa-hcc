@@ -54,5 +54,5 @@ Run test environment
 Unregister hosts from Insights and tear down VMs
 
 ```
-# te --upto teardown idm-ci/metadata/hmsidm-dev.yaml
+# te --phase teardown idm-ci/metadata/hmsidm-dev.yaml
 ```

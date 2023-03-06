@@ -16,7 +16,7 @@ getent group ipaapi >/dev/null || groupadd -f -r ipaapi
 getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d /usr/share/ipa-hcc -c "IPA Hybrid Cloud Console enrollment service" ipahcc
 
 # directories, cache directory must be writeable by user
-mkdir /etc/ipa/hcc
+mkdir -p /etc/ipa/hcc
 mkdir -p /usr/share/ipa-hcc
 mkdir -p /usr/libexec/ipa-hcc
 mkdir -p /var/cache/ipa-hcc
@@ -31,8 +31,8 @@ cp etc/ipa/hcc.conf /etc/ipa/
 
 # WSGI app and configuration
 cp wsgi/hcc_registration_service.py /usr/share/ipa-hcc/
-cp apache/ipa-hcc.conf /etc/httpd/conf.d/ipa-hcc.conf
-cp refresh_token /etc/ipa || true
+cp etc/apache/ipa-hcc.conf /etc/httpd/conf.d/ipa-hcc.conf
+# cp refresh_token /etc/ipa/hcc || true
 
 # Mock API WSGI app
 cp etc/apache/ipa-hcc-mockapi.conf /etc/httpd/conf.d/
@@ -61,13 +61,16 @@ cp ipaserver/install/plugins/*.py ${SITE_PACKAGES}/ipaserver/install/plugins/
 cp ipaplatform/*.py ${SITE_PACKAGES}/ipaplatform
 python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/ ${SITE_PACKAGES}/ipaserver/install/plugins ${SITE_PACKAGES}/ipaplatform
 
+exit 0
+
 # run updater
 if [ $NEEDS_UPGRADE = 1 ]; then
     ipa-server-upgrade
 else
     ipa-ldap-updater \
         -S /usr/share/ipa/schema.d/85-hcc.ldif \
-        /usr/share/ipa/updates/85-hcc.update
+        /usr/share/ipa/updates/85-hcc.update \
+        /usr/share/ipa/updates/86-hcc-enrollment-service.update
     systemctl restart httpd.service
 fi
 
