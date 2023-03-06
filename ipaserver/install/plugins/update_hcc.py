@@ -5,7 +5,6 @@
 #
 """Configure Hybrid Cloud Console basic settings
 """
-import os
 import logging
 
 from augeas import Augeas
@@ -92,52 +91,71 @@ class update_hcc(Updater):
 
         return modified
 
-    def configure_hcc_orgid(self):
-        """Auto-configure global HCC org id"""
-        result = self.api.Command.config_show()["result"]
-        org_ids = result.get("hccorgid")
-        if org_ids:
-            logger.debug(
-                "hccorgid already configured: %s",
-                org_ids[0],
-            )
-            return False
-
-        if not os.path.isfile(hccplatform.RHSM_CERT):
-            logger.debug(
-                "RHSM certificate file '%s' does not exist.",
-                hccplatform.RHSM_CERT,
-            )
-            return False
-
-        try:
-            with open(hccplatform.RHSM_CERT, "rb") as f:
-                cert = x509.load_pem_x509_certificate(f.read())
-        except Exception:
-            logger.exception(
-                "Failed to parse '%s'.",
-                hccplatform.RHSM_CERT,
-            )
-            return False
+    def parse_rhsm_cert(self):
+        """Parse RHSM certificate, return org_id and rhsm_id (CN UUID)"""
+        with open(hccplatform.RHSM_CERT, "rb") as f:
+            cert = x509.load_pem_x509_certificate(f.read())
 
         nas = list(cert.subject)
         if len(nas) != 2 or nas[0].oid != NameOID.ORGANIZATION_NAME:
-            logger.error("Unexpected cert subject %s", cert.subject)
-            return False
+            raise ValueError(
+                "Invalid cert subject {subject}.".format(subject=cert.subject)
+            )
         try:
             org_id = int(nas[0].value)
         except (ValueError, TypeError):
-            logger.error("Unexpected cert subject %s", cert.subject)
+            raise ValueError(
+                "Invalid cert subject {subject}.".format(subject=cert.subject)
+            )
+        return org_id, nas[1].value
+
+    def configure_global_hcc_orgid(self, org_id):
+        """Auto-configure global HCC org id"""
+        # check if org_id is already set, so we don't configure a different
+        # org id.
+        result = self.api.Command.config_show(raw=True)["result"]
+        current_org_ids = result.get("hccorgid")
+        if current_org_ids:
+            logger.debug(
+                "hccOrgId already configured: %s",
+                current_org_ids[0],
+            )
             return False
 
         try:
             self.api.Command.config_mod(hccorgid=org_id)
         except errors.EmptyModlist:
+            logger.debug("hccOrgId already configured.")
             return False
         else:
+            logger.info("hccOrgId configured to '%s'.", org_id)
+            return True
+
+    def configure_host_rhsm_id(self, rhsm_id):
+        """Update rhsm_id of server's host record"""
+        host = self.api.env.host
+        try:
+            self.api.Command.host_mod(host, hccsubscriptionid=rhsm_id)
+        except errors.EmptyModlist:
+            logger.debug(
+                "hccSubscriptionId of host '%s' already configured.", host
+            )
+            return False
+        else:
+            logger.debug(
+                "hccSubscriptionId of host '%s' set to '%s'.", host, rhsm_id
+            )
             return True
 
     def execute(self, **options):
         self.modify_krb5kdc_conf()
-        self.configure_hcc_orgid()
+        try:
+            org_id, rhsm_id = self.parse_rhsm_cert()
+        except (OSError, IOError):  # Python 2
+            logger.exception("Unable to read %s", hccplatform.RHSM_CERT)
+        except Exception:
+            logger.exception("Failed to parse %s", hccplatform.RHSM_CERT)
+        else:
+            self.configure_global_hcc_orgid(org_id)
+            self.configure_host_rhsm_id(rhsm_id)
         return False, []

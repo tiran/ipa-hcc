@@ -60,8 +60,6 @@ class Application:
         # inventory bearer token + validity timestamp
         self.access_token = None
         self.valid_until = 0
-        # cached org_id from IPA config_show
-        self.org_id = None
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.routes = [

@@ -120,7 +120,8 @@ class Application:
         """Get and cache global org_id from IPA config"""
         if self.org_id is not None:
             return self.org_id
-        result = api.Command.config_show()["result"]
+        # no need to fetch additional values
+        result = api.Command.config_show(raw=True)["result"]
         org_ids = result.get("hccorgid")
         if not org_ids or len(org_ids) != 1:
             raise ValueError(

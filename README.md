@@ -101,6 +101,8 @@ The `update_hcc` update plugin:
 - checks HCCOrgId setting in IPA's global configuration. If the
   option is not set, then it sets the value based on the subject org
   name of server's RHSM certificate (`/etc/pki/consumer/cert.pem`).
+- set/update HCCSubscriptionId of the server's host entry based on the
+  subject CN of the server's RHSM certificate.
 
 The update file `86-hcc-enrollment-service.update` runs the
 `update_hcc_enrollment_service` plugin, whoch
