@@ -106,7 +106,7 @@ class update_hcc_enrollment_service(Updater):
                 hcc_enrollment_servers.add(host)
                 server_role.set_hcc_enrollment_servers(hcc_enrollment_servers)
 
-            hcc_update_server = server_role.get_update_server()
+            hcc_update_server = server_role.get_hcc_update_server()
             if hcc_update_server is None:
                 logger.info(
                     "Setting '%s' as single server role '%s'.",

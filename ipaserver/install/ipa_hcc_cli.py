@@ -5,6 +5,8 @@ import json
 
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
+import requests
+import requests.exceptions
 
 from ipalib import api
 from ipalib import errors
@@ -24,11 +26,14 @@ if hccplatform.PY2:
 else:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
+hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
 
 RFC4514_MAP = {
     NameOID.EMAIL_ADDRESS: "E",
 }
+
+DO_REQUEST = False
 
 
 def detect_environment(rhsm_conf="/etc/rhsm/rhsm.conf", default="prod"):
@@ -162,6 +167,27 @@ class IPAHCCCli(admintool.AdminTool):
         result = api.Command.realmdomains_show()
         return list(result["result"]["associateddomain"])
 
+    def submit_domain_api(self, payload):
+        url = hccconfig.idm_domain_cert_api
+        logger.debug("Sending request to %s", url)
+        body = json.dumps(payload, indent=2)
+        logger.debug("body: %s", body)
+        if not DO_REQUEST:
+            logger.warning("Skip request, body:\n%s", body)
+            return
+        try:
+            resp = requests.post(
+                url,
+                cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
+                json=payload,
+            )
+            resp.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Request to %s failed: %s: %s", url, type(e).__name__, e
+            )
+            raise SystemExit(2)
+
     def get_ipa_info(self):
         return dict(
             domain_type="ipa",
@@ -179,7 +205,7 @@ class IPAHCCCli(admintool.AdminTool):
             source=api.env.host,
             info=self.get_ipa_info(),
         )
-        print(json.dumps(payload, indent=2))
+        self.submit_domain_api(payload)
 
     def update(self):
         payload = dict(
@@ -187,7 +213,7 @@ class IPAHCCCli(admintool.AdminTool):
             source=api.env.host,
             info=self.get_ipa_info(),
         )
-        print(json.dumps(payload, indent=2))
+        self.submit_domain_api(payload)
 
     def run(self):
         api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
