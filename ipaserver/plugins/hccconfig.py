@@ -36,6 +36,12 @@ takes_params = (
         doc=_("IPA master which can process HCC auto-enrollment requests"),
         flags={"virtual_attribute", "no_create", "no_update"},
     ),
+    Str(
+        "hcc_update_server_server?",
+        label=_("IPA master with HCC update service"),
+        doc=_("IPA master which hosts HCC update service"),
+        flags={"virtual_attribute", "no_create"},
+    ),
 )
 
 config.takes_params += takes_params

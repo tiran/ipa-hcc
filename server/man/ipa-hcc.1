@@ -20,21 +20,31 @@
 .SH "NAME"
 ipa\-hcc \- Register or update IPA domain information in Red Hat Hybrid Cloud Console
 .SH "SYNOPSIS"
-ipa\-join [\fB\-d\fR|\fB\-\-debug\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-?\fR|\fB\-\-help\fR] [\fB\-\-usage\fR]
-
+\fBipa\-hcc\fR [\fIOPTIONS\fR...] register \fITOKEN\fR
+.br
+\fBipa\-hcc\fR [\fIOPTIONS\fR...] update
 .SH "DESCRIPTION"
 Register or update IPA domain information in Red Hat Hybrid Cloud Console
-
+.SH "COMMANDS"
+.TP
+\fBregister\fR \- Register a domain with Hybrid Cloud Console
+.sp
+.RS
+This command registers a domain. The \fITOKEN\fR is provided by HCC.
+.RE
+.TP
+\fBupdate\fR \- Update domain information in Red Hat Hybrid Cloud Console
+.sp
+.RS
+This command updates domain information.
+.RE
 .SH "OPTIONS"
 .TP
-\fB\-q,\-\-quiet\fR
+\fB\-q, \-\-quiet\fR
 Quiet mode. Only errors are displayed.
 .TP
-\fB\-d,\-\-debug\fR
-Print the raw RPC output in GSSAPI mode.
-.SH "EXAMPLES"
-n/a
-
+\fB\-d, \-\-debug\fR
+Print additional debug information.
 .SH "EXIT STATUS"
 The exit status is 0 on success, nonzero on error.
 

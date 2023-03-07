@@ -26,7 +26,10 @@ from ipapython.version import VERSION
 from ipaplatform import hccplatform
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
-from ipaserver.plugins.hccserverroles import hccenrollment_attribute
+from ipaserver.plugins.hccserverroles import (
+    hcc_enrollment_server_attribute,
+    hcc_update_server_attribute,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,15 +96,24 @@ class update_hcc_enrollment_service(Updater):
 
             host = self.api.env.host
             server_role = self.api.Object.server_role
-            hcc_servers = server_role.get_hcc_enrollment_servers()
-            if host not in hcc_servers:
+            hcc_enrollment_servers = server_role.get_hcc_enrollment_servers()
+            if host not in hcc_enrollment_servers:
                 logger.info(
                     "Adding '%s' to server role '%s'.",
                     host,
-                    hccenrollment_attribute.name,
+                    hcc_enrollment_server_attribute.name,
                 )
-                hcc_servers.add(host)
-                server_role.set_hcc_enrollment_servers(hcc_servers)
+                hcc_enrollment_servers.add(host)
+                server_role.set_hcc_enrollment_servers(hcc_enrollment_servers)
+
+            hcc_update_server = server_role.get_update_server()
+            if hcc_update_server is None:
+                logger.info(
+                    "Setting '%s' as single server role '%s'.",
+                    host,
+                    hcc_update_server_attribute.name,
+                )
+                server_role.set_hcc_update_server(host)
 
             return True
         else:
