@@ -57,9 +57,11 @@ mkdir -p -m 755 /usr/share/ipa/ui/js/plugins/hcchost
 cp ui/js/plugins/hcchost/hcchost.js /usr/share/ipa/ui/js/plugins/hcchost/
 
 cp ipaserver/plugins/*.py ${SITE_PACKAGES}/ipaserver/plugins/
+cp ipaserver/install/*.py ${SITE_PACKAGES}/ipaserver/install/
 cp ipaserver/install/plugins/*.py ${SITE_PACKAGES}/ipaserver/install/plugins/
 cp ipaplatform/*.py ${SITE_PACKAGES}/ipaplatform
 python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/ ${SITE_PACKAGES}/ipaserver/install/plugins ${SITE_PACKAGES}/ipaplatform
+cp server/ipa-hcc /usr/sbin/
 
 exit 0
 

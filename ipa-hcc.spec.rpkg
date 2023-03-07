@@ -292,8 +292,18 @@ cp -p ipaplatform/*.py %{buildroot}%{python_sitelib}/ipaplatform/
 
 %if %{with server_plugin}
 # server-plugin
+%__mkdir_p %{buildroot}%{_sbindir}
+cp server/ipa-hcc %{buildroot}%{_sbindir}/ipa-hcc
+sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_sbindir}/ipa-hcc
+
+%__mkdir_p %{buildroot}%{_mandir}/man1
+cp server/man/ipa-hcc.1 %{buildroot}%{_mandir}/man1/
+
 %__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/plugins
 cp -p ipaserver/plugins/*.py %{buildroot}%{python_sitelib}/ipaserver/plugins/
+
+%__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/install/
+cp -p ipaserver/install/ipa_hcc_cli.py %{buildroot}%{python_sitelib}/ipaserver/install/
 
 %__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/install/plugins
 cp -p ipaserver/install/plugins/update_hcc.py %{buildroot}%{python_sitelib}/ipaserver/install/plugins/
@@ -375,10 +385,14 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %files server-plugin
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
+%{_sbindir}/ipa-hcc
+%{_mandir}/man1/ipa-hcc.1*
 %{python_sitelib}/ipaserver/plugins/*.py*
+%{python_sitelib}/ipaserver/install/*.py*
 %{python_sitelib}/ipaserver/install/plugins/update_hcc.py*
 %if %{with pycache}
 %{python_sitelib}/ipaserver/plugins/__pycache__/*.pyc
+%{python_sitelib}/ipaserver/install/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc.*.pyc
 %endif
 %{_datadir}/ipa/schema.d/85-hcc.ldif
