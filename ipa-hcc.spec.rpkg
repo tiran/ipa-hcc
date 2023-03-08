@@ -138,12 +138,24 @@ if [ $? -eq 0 ]; then
     /bin/systemctl try-restart httpd.service >/dev/null 2>&1 || :
 fi
 
+%post server-plugin
+%systemd_post ipa-hcc.update.service
+%systemd_post ipa-hcc.update.timer
+/bin/systemctl daemon-reload
+/bin/systemctl enable ipa-hcc-update.timer
+
+%preun server-plugin
+%systemd_preun ipa-hcc.update.service
+%systemd_preun ipa-hcc.update.timer
+
 %postun server-plugin
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/redhat-candlepin-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
+%systemd_postun ipa-hcc.update.service
+%systemd_postun ipa-hcc.update.timer
+
 # server-plugin
 %endif
-
 
 %if %{with registration_service}
 %package registration-service
@@ -296,6 +308,9 @@ cp -p ipaplatform/*.py %{buildroot}%{python_sitelib}/ipaplatform/
 cp server/ipa-hcc %{buildroot}%{_sbindir}/ipa-hcc
 sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_sbindir}/ipa-hcc
 
+%__mkdir_p %{buildroot}%{_unitdir}
+cp server/ipa-hcc-update.* %{buildroot}%{_unitdir}/
+
 %__mkdir_p %{buildroot}%{_mandir}/man1
 cp server/man/ipa-hcc.1 %{buildroot}%{_mandir}/man1/
 
@@ -387,6 +402,7 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %license COPYING
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
+%{_unitdir}/ipa-hcc-update.*
 %{python_sitelib}/ipaserver/plugins/*.py*
 %{python_sitelib}/ipaserver/install/*.py*
 %{python_sitelib}/ipaserver/install/plugins/update_hcc.py*

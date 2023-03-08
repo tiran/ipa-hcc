@@ -2,6 +2,7 @@
 """
 import logging
 import json
+from optparse import OptionGroup  # pylint: disable=deprecated-module
 
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
@@ -12,6 +13,7 @@ from ipalib import api
 from ipalib import errors
 from ipalib.install import certstore
 from ipaplatform.paths import paths
+from ipaplatform.services import knownservices
 from ipaplatform import hccplatform
 from ipapython import admintool
 from ipaserver.plugins.hccserverroles import (
@@ -20,11 +22,18 @@ from ipaserver.plugins.hccserverroles import (
 )
 from ipaserver.install import installutils
 
+try:
+    from ipapython.ipaldap import realm_to_serverid
+except ImportError:
+    # IPA 4.6
+    from ipaserver.install.installutils import realm_to_serverid
+
 if hccplatform.PY2:
     from ConfigParser import SafeConfigParser as ConfigParser
     from ConfigParser import NoOptionError, NoSectionError
 else:
     from configparser import ConfigParser, NoOptionError, NoSectionError
+
 
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
@@ -67,7 +76,7 @@ missing = object()
 def get_one(dct, key, default=missing):
     try:
         return dct[key][0]
-    except (KeyError, ValueError):
+    except (KeyError, IndexError):
         if default is missing:
             raise
         return default
@@ -81,7 +90,20 @@ class IPAHCCCli(admintool.AdminTool):
             "%prog [options] update",
         ]
     )
-    description = "Renew expired certificates."
+    description = "Register or update IPA domain in Hybrid Cloud Console"
+
+    @classmethod
+    def add_options(cls, parser):
+        super(IPAHCCCli, cls).add_options(parser)
+
+        update_group = OptionGroup(parser, "Update options")
+        update_group.add_option(
+            "--update-server-only",
+            dest="update_server_only",
+            action="store_true",
+            help="only run on HCC update server",
+        )
+        parser.add_option_group(update_group)
 
     def validate_options(self):
         super(IPAHCCCli, self).validate_options(needs_root=True)
@@ -235,11 +257,26 @@ class IPAHCCCli(admintool.AdminTool):
                 "Global setting 'hccDomainId' is missing.",
                 rval=3,
             )
-        info = self._get_ipa_info(config)
-        self._submit_domain_api(info)
+
+        # already single value
+        update_server = config.get("hcc_update_server_server")
+        if self.options.update_server_only and update_server != api.env.host:
+            # stop with success
+            logger.info(
+                "Current host is not an HCC update server (update server: %s)",
+                update_server,
+            )
+        else:
+            info = self._get_ipa_info(config)
+            self._submit_domain_api(info)
 
     def run(self):
         api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
+        server_id = realm_to_serverid(api.env.realm)
+        if not knownservices.dirsrv.is_running(instance_name=server_id):
+            raise admintool.ScriptError(
+                "The LDAP server is not running; cannot proceed.", rval=2
+            )
         api.finalize()
         api.Backend.ldap2.connect()
         try:
