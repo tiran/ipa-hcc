@@ -20,17 +20,17 @@
 .SH "NAME"
 ipa\-hcc \- Register or update IPA domain information in Red Hat Hybrid Cloud Console
 .SH "SYNOPSIS"
-\fBipa\-hcc\fR [\fIOPTIONS\fR...] register \fITOKEN\fR
+\fBipa\-hcc\fR [\fIOPTIONS\fR...] register \fIDOMAIN_ID\fR \fITOKEN\fR
 .br
 \fBipa\-hcc\fR [\fIOPTIONS\fR...] update
 .SH "DESCRIPTION"
-Register or update IPA domain information in Red Hat Hybrid Cloud Console
+Register or update IPA domain information in Red Hat Hybrid Cloud Console5
 .SH "COMMANDS"
 .TP
 \fBregister\fR \- Register a domain with Hybrid Cloud Console
 .sp
 .RS
-This command registers a domain. The \fITOKEN\fR is provided by HCC.
+This command registers a domain. The \fIDOMAIN_ID\fR and \fITOKEN\fR are provided by HCC.
 .RE
 .TP
 \fBupdate\fR \- Update domain information in Red Hat Hybrid Cloud Console
@@ -51,6 +51,12 @@ The exit status is 0 on success, nonzero on error.
 0 Success
 
 2 IPA is not configured
+
+3 Global setting 'hccDomainId' is missing
+
+4 HTTP request error
+
+5 Unable to connect to local IPA server
 
 .SH "SEE ALSO"
 .BR ipa-server-install (1)

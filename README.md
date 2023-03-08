@@ -27,6 +27,7 @@ time.
 ## Server config
 
 * *HCCOrgId*: int
+* *HCCDomainId*: string
 
 ## Host groups
 
@@ -69,6 +70,7 @@ $ ipa host-show host.test.example
 $ ipa config-mod --help
   ...
   --hccorgid=INT  organization id
+  --hccdomainid=STR  domain id
   ...
 ```
 

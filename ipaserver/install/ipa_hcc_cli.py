@@ -76,7 +76,10 @@ def get_one(dct, key, default=missing):
 class IPAHCCCli(admintool.AdminTool):
     command_name = "ipa-hcc"
     usage = "\n".join(
-        ["%prog [options] register TOKEN", "%prog [options] update"]
+        [
+            "%prog [options] register DOMAIN_ID TOKEN",
+            "%prog [options] update",
+        ]
     )
     description = "Renew expired certificates."
 
@@ -91,9 +94,12 @@ class IPAHCCCli(admintool.AdminTool):
 
         self.command = self.args[0]
         if self.command == "register":
-            if len(self.args) != 2:
-                parser.error("register requires a token.")
-            self.token = self.args[1]
+            if len(self.args) != 3:
+                parser.error(
+                    "register requires domain id and token argument."
+                )
+            self.domain_id = self.args[1]
+            self.token = self.args[2]
         elif self.command == "update":
             if len(self.args) != 1:
                 parser.error("update does not take additional arguments.")
@@ -102,10 +108,9 @@ class IPAHCCCli(admintool.AdminTool):
                 "Unknown command {command}".format(command=self.command)
             )
 
-    def _get_servers(self):
+    def _get_servers(self, config):
         """Get list of IPA server info objects"""
         # Include location information from
-        config = api.Command.config_show()["result"]
         ca_servers = set(config.get("ca_server_server", ()))
         hcc_enrollment = set(
             config.get(hcc_enrollment_server_attribute.attr_name, ())
@@ -167,17 +172,40 @@ class IPAHCCCli(admintool.AdminTool):
         result = api.Command.realmdomains_show()
         return list(result["result"]["associateddomain"])
 
-    def submit_domain_api(self, payload):
-        url = hccconfig.idm_domain_cert_api
-        logger.debug("Sending request to %s", url)
+    def _get_ipa_info(self, config):
+        return {
+            "domain_id": self.domain_id,
+            "domain_name": api.env.domain,
+            "domain_type": "ipa",
+            "ipa": {
+                "realm_name": api.env.realm,
+                "servers": self._get_servers(config),
+                "cacerts": self._get_cacerts(),
+                "realmdomains": self._get_realmdomains(),
+            },
+        }
+
+    def _submit_domain_api(self, payload, extra_headers=None):
+        url = "{idm_api}/domain/{domain_id}".format(
+            idm_api=hccconfig.idm_domain_cert_api, domain_id=self.domain_id
+        )
+        method = "PUT"
+        headers = {}
+        if extra_headers:
+            headers.update(extra_headers)
+        logger.debug(
+            "Sending %s request to %s with headers %s", method, url, headers
+        )
         body = json.dumps(payload, indent=2)
         logger.debug("body: %s", body)
         if not DO_REQUEST:
             logger.warning("Skip request, body:\n%s", body)
             return
         try:
-            resp = requests.post(
+            resp = requests.request(
+                method,
                 url,
+                headers=headers,
                 cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
                 json=payload,
             )
@@ -186,44 +214,45 @@ class IPAHCCCli(admintool.AdminTool):
             logger.error(
                 "Request to %s failed: %s: %s", url, type(e).__name__, e
             )
-            raise SystemExit(2)
+            raise admintool.ScriptError(
+                "{e.__class__.__name__}: {e}".format(e=e),
+                rval=4,
+            )
 
-    def get_ipa_info(self):
-        return dict(
-            domain_type="ipa",
-            domain_name=api.env.domain,
-            realm_name=api.env.realm,
-            servers=self._get_servers(),
-            cacerts=self._get_cacerts(),
-            realmdomains=self._get_realmdomains(),
-        )
+    def register(self, config):
+        info = self._get_ipa_info(config)
+        extra_headers = {
+            "X-RH-IDM-Registration-Token": self.token,
+        }
+        self._submit_domain_api(info, extra_headers)
+        # update after successful registration
+        api.Command.config_mod(hccdomainid=self.domain_id)
 
-    def register(self):
-        payload = dict(
-            type="register",
-            token=self.token,
-            source=api.env.host,
-            info=self.get_ipa_info(),
-        )
-        self.submit_domain_api(payload)
-
-    def update(self):
-        payload = dict(
-            type="update",
-            source=api.env.host,
-            info=self.get_ipa_info(),
-        )
-        self.submit_domain_api(payload)
+    def update(self, config):
+        self.domain_id = get_one(config, "hccdomainid", None)
+        if self.domain_id is None:
+            raise admintool.ScriptError(
+                "Global setting 'hccDomainId' is missing.",
+                rval=3,
+            )
+        info = self._get_ipa_info(config)
+        self._submit_domain_api(info)
 
     def run(self):
         api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
         api.finalize()
         api.Backend.ldap2.connect()
         try:
+            config = api.Command.config_show()["result"]
+        except Exception as e:
+            logger.exception("Unable to get global configuration from IPA")
+            raise admintool.ScriptError(e, rval=5)
+
+        try:
             if self.command == "register":
-                self.register()
+                self.register(config)
             elif self.command == "update":
-                self.update()
+                self.update(config)
         finally:
             api.Backend.ldap2.disconnect()
 
