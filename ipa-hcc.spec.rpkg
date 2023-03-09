@@ -309,7 +309,7 @@ cp server/ipa-hcc %{buildroot}%{_sbindir}/ipa-hcc
 sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_sbindir}/ipa-hcc
 
 %__mkdir_p %{buildroot}%{_unitdir}
-cp server/ipa-hcc-update.* %{buildroot}%{_unitdir}/
+cp server/systemd/ipa-hcc-update.* %{buildroot}%{_unitdir}/
 
 %__mkdir_p %{buildroot}%{_mandir}/man1
 cp server/man/ipa-hcc.1 %{buildroot}%{_mandir}/man1/
