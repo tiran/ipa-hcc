@@ -72,6 +72,12 @@ parser.add_argument(
     help="force setting of Kerberos conf",
     action="store_true",
 )
+parser.add_argument(
+    "--timeout",
+    help="timeout for HTTP request",
+    type=int,
+    default=10,
+)
 # hidden arguments for internal testing
 parser.add_argument(
     "--upto",
@@ -131,6 +137,7 @@ def hcc_hostconf(args):
         resp = requests.post(
             url,
             verify=verify,
+            timeout=args.timeout,
             cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
             json=body,
         )
@@ -174,6 +181,7 @@ def hcc_register(args):
     resp = requests.post(
         url,
         verify=args.ipa_cacert,
+        timeout=args.timeout,
         cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
         json=body,
     )
