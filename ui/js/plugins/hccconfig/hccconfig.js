@@ -24,21 +24,31 @@ function(phases, IPA) {
         var section = {
             name: 'hcc',
             label: '@i18n:hccconfig.name',
-            fields: [{
-                name: 'hccorgid',
-                flags: ['w_if_no_aci']
-            }]
+            fields: [
+                {
+                    name: 'hccorgid',
+                    read_only: true
+                },
+                {
+                    name: 'hccdomainid',
+                    read_only: true
+                },
+                {
+                    $type: 'multivalued',
+                    name: 'hcc_enrollment_server_server',
+                    read_only: true
+                },
+                {
+                    $type: 'entity_select',
+                    name: 'hcc_update_server_server',
+                    other_entity: 'server',
+                    other_field: 'cn',
+                    flags: ['w_if_no_aci']
+                }
+            ]
         };
         var facet = get_item(IPA.serverconfig.entity_spec.facets, '$type', 'details');
         facet.sections.push(section);
-
-        var field = {
-            $type: 'multivalued',
-            name: 'hcc_enrollment_server_server',
-            read_only: true
-        };
-        var server_section = get_item(facet.sections, 'name', 'server');
-        server_section.fields.push(field);
 
         return true;
     };

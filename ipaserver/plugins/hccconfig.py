@@ -18,6 +18,7 @@ if hcc_config_class not in config.possible_objectclasses:
 
 hcc_config_attributes = {
     "hccorgid",
+    "hccdomainid",
 }
 
 config.default_attributes.extend(list(hcc_config_attributes))
@@ -31,10 +32,21 @@ takes_params = (
         minvalue=1,
     ),
     Str(
+        "hccdomainid?",
+        cli_name="hccdomainid",
+        label=_("HCC domain id"),
+    ),
+    Str(
         "hcc_enrollment_server_server*",
-        label=_("IPA master capable of HCC auto-enrollment"),
-        doc=_("IPA master which can process HCC auto-enrollment requests"),
-        flags={"virtual_attribute", "no_create", "no_update"},
+        label=_("IPA servers capable of HCC auto-enrollment"),
+        doc=_("IPA server which can process HCC auto-enrollment requests"),
+        flags={"virtual_attribute", "no_create"},
+    ),
+    Str(
+        "hcc_update_server_server?",
+        label=_("IPA server with HCC update service"),
+        doc=_("IPA server which hosts the HCC update service"),
+        flags={"virtual_attribute", "no_create"},
     ),
 )
 

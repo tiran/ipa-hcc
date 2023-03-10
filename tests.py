@@ -105,8 +105,9 @@ class WSGITests(IPABaseTests):
 @unittest.skipUnless(HAS_IPASERVER, "requires ipaserver")
 class IPAServerTests(IPABaseTests):
     register_paths = [
-        "ipaserver.plugins",
+        "ipaserver.install",
         "ipaserver.install.plugins",
+        "ipaserver.plugins",
     ]
 
     def test_server_plugin_imports(self):
@@ -118,6 +119,17 @@ class IPAServerTests(IPABaseTests):
         from ipaserver.install.plugins import (  # noqa: F401
             update_hcc_enrollment_service,
         )
+
+    def test_ipa_hcc_cli_help(self):
+        from ipaserver.install.ipa_hcc_cli import IPAHCCCli
+
+        try:
+            with capture_output():
+                IPAHCCCli.main(["ipa-hc", "--help"])
+        except SystemExit as e:
+            self.assertEqual(e.code, 0)
+        else:
+            self.fail("SystemExit expected")
 
 
 if __name__ == "__main__":

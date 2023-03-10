@@ -1,0 +1,63 @@
+.\" A man page for ipa-hcc
+.\" Copyright (C) 2022 Red Hat, Inc.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful, but
+.\" WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+.\" General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program.  If not, see <http://www.gnu.org/licenses/>.
+.\"
+.\" Author: Christian Heimes <cheimes@redhat.com>
+.\"
+.TH "ipa-hcc" "1" "Nar 7 2022" "IPA" "IPA Manual Pages"
+.SH "NAME"
+ipa\-hcc \- Register or update IPA domain information in Red Hat Hybrid Cloud Console
+.SH "SYNOPSIS"
+\fBipa\-hcc\fR [\fIOPTIONS\fR...] register \fIDOMAIN_ID\fR \fITOKEN\fR
+.br
+\fBipa\-hcc\fR [\fIOPTIONS\fR...] update
+.SH "DESCRIPTION"
+Register or update IPA domain information in Red Hat Hybrid Cloud Console5
+.SH "COMMANDS"
+.TP
+\fBregister\fR \- Register a domain with Hybrid Cloud Console
+.sp
+.RS
+This command registers a domain. The \fIDOMAIN_ID\fR and \fITOKEN\fR are provided by HCC.
+.RE
+.TP
+\fBupdate\fR \- Update domain information in Red Hat Hybrid Cloud Console
+.sp
+.RS
+This command updates domain information.
+.RE
+.SH "OPTIONS"
+.TP
+\fB\-q, \-\-quiet\fR
+Quiet mode. Only errors are displayed.
+.TP
+\fB\-d, \-\-debug\fR
+Print additional debug information.
+.SH "EXIT STATUS"
+The exit status is 0 on success, nonzero on error.
+
+0 Success
+
+2 IPA is not configured
+
+3 Global setting 'hccDomainId' is missing
+
+4 HTTP request error
+
+5 Unable to connect to local IPA server
+
+.SH "SEE ALSO"
+.BR ipa-server-install (1)
+.BR ipa-client-install (1)

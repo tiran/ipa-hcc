@@ -61,6 +61,7 @@ class HCCConfig:
     _inventory_hosts_cert_api = (
         "https://cert.console.{base}/api/inventory/v1/hosts"
     )
+    _idm_cert_api = "https://cert.console.{base}/api/idm/v1"
 
     _section = "hcc"
 
@@ -100,3 +101,7 @@ class HCCConfig:
     @property
     def inventory_hosts_cert_api(self):
         return self._inventory_hosts_cert_api.format(base=self._base)
+
+    @property
+    def idm_cert_api(self):
+        return self._idm_cert_api.format(base=self._base)

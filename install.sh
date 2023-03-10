@@ -3,12 +3,6 @@ set -ex
 
 SITE_PACKAGES=$(python -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
 
-if [ -f /usr/share/ipa/schema.d/85-hcc.ldif -a -f /usr/share/ipa/updates/85-hcc.update ]; then
-    NEEDS_UPGRADE=0;
-else
-    NEEDS_UPGRADE=1;
-fi
-
 ## phase 1, handled by RPM package
 
 # user and group
@@ -57,22 +51,21 @@ mkdir -p -m 755 /usr/share/ipa/ui/js/plugins/hcchost
 cp ui/js/plugins/hcchost/hcchost.js /usr/share/ipa/ui/js/plugins/hcchost/
 
 cp ipaserver/plugins/*.py ${SITE_PACKAGES}/ipaserver/plugins/
+cp ipaserver/install/*.py ${SITE_PACKAGES}/ipaserver/install/
 cp ipaserver/install/plugins/*.py ${SITE_PACKAGES}/ipaserver/install/plugins/
 cp ipaplatform/*.py ${SITE_PACKAGES}/ipaplatform
 python3 -m compileall ${SITE_PACKAGES}/ipaserver/plugins/ ${SITE_PACKAGES}/ipaserver/install/plugins ${SITE_PACKAGES}/ipaplatform
+cp server/ipa-hcc /usr/sbin/
 
 exit 0
 
 # run updater
-if [ $NEEDS_UPGRADE = 1 ]; then
-    ipa-server-upgrade
-else
-    ipa-ldap-updater \
-        -S /usr/share/ipa/schema.d/85-hcc.ldif \
-        /usr/share/ipa/updates/85-hcc.update \
-        /usr/share/ipa/updates/86-hcc-enrollment-service.update
-    systemctl restart httpd.service
-fi
+ipa-ldap-updater \
+    -S /usr/share/ipa/schema.d/85-hcc.ldif \
+    /usr/share/ipa/updates/85-hcc.update \
+    /usr/share/ipa/updates/86-hcc-enrollment-service.update
+killall -9 httpd
+systemctl restart httpd.service
 
 echo "NOTE: $0 is a hack for internal development."
 echo "Some changes require a proper ipa-server-upgrade or ipactl restart."

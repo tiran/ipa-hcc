@@ -1,0 +1,10 @@
+[Unit]
+Description=IPA Hybrid Cloud Console domain update service
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=4h
+
+[Install]
+WantedBy=timers.target
