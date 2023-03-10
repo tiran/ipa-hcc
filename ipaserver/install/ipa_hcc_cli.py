@@ -5,7 +5,6 @@ import json
 from optparse import OptionGroup  # pylint: disable=deprecated-module
 
 from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.x509.oid import NameOID
 import requests
 import requests.exceptions
 
@@ -21,44 +20,9 @@ from ipaserver.plugins.hccserverroles import (
 )
 from ipaserver.install import installutils
 
-if hccplatform.PY2:
-    from ConfigParser import SafeConfigParser as ConfigParser
-    from ConfigParser import NoOptionError, NoSectionError
-else:
-    from configparser import ConfigParser, NoOptionError, NoSectionError
-
 
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
-
-RFC4514_MAP = {
-    NameOID.EMAIL_ADDRESS: "E",
-}
-
-
-def detect_environment(rhsm_conf="/etc/rhsm/rhsm.conf", default="prod"):
-    """Detect environment (stage, prod) from RHSM server name"""
-    c = ConfigParser()
-    try:
-        with open(rhsm_conf) as f:
-            c.read_file(f)
-    except Exception as e:
-        logger.error("Failed to read '%s': %s", rhsm_conf, e)
-        return default
-
-    try:
-        # Python 2 does not support get(..., fallback) argument
-        server_hostname = c.get("server", "hostname")
-    except (NoOptionError, NoSectionError):
-        return default
-
-    server_hostname = server_hostname.strip()
-    if server_hostname == "subscription.rhsm.redhat.com":
-        return "prod"
-    elif server_hostname == "subscription.rhsm.stage.redhat.com":
-        return "stage"
-    else:
-        return default
 
 
 missing = object()
@@ -185,12 +149,6 @@ class IPAHCC(object):
             certinfo = dict(
                 nickname=nickname,
                 pem=cert.public_bytes(Encoding.PEM).decode("ascii"),
-                issuer=cert.issuer.rfc4514_string(RFC4514_MAP),
-                subject=cert.subject.rfc4514_string(RFC4514_MAP),
-                # JSON number type cannot handle large serial numbers
-                serial_number=str(cert.serial_number),
-                not_valid_before=cert.not_valid_before.isoformat(),
-                not_valid_after=cert.not_valid_before.isoformat(),
             )
             cacerts.append(certinfo)
 
