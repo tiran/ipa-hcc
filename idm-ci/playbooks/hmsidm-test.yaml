@@ -4,7 +4,7 @@
   become_method: sudo
   tasks:
     - name: Test ipa-hcc-auto-enrollment --upto pkinit
-      command: "/usr/libexec/ipa/hcc/ipa-hcc-auto-enrollment --insecure --upto pkinit --override-server {{ item }}"
+      command: "/usr/libexec/ipa-hcc/ipa-hcc-auto-enrollment --insecure --upto pkinit --override-server {{ item }}"
       loop: "{{ groups.ipaserver }}"
       register: out
 
@@ -13,7 +13,7 @@
         msg: "{{ out }}"
 
     - name: Perform auto-enrollment
-      command: "/usr/libexec/ipa/hcc/ipa-hcc-auto-enrollment --insecure"
+      command: "/usr/libexec/ipa-hcc/ipa-hcc-auto-enrollment --insecure"
       args:
         creates: /etc/ipa/default.conf
 

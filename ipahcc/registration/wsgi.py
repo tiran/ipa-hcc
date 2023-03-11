@@ -8,7 +8,7 @@ import gssapi
 import requests
 
 from ipalib import x509
-from ipaplatform import hccplatform
+from ipahcc import hccplatform
 
 if hccplatform.PY2:
     from httplib import responses as http_responses

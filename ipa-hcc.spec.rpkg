@@ -88,6 +88,8 @@ BuildRequires: python3-ipaclient >= %{ipa_version}
 BuildRequires: python3-requests
 BuildRequires: python3-sssdconfig
 %endif
+BuildRequires: make
+BuildRequires: openssl
 BuildRequires: systemd-devel
 BuildRequires: selinux-policy-devel
 
@@ -284,103 +286,30 @@ touch debugfiles.list
 
 
 %check
-%{python} -Wignore -m unittest discover
+export PYTHONPATH=%{buildroot}%{python_sitelib}
+%{python} -Wignore -m unittest discover  -s tests/
+%{buildroot}%{_sbindir}/ipa-hcc --help >/dev/null
+%{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --help >/dev/null
 
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
 # common
-%__mkdir_p %{buildroot}%{_sysconfdir}/ipa
-cp -p etc/ipa/hcc.conf %{buildroot}%{_sysconfdir}/ipa/hcc.conf
-
-%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc
-%__mkdir_p %{buildroot}%{_datadir}/ipa-hcc/cacerts
-cp -p rhsm/redhat-candlepin-bundle.pem %{buildroot}%{_datadir}/ipa-hcc/
-cp -pd rhsm/cacerts/* %{buildroot}%{_datadir}/ipa-hcc/cacerts/
-
-%__mkdir_p %{buildroot}%{python_sitelib}/ipaplatform
-cp -p ipaplatform/*.py %{buildroot}%{python_sitelib}/ipaplatform/
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_common install_client
 
 %if %{with server_plugin}
-# server-plugin
-%__mkdir_p %{buildroot}%{_sbindir}
-cp server/ipa-hcc %{buildroot}%{_sbindir}/ipa-hcc
-sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_sbindir}/ipa-hcc
-
-%__mkdir_p %{buildroot}%{_unitdir}
-cp server/systemd/ipa-hcc-update.* %{buildroot}%{_unitdir}/
-
-%__mkdir_p %{buildroot}%{_mandir}/man1
-cp server/man/ipa-hcc.1 %{buildroot}%{_mandir}/man1/
-
-%__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/plugins
-cp -p ipaserver/plugins/*.py %{buildroot}%{python_sitelib}/ipaserver/plugins/
-
-%__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/install/
-cp -p ipaserver/install/ipa_hcc_cli.py %{buildroot}%{python_sitelib}/ipaserver/install/
-
-%__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/install/plugins
-cp -p ipaserver/install/plugins/update_hcc.py %{buildroot}%{python_sitelib}/ipaserver/install/plugins/
-
-%__mkdir_p %buildroot/%{_datadir}/ipa/schema.d
-cp -p schema.d/*.ldif %buildroot/%{_datadir}/ipa/schema.d/
-
-%__mkdir_p %buildroot/%{_datadir}/ipa/updates
-cp -p updates/85-hcc.update %buildroot/%{_datadir}/ipa/updates/
-
-%__mkdir_p %buildroot/%{_datadir}/ipa/ui/js/plugins
-for j in $(find ui/ -name '*.js') ; do
-    destdir=%buildroot/%{_datadir}/ipa/ui/js/plugins/$(basename ${j%.js})
-    %__mkdir_p $destdir
-    %__cp -p $j $destdir/
-done
-
-# server-plugin
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_server_plugin
 %endif
 
 %if %{with registration_service}
-# registration service
-%__mkdir_p %{buildroot}%{_sysconfdir}/ipa/hcc
-%__mkdir_p %{buildroot}%{_localstatedir}/cache/ipa-hcc
-
-%__mkdir_p %{buildroot}%{python_sitelib}/ipaserver/install/plugins
-cp -p ipaserver/install/plugins/update_hcc_enrollment_service.py %{buildroot}%{python_sitelib}/ipaserver/install/plugins/
-
-cp -p wsgi/hcc_registration_service.py %{buildroot}%{_datadir}/ipa-hcc/
-
-%__mkdir_p %buildroot/%{_datadir}/ipa/updates
-cp -p updates/86-hcc-enrollment-service.update %buildroot/%{_datadir}/ipa/updates/
-
-%__mkdir_p %{buildroot}%{_sysconfdir}/httpd/conf.d/
-cp etc/apache/ipa-hcc.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
-
-%__mkdir_p %{buildroot}%{_sysconfdir}/gssproxy
-cp etc/gssproxy/85-ipa-hcc.conf %{buildroot}%{_sysconfdir}/gssproxy/85-ipa-hcc.conf
-
-%__mkdir_p %{buildroot}%{_sharedstatedir}/ipa/gssproxy
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_registration_service
 touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
-
-# registration service
 %endif
 
 %if %{with mockapi}
-cp -p wsgi/hcc_mockapi.py %{buildroot}%{_datadir}/ipa-hcc/
-
-%__mkdir_p %{buildroot}%{_sysconfdir}/httpd/conf.d/
-cp etc/apache/ipa-hcc-mockapi.conf %{buildroot}%{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_mockapi
 %endif
-
-# client auto-enrollment
-%__mkdir_p %{buildroot}%{python_sitelib}/ipaclient/hcc
-cp -p ipaclient/hcc/*.py %{buildroot}%{python_sitelib}/ipaclient/hcc/
-
-%__mkdir_p %{buildroot}%{_unitdir}
-cp -p client/ipa-hcc-auto-enrollment.service %{buildroot}%{_unitdir}/
-%__mkdir_p %{buildroot}%{_libexecdir}/ipa/hcc/
-cp -p client/ipa-hcc-auto-enrollment %{buildroot}%{_libexecdir}/ipa/hcc/
-
-sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/hcc/*
 
 
 %files common
@@ -390,9 +319,9 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %dir %{_datadir}/ipa-hcc/
 %{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-hcc/cacerts
-%{python_sitelib}/ipaplatform/*.py*
+%{python_sitelib}/ipahcc/*.py*
 %if %{with pycache}
-%{python_sitelib}/ipaplatform/__pycache__/*.pyc
+%{python_sitelib}/ipahcc/__pycache__/*.pyc
 %endif
 
 
@@ -403,12 +332,12 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
 %{_unitdir}/ipa-hcc-update.*
+%{python_sitelib}/ipahcc/server/*.py*
 %{python_sitelib}/ipaserver/plugins/*.py*
-%{python_sitelib}/ipaserver/install/*.py*
 %{python_sitelib}/ipaserver/install/plugins/update_hcc.py*
 %if %{with pycache}
+%{python_sitelib}/ipahcc/server/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/plugins/__pycache__/*.pyc
-%{python_sitelib}/ipaserver/install/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc.*.pyc
 %endif
 %{_datadir}/ipa/schema.d/85-hcc.ldif
@@ -423,12 +352,14 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %license COPYING
 %attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
 %attr(0755,ipahcc,ipaapi) %dir %{_localstatedir}/cache/ipa-hcc
+%{python_sitelib}/ipahcc/registration/*.py*
 %{python_sitelib}/ipaserver/install/plugins/update_hcc_enrollment_service.py*
 %if %{with pycache}
+%{python_sitelib}/ipahcc/registration/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_enrollment_service.*.pyc
 %endif
 %{_datadir}/ipa-hcc/hcc_registration_service.py*
-%{_datadir}/ipa/updates/86-hcc-enrollment-service.update
+%{_datadir}/ipa/updates/86-hcc-registration-service.update
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-ipa-hcc.conf
 %ghost %{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
@@ -439,8 +370,11 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %files mockapi
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
+%{python_sitelib}/ipahcc/mockapi/*.py*
+%if %{with pycache}
+%{python_sitelib}/ipahcc/mockapi/__pycache__/*.pyc
+%endif
 %{_datadir}/ipa-hcc/hcc_mockapi.py*
-%{_datadir}/ipa/updates/86-hcc-enrollment-service.update
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
 %endif
 
@@ -448,9 +382,12 @@ sed -i -e '1 s|^#!.*\bpython[^ ]*|#!%{python}|' %{buildroot}%{_libexecdir}/ipa/h
 %files client-enrollment
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%{python_sitelib}/ipaclient/hcc/
-%attr(0755,root,root) %dir %{_libexecdir}/ipa/hcc
-%attr(0755,root,root) %{_libexecdir}/ipa/hcc/ipa-hcc-auto-enrollment
+%{python_sitelib}/ipahcc/client/*.py*
+%if %{with pycache}
+%{python_sitelib}/ipahcc/client/__pycache__/*.pyc
+%endif
+%attr(0755,root,root) %dir %{_libexecdir}/ipa-hcc
+%attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
 
 

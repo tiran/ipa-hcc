@@ -12,14 +12,10 @@ import ipalib
 from ipalib import errors
 from ipalib.install import certstore
 from ipaplatform.paths import paths
-from ipaplatform import hccplatform
 from ipapython import admintool
-from ipaserver.plugins.hccserverroles import (
-    hcc_enrollment_server_attribute,
-    hcc_update_server_attribute,
-)
 from ipaserver.install import installutils
 
+from ipahcc import hccplatform
 
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
@@ -101,11 +97,9 @@ class IPAHCC(object):
         # Include location information from
         ca_servers = set(self._config.get("ca_server_server", ()))
         hcc_enrollment = set(
-            self._config.get(hcc_enrollment_server_attribute.attr_name, ())
+            self._config.get("hcc_enrollment_server_server", ())
         )
-        hcc_update = self._config.get(
-            hcc_update_server_attribute.attr_name, None
-        )
+        hcc_update = self._config.get("hcc_update_server_server", None)
         pkinit_servers = set(self._config.get("pkinit_server_server", ()))
 
         result = self.api.Command.host_find(in_hostgroup="ipaservers")

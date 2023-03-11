@@ -14,7 +14,7 @@ Requisite=rhcd.service
 [Service]
 Type=oneshot
 RemainAfterExit=no
-ExecStart=/usr/libexec/ipa/hcc/ipa-hcc-auto-enrollment --insecure
+ExecStart=/usr/libexec/ipa-hcc/ipa-hcc-auto-enrollment --insecure
 
 [Install]
 WantedBy=rhcd.service
