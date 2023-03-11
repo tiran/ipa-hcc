@@ -76,6 +76,8 @@ BuildRequires: python2-ipaserver >= %{ipa_version}
 %else
 BuildRequires: python2-ipaclient >= %{ipa_version}
 %endif
+BuildRequires: python-dbus
+BuildRequires: python-gobject-base
 BuildRequires: python2-requests
 BuildRequires: python-sssdconfig
 %else
@@ -85,6 +87,8 @@ BuildRequires: python3-ipaserver >= %{ipa_version}
 %else
 BuildRequires: python3-ipaclient >= %{ipa_version}
 %endif
+BuildRequires: python3-dbus
+BuildRequires: python3-gobject-base
 BuildRequires: python3-requests
 BuildRequires: python3-sssdconfig
 BuildRequires: python3-jsonschema
@@ -124,9 +128,13 @@ Requires: %{package_name}-common = %{version}
 Requires: %{ipa_name}-server >= %{ipa_version}
 Requires(post): %{ipa_name}-server >= %{ipa_version}
 %if 0%{?with_python2}
+Requires: python-dbus
+Requires: python-gobject-base
 # not available in RHEL 7
 # Requires: python2-jsonschema
 %else
+Requires: python3-dbus
+Requires: python3-gobject-base
 Requires: python3-jsonschema
 %endif
 
@@ -149,18 +157,22 @@ if [ $? -eq 0 ]; then
 fi
 
 %post server-plugin
+%systemd_post ipa-hcc-dbus.service
 %systemd_post ipa-hcc.update.service
 %systemd_post ipa-hcc.update.timer
 /bin/systemctl daemon-reload
 /bin/systemctl enable ipa-hcc-update.timer
 
 %preun server-plugin
+%systemd_preun ipa-hcc-dbus.service
 %systemd_preun ipa-hcc.update.service
 %systemd_preun ipa-hcc.update.timer
+
 
 %postun server-plugin
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/redhat-candlepin-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
+%systemd_postun_with_restart ipa-hcc-dbus.service
 %systemd_postun ipa-hcc.update.service
 %systemd_postun ipa-hcc.update.timer
 
@@ -189,7 +201,6 @@ Requires: mod_ssl
 OrderWithRequires: %{package_name}-server-plugin
 Requires: selinux-policy
 Requires(post): selinux-policy
-%{?systemd_requires}
 
 %description registration-service
 This package contains the registration service for
@@ -292,9 +303,11 @@ touch debugfiles.list
 %check
 export PYTHONPATH=%{buildroot}%{python_sitelib}
 %{python} -Wignore -m unittest discover  -s tests/
-%{buildroot}%{_sbindir}/ipa-hcc --help >/dev/null
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --help >/dev/null
-
+%if %{with server_plugin}
+%{buildroot}%{_sbindir}/ipa-hcc --help >/dev/null
+%{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-dbus --help >/dev/null
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -335,7 +348,11 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %license COPYING
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
+%{_libexecdir}/ipa-hcc/ipa-hcc-dbus
 %{_unitdir}/ipa-hcc-update.*
+%{_unitdir}/ipa-hcc-dbus.service
+%{_datadir}/dbus-1/system.d/com.redhat.console.ipahcc.conf
+%{_datadir}/dbus-1/system-services/com.redhat.console.ipahcc.service
 %{python_sitelib}/ipahcc/server/*.py*
 %{python_sitelib}/ipaserver/plugins/*.py*
 %{python_sitelib}/ipaserver/install/plugins/update_hcc.py*

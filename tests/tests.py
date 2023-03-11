@@ -26,7 +26,7 @@ class IPAClientTests(IPABaseTests):
                 auto_enrollment.main(["--help"])
         except SystemExit as e:
             self.assertEqual(e.code, 0)
-        else:
+        else:  # pragma: no cover
             self.fail("SystemExit expected")
 
 
@@ -59,7 +59,28 @@ class IPAServerTests(IPABaseTests):
                 IPAHCCCli.main(["ipa-hcc", "--help"])
         except SystemExit as e:
             self.assertEqual(e.code, 0)
+        else:  # pragma: no cover
+            self.fail("SystemExit expected")
+
+    @conftest.requires_dbus
+    def test_ipa_hcc_dbus_help(self):
+        from ipahcc.server import dbus_service
+        from ipahcc.server import dbus_cli
+
+        try:
+            with conftest.capture_output():
+                dbus_service.main(["--help"])
+        except SystemExit as e:
+            self.assertEqual(e.code, 0)
         else:
+            self.fail("SystemExit expected")
+
+        try:
+            with conftest.capture_output():
+                dbus_cli.main(["--help"])
+        except SystemExit as e:
+            self.assertEqual(e.code, 0)
+        else:  # pragma: no cover
             self.fail("SystemExit expected")
 
 

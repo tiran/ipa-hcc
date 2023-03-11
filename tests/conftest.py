@@ -49,6 +49,14 @@ else:
     HAS_IPASERVER = True
 
 try:
+    import dbus.mainloop.glib  # noqa: F401
+    import gi.repository  # noqa: F401
+except ImportError:
+    HAS_DBUS = False
+else:
+    HAS_DBUS = True
+
+try:
     from unittest import mock
 except ImportError:
     try:
@@ -62,6 +70,9 @@ requires_ipaclient_install = unittest.skipUnless(
 requires_ipaserver = unittest.skipUnless(HAS_IPASERVER, "requires ipaserver")
 requires_jsonschema = unittest.skipUnless(
     schema.jsonschema, "requires jsonschema"
+)
+requires_dbus = unittest.skipUnless(
+    HAS_DBUS, "requires dbus and gi.repository"
 )
 requires_mock = unittest.skipUnless(mock is not None, "requires mock")
 

@@ -48,6 +48,13 @@ INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
 TOKEN_CLIENT_ID = "rhsm-api"
 REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"
 
+# D-Bus API
+# dbus doesn't like '-' in names
+HCC_DBUS_NAME = "com.redhat.console.ipahcc"
+HCC_DBUS_OBJ_PATH = "/com/redhat/console/ipahcc"
+HCC_DBUS_IFACE_NAME = HCC_DBUS_NAME
+
+# configuration
 HCC_CONFIG = "/etc/ipa/hcc.conf"
 
 HCC_DOMAIN_TYPE = "rhel-idm"

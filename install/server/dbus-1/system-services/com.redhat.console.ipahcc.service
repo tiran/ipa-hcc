@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=com.redhat.console.ipahcc
+Exec=/usr/libexec/ipa-hcc/ipa-hcc-dbus
+User=root
+SystemdService=ipa-hcc-dbus.service

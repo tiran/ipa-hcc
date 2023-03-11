@@ -5,3 +5,4 @@
       ansible.builtin.template:
         src: host-info.j2
         dest: "{{ playbook_dir }}/../../host-info.txt"
+
