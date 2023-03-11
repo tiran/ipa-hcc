@@ -1,4 +1,0 @@
-#!/usr/bin/env python3
-from ipaserver.install.ipa_hcc_cli import IPAHCCCli
-
-IPAHCCCli.run_cli()

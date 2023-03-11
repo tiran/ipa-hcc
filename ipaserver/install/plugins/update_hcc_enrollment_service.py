@@ -23,13 +23,13 @@ from ipapython.certdb import NSSDatabase, parse_trust_flags
 from ipapython.kerberos import Principal
 from ipapython import ipautil
 from ipapython.version import VERSION
-from ipaplatform import hccplatform
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
 from ipaserver.plugins.hccserverroles import (
     hcc_enrollment_server_attribute,
     hcc_update_server_attribute,
 )
+from ipahcc import hccplatform
 
 logger = logging.getLogger(__name__)
 

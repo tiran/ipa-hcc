@@ -8,10 +8,11 @@
 Server roles and associated attribute extension.
 """
 from ipalib import errors
-from ipaplatform.hccplatform import text
 from ipaserver import servroles
 from ipaserver.plugins import serverroles
 from ipaserver.plugins.serverrole import server_role
+
+from ipahcc.hccplatform import text
 
 ipa_master_role = [
     role for role in servroles.role_instances if role.name == "IPA master"

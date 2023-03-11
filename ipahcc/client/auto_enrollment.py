@@ -21,13 +21,12 @@ import time
 import requests
 import requests.exceptions
 
-
-# from ipalib.constants import FQDN
 from ipalib.install import kinit
 from ipalib.util import validate_hostname
 from ipaplatform.paths import paths
-from ipaplatform import hccplatform
 from ipapython.ipautil import run
+
+from ipahcc import hccplatform
 
 # IPA >= 4.9.10 / 4.10.1
 HAS_KINIT_PKINIT = hasattr(kinit, "kinit_pkinit")

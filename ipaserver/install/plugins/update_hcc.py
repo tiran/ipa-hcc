@@ -14,9 +14,10 @@ from ipalib import errors
 from ipalib import Registry
 from ipalib import Updater
 from ipalib import x509
-from ipaplatform import hccplatform
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
+
+from ipahcc import hccplatform
 
 logger = logging.getLogger(__name__)
 

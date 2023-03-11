@@ -65,15 +65,13 @@ class IPABaseTests(unittest.TestCase):
 
 
 class IPAClientTests(IPABaseTests):
-    register_paths = ["ipaplatform", "ipaclient"]
-
     def test_platform_imports(self):
         # noqa: F401
-        from ipaplatform import hccplatform  # noqa: F401
+        from ipahcc import hccplatform  # noqa: F401
 
     @unittest.skipUnless(HAS_IPACLIENT_INSTALL, "ipaclient.install")
     def test_auto_enrollment_help(self):
-        from ipaclient.hcc import auto_enrollment
+        from ipahcc.client import auto_enrollment
 
         try:
             with capture_output():
@@ -85,18 +83,9 @@ class IPAClientTests(IPABaseTests):
 
 
 class WSGITests(IPABaseTests):
-    @classmethod
-    def setUpClass(cls):
-        cls.orig_sys_path = sys.path[:]
-        sys.path.insert(0, os.path.abspath("wsgi"))
-
-    @classmethod
-    def tearDownClass(cls):
-        sys.path[:] = cls.orig_sys_path
-
     def test_wsgi_imports(self):
-        import hcc_registration_service
-        import hcc_mockapi
+        from ipahcc.registration import wsgi as hcc_registration_service
+        from ipahcc.mockapi import wsgi as hcc_mockapi
 
         assert callable(hcc_registration_service.application)
         assert callable(hcc_mockapi.application)
@@ -105,7 +94,6 @@ class WSGITests(IPABaseTests):
 @unittest.skipUnless(HAS_IPASERVER, "requires ipaserver")
 class IPAServerTests(IPABaseTests):
     register_paths = [
-        "ipaserver.install",
         "ipaserver.install.plugins",
         "ipaserver.plugins",
     ]
@@ -121,7 +109,7 @@ class IPAServerTests(IPABaseTests):
         )
 
     def test_ipa_hcc_cli_help(self):
-        from ipaserver.install.ipa_hcc_cli import IPAHCCCli
+        from ipahcc.server.ipa_hcc_cli import IPAHCCCli
 
         try:
             with capture_output():

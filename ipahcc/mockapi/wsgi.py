@@ -19,7 +19,7 @@ import requests
 
 from ipalib import x509
 from ipaplatform.paths import paths
-from ipaplatform import hccplatform
+from ipahcc import hccplatform
 
 
 if hccplatform.PY2:
