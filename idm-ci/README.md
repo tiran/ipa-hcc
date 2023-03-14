@@ -10,10 +10,17 @@
 - rhel-9.1
 - rhel-9.2 (dev)
 
-Kerberos KDC on RHEL 8.6 server uses SHA-1 for PKINIT, which is incompatible
-with RHEL 9's crypto policy.
+(*) Kerberos KDC on RHEL 8.6 server uses SHA-1 for PKINIT, which is
+incompatible with RHEL 9's crypto policy.
 
-## Production
+## Configuration
+
+All playbooks load configuration from `idm-ci/config/hmsidm-config.yaml`. By
+default the file is a symlink to `idm-ci/config/hmsidm-config-stage.yaml`.
+Account data for stage is in the Ethel export file
+`idm-ci/exported_accounts.csv`.
+
+### Production
 
 Create activation key at https://access.redhat.com/management/activation_keys
 Create RHSM API token at https://access.redhat.com/management/api
@@ -23,7 +30,7 @@ See https://access.redhat.com/articles/3626371
 If your account cannot access Insights, then it might miss the EBS
 number. Contact RH customer support to add an EBS number to an account.
 
-## Stage
+### Stage
 
 Create account: https://account-manager-stage.app.eng.rdu2.redhat.com/
 Create activation key at https://access.stage.redhat.com/management/activation_keys
@@ -50,6 +57,9 @@ Run test environment
 ```
 # te --upto test idm-ci/metadata/hmsidm-dev.yaml
 ```
+
+The file `host-info.txt` in the project's root directory contains a list
+of IP addresses and SSH commands to log into the hosts.
 
 Unregister hosts from Insights and tear down VMs
 

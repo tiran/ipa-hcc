@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Dump hosts to file
+      ansible.builtin.template:
+        src: host-info.j2
+        dest: "{{ playbook_dir }}/../../host-info.txt"

@@ -1,26 +1,19 @@
 ---
+# Configuration for permanent test cluster
+# Uses cheimes/ipa-hcc COPR
 domains:
-  - name: hmsidm.test
+  - name: ipahcc.test
     type: IPA
     hosts:
-      - name: server87.hmsidm.test
+      - name: server.ipahcc.test
         role: master
         group: ipaserver
-        os: rhel-8.7
-      - name: replica91.hmsidm.test
+        os: rhel-9.1
+      - name: replica1.ipahcc.test
         role: replica
         group: ipaserver
         os: rhel-9.1
-
-      - name: client79.hmsidm.test
-        role: client
-        group: ipaclient
-        os: rhel-7.9
-      - name: client87.hmsidm.test
-        role: client
-        group: ipaclient
-        os: rhel-8.7
-      - name: client91.hmsidm.test
+      - name: client91.ipahcc.test
         role: client
         group: ipaclient
         os: rhel-9.1
@@ -50,8 +43,7 @@ phases:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-configure.yaml
       - playbook: prep/ipa-server-install.yaml
       - playbook: prep/ipa-replica-install.yaml
-      # - playbook: prep/hmsidm-auto-enrollment.yaml
-      # trigger auto-enrollment
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaclient

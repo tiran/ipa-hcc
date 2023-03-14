@@ -1,0 +1,15 @@
+# Hosts
+
+## /etc/hosts
+
+{% for item in groups['all'] %}
+{{ hostvars[item]['meta_ip'] }} {{ hostvars[item]['meta_fqdn'] }}
+{% endfor %}
+
+## ssh
+
+{% for item in groups['all'] %}
+### {{ hostvars[item]['meta_fqdn'] }} ({{ hostvars[item]['meta_os'] }} {{ hostvars[item]['meta_role'] }})
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./config/id_rsa cloud-user@{{ hostvars[item]['meta_ip'] }}
+
+{% endfor %}
