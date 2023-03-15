@@ -6,6 +6,7 @@
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
 from ipalib import _
+from ipalib import errors
 from ipalib.parameters import Int, Str
 from ipaserver.plugins.config import config
 from ipaserver.plugins.config import config_mod
@@ -78,10 +79,36 @@ def config_mod_hcc_precb(self, ldap, dn, entry, attrs_list, *keys, **options):
             entry["objectclass"], hcc_config_class
         ):
             entry["objectclass"].append(hcc_config_class)
+
+    if "hcc_update_server_server" in options:
+        new_update = options["hcc_update_server_server"]
+
+        try:
+            self.api.Object.server.get_dn_if_exists(new_update)
+        except errors.NotFound:
+            raise self.api.Object.server.handle_not_found(new_update)
+
+        backend = self.api.Backend.serverroles
+        backend.config_update(hcc_update_server_server=new_update)
+
     return dn
 
 
+def config_mod_hcc_exccb(
+    self, keys, options, exc, call_func, *call_args, **call_kwargs
+):
+    if (
+        isinstance(exc, errors.EmptyModlist)
+        and call_func.__name__ == "update_entry"
+        and "hcc_update_server_server" in options
+    ):
+        return
+    else:
+        raise exc
+
+
 config_mod.register_pre_callback(config_mod_hcc_precb)
+config_mod.register_exc_callback(config_mod_hcc_exccb)
 
 i18n_messages.messages["hccconfig"] = {
     "name": _("Hybrid Cloud Console configuration")
