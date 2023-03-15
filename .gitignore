@@ -18,3 +18,4 @@ __pycache__
 /mrack.conf
 /mrack.log
 /runner.log
+/host-info.txt

@@ -7,6 +7,10 @@ domains:
         role: master
         group: ipaserver
         os: rhel-9.1
+      # - name: replica1.hmsidm-dev.test
+      #   role: replica
+      #   group: ipaserver
+      #   os: rhel-9.1
       - name: client.hmsidm-dev.test
         role: client
         group: ipaclient
@@ -19,6 +23,7 @@ phases:
     steps:
       - playbook: provision/mrack-up.yaml
       - playbook: provision/wait.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-dump-hosts.yaml
   - name: prep
     steps:
       - playbook: prep/prefer-ipv4.yaml
@@ -39,6 +44,7 @@ phases:
           target_group: ipaserver
       - playbook: prep/ipa-server-install.yaml
       - playbook: prep/ipa-replica-install.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
   - name: test
     steps:
       # - playbook: prep/hmsidm-auto-enrollment.yaml

@@ -38,6 +38,7 @@ all: test rehash lint
 clean-idm-ci:
 	rm -rf config credentials
 	rm -f mrack.* runner.log
+	rm -f host-info.txt
 
 .PHONY: clean
 clean: clean-idm-ci
