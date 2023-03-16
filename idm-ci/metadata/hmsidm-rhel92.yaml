@@ -47,10 +47,11 @@ phases:
       - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaserver
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-configure.yaml
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
       - playbook: prep/ipa-server-install.yaml
       - playbook: prep/ipa-replica-install.yaml
       - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
       # - playbook: prep/hmsidm-auto-enrollment.yaml
       # trigger auto-enrollment
       - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-connect.yaml

@@ -2,7 +2,7 @@
 
 Installation with older clients that lack PKINIT:
 
-- get configuration from remote api /hostconf
+- get configuration from remote api /host-conf
 - write a temporary krb5.conf for kinit and ipa-getkeytab commands
 - with kinit using PKINIT identity and host principal 'host/$FQDN'
 - ipa-getkeytab for host principal 'host/$FQDN' using the first
@@ -82,7 +82,7 @@ parser.add_argument(
     "--upto",
     metavar="PHASE",
     help=argparse.SUPPRESS,
-    choices=("hostconf", "register", "pkinit", "keytab"),
+    choices=("host-conf", "register", "pkinit", "keytab"),
 )
 parser.add_argument(
     "--override-server",
@@ -124,10 +124,13 @@ KRB5_CONF = """\
 """
 
 
-def hcc_hostconf(args):
-    body = {}
-    api_url = hccconfig.hcc_api_url.rstrip("/")
-    url = "/".join((api_url, "hostconf", args.hostname))
+def hcc_host_conf(args):
+    body = {
+        "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+        "inventory_id": args.inventory_id,
+    }
+    api_url = hccconfig.idm_cert_api_url.rstrip("/")
+    url = "/".join((api_url, "host-conf", args.hostname))
     verify = not args.insecure
     logger.info(
         "Getting host configuration from %s (secure: %s).", url, verify
@@ -148,15 +151,18 @@ def hcc_hostconf(args):
 
     args.ipa_cacert = os.path.join(args.tmpdir, "ca.crt")
     with open(args.ipa_cacert, "w") as f:
-        f.write(j["ipa"]["ca_cert"])
+        f.write(j[hccplatform.HCC_DOMAIN_TYPE]["cabundle"])
     # IPA CA signs KDC cert
     args.pkinit_anchors.append(
         "FILE:{}".format(args.ipa_cacert),
     )
 
+    if j["domain_type"] != hccplatform.HCC_DOMAIN_TYPE:
+        raise ValueError(j["domain_type"])
     args.domain = j["domain_name"]
-    args.realm = j["ipa"]["realm_name"]
-    args.servers = j["ipa"]["enrollment_servers"]
+    args.domain_id = j["domain_id"]
+    args.realm = j[hccplatform.HCC_DOMAIN_TYPE]["realm_name"]
+    args.servers = j[hccplatform.HCC_DOMAIN_TYPE]["enrollment_servers"]
     # TODO: use all servers
     if args.override_server is None:
         args.server = args.servers[0]
@@ -175,7 +181,12 @@ def hcc_register(args):
     url = "https://{server}/hcc/{hostname}".format(
         server=args.server, hostname=args.hostname
     )
-    body = {}
+    body = {
+        "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+        "domain_name": args.domain,
+        "domain_id": args.domain_id,
+        "inventory_id": args.inventory_id,
+    }
     logger.info("Registering host at %s", url)
     resp = requests.post(
         url,
@@ -191,47 +202,31 @@ def hcc_register(args):
 def wait_for_inventory_host(args):
     """Wait until this host is available in Insights inventory
 
-    Sometimes it takes a while until a host appears in Insights.
+    insights-client stores the result of Insights API query in a local file
+    once the host is registered.
     """
-    sess = requests.Session()
-    sess.cert = (
-        hccplatform.RHSM_CERT,
-        hccplatform.RHSM_KEY,
-    )
-    sess.verify = True  # RH HCC uses public, trusted cert
-    time.sleep(3)  # short initial sleep
-    sleep_dur = 10  # sleep for 10, 20, 40, ...
+    sleep_dur = 10
     for i in range(5):
         try:
-            resp = sess.get(hccconfig.inventory_hosts_cert_api)
-            resp.raise_for_status()
-            j = resp.json()
-            # 'j["total"] != 0' also works. A host sees only its record.
-            logger.debug(json.dumps(j, indent=2))
-            for host in j.get("results", ()):
-                if host["fqdn"] == args.hostname:
-                    logger.info(
-                        "Host '%s' found in Insights Inventory.",
-                        host["subscription_manager_id"],
-                    )
-                    return host
-        except Exception:
+            with open(hccplatform.INSIGHTS_HOST_DETAILS) as f:
+                j = json.load(f)
+        except (OSError, IOError, ValueError):
             logger.exception(
-                "Host inventory lookup failed, try again in %is", sleep_dur
-            )
-        else:
-            logger.info(
-                "Host '%s' not found in Insights Inventory, wait for %is",
-                args.hostname,
+                "Cannot read JSON file %s, try again in %i",
+                hccplatform.INSIGHTS_HOST_DETAILS,
                 sleep_dur,
             )
-        time.sleep(sleep_dur)
-        sleep_dur *= 2
-    else:
-        logger.warning(
-            "Host '%s' not found in Insights Inventory inventory",
-            args.hostname,
-        )
+            time.sleep(sleep_dur)
+        else:
+            assert len(j["results"]) == 1
+            result = j["results"][0]
+            args.inventory_id = result["id"]
+            logger.info(
+                "Host '%s' has inventory id '%s'.",
+                args.hostname,
+                args.inventory_id,
+            )
+            return result
 
 
 def create_krb5_conf(args, krb_name):
@@ -340,6 +335,8 @@ def parse_args(*args):
     args.servers = None
     args.domain = None
     args.realm = None
+    args.domain_id = None
+    args.inventory_id = None
 
     return args
 
@@ -363,12 +360,13 @@ def main(*args):
     tmpdir = tempfile.mkdtemp()  # Python 2
     try:
         args.tmpdir = tmpdir
-        # wait until this host appears in ConsoleDot host inventory
-        # wait_for_inventory_host(args)
+        # wait until this host appears in ConsoleDot host inventory and
+        # insights-client has stored a local copy of the inventory data.
+        wait_for_inventory_host(args)
 
-        # set local_cacert, servers, domain, realm
-        hcc_hostconf(args)
-        check_upto(args, "hostconf")
+        # set local_cacert, servers, domain name, domain_id, realm
+        hcc_host_conf(args)
+        check_upto(args, "host-conf")
 
         # self-register host with IPA
         # TODO: check other servers if server returns 400

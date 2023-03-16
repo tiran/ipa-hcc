@@ -87,6 +87,7 @@ BuildRequires: python3-ipaclient >= %{ipa_version}
 %endif
 BuildRequires: python3-requests
 BuildRequires: python3-sssdconfig
+BuildRequires: python3-jsonschema
 %endif
 BuildRequires: make
 BuildRequires: openssl
@@ -122,6 +123,13 @@ Obsoletes: %{alt_name}-server-plugin < %{version}
 Requires: %{package_name}-common = %{version}
 Requires: %{ipa_name}-server >= %{ipa_version}
 Requires(post): %{ipa_name}-server >= %{ipa_version}
+%if 0%{?with_python2}
+# not available in RHEL 7
+# Requires: python2-jsonschema
+%else
+Requires: python3-jsonschema
+%endif
+
 %{?systemd_requires}
 
 %description server-plugin
@@ -164,11 +172,11 @@ sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/redhat-candlepin-bundle.pem/d' /var
 Summary: Registration service for IPA Hybrid Cloud Console extension
 BuildArch: noarch
 
-Provides:       %{alt_name}-registration-service = %{version}
+Provides:  %{alt_name}-registration-service = %{version}
 Conflicts: %{alt_name}-registration-service
 Obsoletes: %{alt_name}-registration-service < %{version}
-# Don't allow installation on an IPA server?
 Requires: %{package_name}-common = %{version}
+Requires: %{package_name}-server-plugin = %{version}
 Requires: httpd
 %if 0%{?with_python2}
 Requires: mod_wsgi

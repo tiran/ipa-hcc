@@ -28,3 +28,10 @@
     - name: "Show output"
       debug:
         msg: "{{ out.stdout }}\n{{ out.stderr }}"
+
+- hosts: ipaserver
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Run ipa-hcc update
+      command: ipa-hcc update

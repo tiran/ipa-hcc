@@ -14,11 +14,11 @@
         option: environment
         value: "{{ hmsidm_config.rhc_env }}"
 
-    - name: Configure mockapi in /ec/ipa/hcc.conf
+    - name: Configure mockapi in /etc/ipa/hcc.conf
       ini_file:
         path: /etc/ipa/hcc.conf
         section: hcc
-        option: hcc_api_url
+        option: idm_cert_api_url
         value: "https://{{ hostvars[groups.ipaserver.0].meta_fqdn }}/mockapi"
 
 - hosts: ipaserver
@@ -37,3 +37,8 @@
         mode: '0640'
         owner: ipahcc
         group: root
+
+    - name: Restart HTTPD to reload /etc/ipa/hcc.conf
+      systemd:
+        name: httpd
+        state: restarted

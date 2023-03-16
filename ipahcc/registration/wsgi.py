@@ -2,13 +2,14 @@ import json
 import logging
 import os
 import sys
+import traceback
 
 from cryptography.x509.oid import NameOID
 import gssapi
 import requests
 
-from ipalib import x509
 from ipahcc import hccplatform
+from ipahcc.server import schema
 
 if hccplatform.PY2:
     from httplib import responses as http_responses
@@ -20,6 +21,7 @@ os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_SERVICE_CACHE_DIR
 os.environ["KRB5CCNAME"] = hccplatform.HCC_SERVICE_KRB5CCNAME
 os.environ["GSS_USE_PROXY"] = "1"
 
+from ipalib import x509  # noqa: E402
 from ipalib import api, errors  # noqa: E402
 
 hccconfig = hccplatform.HCCConfig()
@@ -42,6 +44,24 @@ class HTTPException(Exception):
         self.message = msg
         self.headers = headers
 
+    @classmethod
+    def from_exception(cls, e, code, title):
+        body = {
+            "status": code,
+            "title": title,
+            "details": traceback.print_exc(),
+        }
+        return cls(code, json.dumps(body), content_type="application/json")
+
+    @classmethod
+    def from_error(cls, code, msg):
+        body = {
+            "status": code,
+            "title": http_responses[code],
+            "details": msg,
+        }
+        return cls(code, json.dumps(body), content_type="application/json")
+
     def __str__(self):
         return "{} {}".format(self.code, http_responses[self.code])
 
@@ -49,14 +69,15 @@ class HTTPException(Exception):
 class Application:
     def __init__(self):
         # cached org_id from IPA config_show
-        self.org_id = None
+        self._org_id = None
+        self._domain_id = None
         # requests session for persistent HTTP connection
         self.session = requests.Session()
 
     def parse_cert(self, env, envname):
         cert_pem = env.get(envname)
         if not cert_pem:
-            raise HTTPException(
+            raise HTTPException.from_error(
                 412, "{envname} is missing or empty.".format(envname=envname)
             )
         return x509.load_pem_x509_certificate(cert_pem.encode("ascii"))
@@ -64,25 +85,28 @@ class Application:
     def parse_subject(self, subject):
         nas = list(subject)
         if len(nas) != 2:
-            raise HTTPException(
+            raise HTTPException.from_error(
                 400, "Invalid cert subject {subject}.".format(subject=subject)
             )
         if (
             nas[0].oid != NameOID.ORGANIZATION_NAME
             or nas[1].oid != NameOID.COMMON_NAME
         ):
-            raise HTTPException(
+            raise HTTPException.from_error(
                 400, "Invalid cert subject {subject}.".format(subject=subject)
             )
         return int(nas[0].value), nas[1].value
 
-    def check_host(self, rhsm_id, fqdn):
+    def check_host(self, inventory_id, rhsm_id, fqdn):
         body = {
-            "domain_type": "ipa",
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": api.env.domain,
+            "domain_id": self.domain_id,
+            "inventory_id": inventory_id,
+            "subscription_manager_id": rhsm_id,
         }
-        api_url = hccconfig.hcc_api_url.rstrip("/")
-        url = "/".join((api_url, "check_host", rhsm_id, fqdn))
+        api_url = hccconfig.idm_cert_api_url.rstrip("/")
+        url = "/".join((api_url, "check-host", rhsm_id, fqdn))
         resp = self.session.post(url, json=body)
         resp.raise_for_status()
         j = resp.json()
@@ -116,10 +140,8 @@ class Application:
         if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
             api.Backend.rpcclient.disconnect()
 
-    def get_ipa_org_id(self):
-        """Get and cache global org_id from IPA config"""
-        if self.org_id is not None:
-            return self.org_id
+    def _get_ipa_config(self):
+        """Get org_id and domain_id from IPA config"""
         # no need to fetch additional values
         result = api.Command.config_show(raw=True)["result"]
         org_ids = result.get("hccorgid")
@@ -127,8 +149,25 @@ class Application:
             raise ValueError(
                 "Invalid IPA configuration, 'hccorgid' is not set."
             )
-        self.org_id = int(org_ids[0])
-        return self.org_id
+        domain_ids = result.get("hccdomainid")
+        if not domain_ids or len(domain_ids) != 1:
+            raise ValueError(
+                "Invalid IPA configuration, 'hccdomainid' is not set."
+            )
+
+        return int(org_ids[0]), domain_ids[0]
+
+    @property
+    def org_id(self):
+        if self._org_id is None:
+            self._org_id, self._domain_id = self._get_ipa_config()
+        return self._org_id
+
+    @property
+    def domain_id(self):
+        if self._domain_id is None:
+            self._org_id, self._domain_id = self._get_ipa_config()
+        return self._domain_id
 
     def update_ipa(
         self,
@@ -137,10 +176,10 @@ class Application:
         inventory_id,
         fqdn,
     ):
-        ipa_org_id = self.get_ipa_org_id()
+        ipa_org_id = self.org_id
         if org_id != ipa_org_id:
-            raise HTTPException(
-                403,
+            raise HTTPException.from_error(
+                400,
                 "Invalid org_id: {org_id} != {ipa_org_id}".format(
                     org_id=org_id,
                     ipa_org_id=ipa_org_id,
@@ -173,7 +212,7 @@ class Application:
     def get_json(self, env, maxlength=10240):
         content_type = env["CONTENT_TYPE"]
         if content_type != "application/json":
-            raise HTTPException(
+            raise HTTPException.from_error(
                 406,
                 "Unsupported content type {content_type}.".format(
                     content_type=content_type
@@ -184,26 +223,28 @@ class Application:
         except (KeyError, ValueError):
             length = -1
         if length < 0:
-            raise HTTPException(411, "Length required.")
+            raise HTTPException.from_error(411, "Length required.")
         if length > maxlength:
-            raise HTTPException(413, "Request entity too large.")
-        result = json.load(env["wsgi.input"])
-        if not isinstance(result, dict):
-            raise HTTPException(403, "JSON object expected")
-        return result
+            raise HTTPException.from_error(413, "Request entity too large.")
+        return json.load(env["wsgi.input"])
 
-    def handle(self, env, start_repose):
+    def handle(self, env):
         method = env["REQUEST_METHOD"]
         if method != "POST":
-            raise HTTPException(
+            raise HTTPException.from_error(
                 405, "Method {method} not allowed.".format(method=method)
             )
-        # verify it's valid JSON body
-        self.get_json(env)
-        print(env)
         fqdn = env["PATH_INFO"][1:]
         if not fqdn or "/" in fqdn:
-            raise HTTPException(404, "host not found")
+            raise HTTPException.from_error(404, "host not found")
+
+        body = self.get_json(env)
+        try:
+            schema.validate_schema(body, "/schemas/hcc/request")
+        except schema.ValidationError as e:
+            raise HTTPException.from_exception(e, 400, "Invalid request body")
+
+        inventory_id = body["inventory_id"]
 
         self.bootstrap_ipa()
 
@@ -214,9 +255,9 @@ class Application:
             org_id,
             rhsm_id,
         )
-        inventory_id = self.check_host(rhsm_id, fqdn)
         try:
             self.connect_ipa()
+            self.check_host(inventory_id, rhsm_id, fqdn)
             self.update_ipa(org_id, rhsm_id, inventory_id, fqdn)
         finally:
             self.disconnect_ipa()
@@ -228,16 +269,17 @@ class Application:
             rhsm_id,
         )
         # TODO: return value?
-        result = {}
+        response = {"status": "ok"}
+        schema.validate_schema(response, "/schemas/hcc/response")
         raise HTTPException(
             200,
-            json.dumps(result),
+            json.dumps(response),
             content_type="application/json",
         )
 
     def __call__(self, env, start_response):
         try:
-            return self.handle(env, start_response)
+            return self.handle(env)
         except HTTPException as e:
             if e.code >= 400:
                 logger.info("%s: %s", str(e), e.message)
@@ -245,7 +287,9 @@ class Application:
             return [e.message]
         except Exception as e:
             logger.exception("Request failed")
-            e = HTTPException(500, "invalid server error: {e}".format(e=e))
+            e = HTTPException.from_exception(
+                e, 500, "invalid server error: {e}".format(e=e)
+            )
             start_response(str(e), e.headers)
             return [e.message]
 
