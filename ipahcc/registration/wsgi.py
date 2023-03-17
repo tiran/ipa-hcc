@@ -103,7 +103,6 @@ class Application:
             "domain_name": api.env.domain,
             "domain_id": self.domain_id,
             "inventory_id": inventory_id,
-            "subscription_manager_id": rhsm_id,
         }
         api_url = hccconfig.idm_cert_api_url.rstrip("/")
         url = "/".join((api_url, "check-host", rhsm_id, fqdn))

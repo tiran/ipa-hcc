@@ -26,7 +26,7 @@ INSTALL_DATAFILE = $(INSTALL) -d -m644
 INSTALL_EXE = $(INSTALL) -D -m755
 MKDIR_P = mkdir -p -m755
 CP_PD = cp -p -d
-CP_CONFIG = $(CP_PD) --update
+CP_CONFIG = $(CP_PD) -n
 
 BLACK = black
 CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem

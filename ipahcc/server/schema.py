@@ -119,20 +119,14 @@ HOST_CONF_RESPONSE = {
 CHECK_HOST_REQUEST = {
     "$id": "/schemas/check-host/request",
     "type": "object",
-    "required": [
-        "domain_type",
-        "domain_name",
-        "domain_id",
-        "inventory_id",
-        "subscription_manager_id",
-    ],
+    # subscription_manager_id and fqdn are passed via PATH variables
+    "required": ["domain_type", "domain_name", "domain_id", "inventory_id"],
     "additionalProperties": False,
     "properties": {
         "domain_type": {"$ref": "#/$defs/domain_type"},
         "domain_name": {"$ref": "#/$defs/domain_name"},
         "domain_id": {"$ref": "#/$defs/uuid"},
         "inventory_id": {"$ref": "#/$defs/uuid"},
-        "subscription_manager_id": {"$ref": "#/$defs/uuid"},
     },
     "$defs": DEFS,
 }

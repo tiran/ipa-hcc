@@ -109,7 +109,7 @@ class IPAServerTests(IPABaseTests):
         )
 
     def test_ipa_hcc_cli_help(self):
-        from ipahcc.server.ipa_hcc_cli import IPAHCCCli
+        from ipahcc.server.cli import IPAHCCCli
 
         try:
             with capture_output():
