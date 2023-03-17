@@ -26,6 +26,7 @@ INSTALL_DATAFILE = $(INSTALL) -d -m644
 INSTALL_EXE = $(INSTALL) -D -m755
 MKDIR_P = mkdir -p -m755
 CP_PD = cp -p -d
+CP_CONFIG = $(CP_PD) --update
 
 BLACK = black
 CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem
@@ -87,7 +88,7 @@ install_common:
 	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc
 	$(CP_PD) $(srcdir)/ipahcc/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa
-	$(CP_PD) $(srcdir)/install/common/ipa/hcc.conf $(DEST)$(SYSCONFDIR)/ipa/
+	$(CP_CONFIG) $(srcdir)/install/common/ipa/hcc.conf $(DEST)$(SYSCONFDIR)/ipa/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa/hcc
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc/cacerts
 	$(CP_PD) $(srcdir)/install/common/redhat-candlepin-bundle.pem $(DEST)$(DATADIR)/ipa-hcc/
@@ -143,9 +144,9 @@ install_registration_service: install_common
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates
 	$(CP_PD) $(srcdir)/install/registration/updates/86-hcc-registration-service.update $(DEST)$(DATADIR)/ipa/updates/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/httpd/conf.d
-	$(CP_PD) $(srcdir)/install/registration/httpd/ipa-hcc.conf $(DEST)$(SYSCONFDIR)/httpd/conf.d/
+	$(CP_CONFIG) $(srcdir)/install/registration/httpd/ipa-hcc.conf $(DEST)$(SYSCONFDIR)/httpd/conf.d/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/gssproxy
-	$(CP_PD) $(srcdir)/install/registration/gssproxy/85-ipa-hcc.conf $(DEST)$(SYSCONFDIR)/gssproxy/
+	$(CP_CONFIG) $(srcdir)/install/registration/gssproxy/85-ipa-hcc.conf $(DEST)$(SYSCONFDIR)/gssproxy/
 
 .PHONY: install_mockapi
 install_mockapi: install_common
@@ -154,7 +155,7 @@ install_mockapi: install_common
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc
 	$(CP_PD) $(srcdir)/install/mockapi/wsgi/hcc_mockapi.py $(DEST)$(DATADIR)/ipa-hcc/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/httpd/conf.d
-	$(CP_PD) $(srcdir)/install/mockapi/httpd/ipa-hcc-mockapi.conf $(DEST)$(SYSCONFDIR)/httpd/conf.d/
+	$(CP_CONFIG) $(srcdir)/install/mockapi/httpd/ipa-hcc-mockapi.conf $(DEST)$(SYSCONFDIR)/httpd/conf.d/
 
 .PHONY: install_server
 install_server: install_server_plugin install_registration_service install_mockapi

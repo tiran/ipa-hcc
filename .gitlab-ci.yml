@@ -17,7 +17,6 @@ tox_check:
           - py,py27,py36
           - lint,format,bandit
           - jslint,yamllint,maketest
-          - rpkg
   script:
     - tox -e $TOXENV
   only:
@@ -30,8 +29,11 @@ srpm:
   needs: []
   image: quay.io/tiran/ipa-hcc-ci:fedora
   before_script:
+    - dnf install -y 'dnf-command(builddep)'
     - mkdir -p $CI_PROJECT_DIR/rpkg
   script:
+    - rpkg spec --outdir $CI_PROJECT_DIR/rpkg
+    - dnf builddep -y --spec $CI_PROJECT_DIR/rpkg/ipa-hcc.spec
     - rpkg local --outdir $CI_PROJECT_DIR/rpkg
   artifacts:
     name: srpm

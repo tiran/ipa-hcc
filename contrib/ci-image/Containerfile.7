@@ -1,5 +1,5 @@
 # quay.io/tiran/ipa-hcc-ci:7
-FROM quay.io/centos/centos:7
+FROM quay.io/centos/centos:centos7
 RUN yum -y install \
         rpm-build createrepo python2-devel ipa-client python2-ipaserver python2-sssdconfig python2-requests systemd-devel selinux-policy-devel \
     && yum clean all

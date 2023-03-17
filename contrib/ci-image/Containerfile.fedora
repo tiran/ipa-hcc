@@ -1,10 +1,12 @@
 # see quay.io/tiran/ipa-hcc-ci
 FROM registry.fedoraproject.org/fedora:37
-RUN dnf --setopt=install_weak_deps=False -y --best install\
+RUN dnf --setopt=install_weak_deps=False -y --best install \
+        dnf-utils dnf-plugins-core \
         tox python2.7 python3.6 npm rpkg rpmlint openssl make \
         python3-devel selinux-policy-devel systemd-devel \
         gcc krb5-devel openldap-devel openldap-compat \
-        ipa-client python3-ipaserver python3-requests python3-sssdconfig yamllint \
+        ipa-client python3-ipaserver python3-requests python3-sssdconfig \
+        python3-jsonschema yamllint \
     && dnf clean all
 RUN python3.6 -m ensurepip \
     && python3.6 -m pip install --upgrade pip \

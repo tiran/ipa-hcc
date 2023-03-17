@@ -1,0 +1,11 @@
+- hosts: ipaserver
+  become: true
+  become_method: sudo
+  tasks:
+    - include_vars:
+        file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
+        name: hmsidm_config
+
+    # TODO: hard-coded test domain_id and token
+    - name: Run ipa-hcc register
+      command: ipa-hcc register 772e9618-d0f8-4bf8-bfed-d2831f63c619 mockapi

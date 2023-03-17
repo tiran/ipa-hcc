@@ -1,7 +1,7 @@
 """Mock API endpoints
 
-The WSGI service provides a minimalistic implementation of /hostconf/ and
-/check_host API endpoints. It has to be installed on an IPA server with
+The WSGI service provides a minimalistic implementation of /host-conf/ and
+/check-host API endpoints. It has to be installed on an IPA server with
 ipa-hcc-registration-service. The mockapi performs minimal checks.
 
 NOTE: The WSGI app does not use any frameworks such as FastAPI or Flask
@@ -20,13 +20,12 @@ import requests
 from ipalib import x509
 from ipaplatform.paths import paths
 from ipahcc import hccplatform
-
+from ipahcc.server import schema
+from ipahcc.registration.wsgi import HTTPException
 
 if hccplatform.PY2:
-    from httplib import responses as http_responses
     from time import time as monotonic_time
 else:
-    from http.client import responses as http_responses
     from time import monotonic as monotonic_time
 
 from ipalib import api  # noqa: E402
@@ -38,21 +37,16 @@ logger = logging.getLogger("ipa-mockapi")
 logger.setLevel(logging.DEBUG)
 
 
-class HTTPException(Exception):
-    def __init__(self, code, msg, content_type="text/plain; charset=utf-8"):
-        if isinstance(msg, str):
-            msg = msg.encode("utf-8")
-        headers = [
-            ("Content-Type", content_type),
-            ("Content-Length", str(len(msg))),
-        ]
-        super(HTTPException, self).__init__(code, msg, headers)
-        self.code = code
-        self.message = msg
-        self.headers = headers
-
-    def __str__(self):
-        return "{} {}".format(self.code, http_responses[self.code])
+def validate_schema(instance, schema_id):
+    try:
+        schema.validate_schema(instance, schema_id)
+    except schema.ValidationError:
+        raise HTTPException(
+            400,
+            "schema violation: invalid JSON for {schema_id}".format(
+                schema_id=schema_id
+            ),
+        )
 
 
 class Application:
@@ -63,11 +57,30 @@ class Application:
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.routes = [
-            (re.compile("^/$"), self.handle_root),
-            (re.compile("^/hostconf/(?P<fqdn>[^/]+)$"), self.handle_hostconf),
             (
-                re.compile("^/check_host/(?P<smid>[^/]+)/(?P<fqdn>[^/]+)$"),
+                "GET",
+                re.compile("^/$"),
+                self.handle_root,
+            ),
+            (
+                "POST",
+                re.compile("^/host-conf/(?P<fqdn>[^/]+)$"),
+                self.handle_host_conf,
+            ),
+            (
+                "POST",
+                re.compile("^/check-host/(?P<smid>[^/]+)/(?P<fqdn>[^/]+)$"),
                 self.handle_check_host,
+            ),
+            (
+                "PUT",
+                re.compile("^/domains/(?P<domain_id>[^/]+)/register$"),
+                self.handle_register_domain,
+            ),
+            (
+                "PUT",
+                re.compile("^/domains/(?P<domain_id>[^/]+)/update$"),
+                self.handle_update_domain,
             ),
         ]
 
@@ -82,14 +95,14 @@ class Application:
     def parse_subject(self, subject):
         nas = list(subject)
         if len(nas) != 2:
-            raise HTTPException(
+            raise HTTPException.from_error(
                 400, "Invalid cert subject {subject}.".format(subject=subject)
             )
         if (
             nas[0].oid != NameOID.ORGANIZATION_NAME
             or nas[1].oid != NameOID.COMMON_NAME
         ):
-            raise HTTPException(
+            raise HTTPException.from_error(
                 400, "Invalid cert subject {subject}.".format(subject=subject)
             )
         return int(nas[0].value), nas[1].value
@@ -130,7 +143,7 @@ class Application:
         resp = self.session.post(url, data)
         dur = monotonic_time() - start
         if resp.status_code >= 400:
-            raise HTTPException(
+            raise HTTPException.from_error(
                 resp.status_code,
                 "get_access_token() failed: {resp} {content} ({url})".format(
                     resp=resp.reason,
@@ -171,14 +184,14 @@ class Application:
         if resp.status_code >= 400:
             # reset access token
             self.access_token = None
-            raise HTTPException(
+            raise HTTPException.from_error(
                 resp.status_code,
                 "lookup_inventory() failed: {resp}".format(resp=resp.reason),
             )
 
         j = resp.json()
         if j["total"] != 1:
-            raise HTTPException(
+            raise HTTPException.from_error(
                 404, "Unknown host {rhsm_id}.".format(rhsm_id=rhsm_id)
             )
         result = j["results"][0]
@@ -205,7 +218,7 @@ class Application:
     def get_json(self, env, maxlength=10240):
         content_type = env["CONTENT_TYPE"]
         if content_type != "application/json":
-            raise HTTPException(
+            raise HTTPException.from_error(
                 406,
                 "Unsupported content type {content_type}.".format(
                     content_type=content_type
@@ -221,23 +234,13 @@ class Application:
             raise HTTPException(413, "Request entity too large.")
         result = json.load(env["wsgi.input"])
         if not isinstance(result, dict):
-            raise HTTPException(403, "JSON object expected")
+            raise HTTPException(400, "JSON object expected")
         return result
 
-    def check_method(self, env, expected):
-        method = env["REQUEST_METHOD"]
-        if method != expected:
-            raise HTTPException(
-                405, "Method {method} not allowed.".format(method=method)
-            )
-
     def handle_root(self, env):
-        self.check_method(env, "GET")
         return {}
 
-    def handle_hostconf(self, env, fqdn):
-        self.check_method(env, "POST")
-
+    def handle_host_conf(self, env, fqdn):
         cert = self.parse_cert(env, "SSL_CLIENT_CERT")
         org_id, rhsm_id = self.parse_subject(cert.subject)
         logger.warn(
@@ -248,67 +251,141 @@ class Application:
         )
 
         # just to verify it's json
-        self.get_json(env)
+        body = self.get_json(env)
+        validate_schema(body, "/schemas/host-conf/request")
 
         if not fqdn.endswith(api.env.domain):
-            raise HTTPException(404, "hostname not recognized")
+            raise HTTPException.from_error(404, "hostname not recognized")
 
         access_token = self.get_access_token()
         expected_fqdn, inventory_id = self.lookup_inventory(
             rhsm_id, access_token=access_token
         )
         if fqdn != expected_fqdn:
-            raise HTTPException(403, "unexpected fqdn")
+            raise HTTPException.from_error(
+                400,
+                "unexpected fqdn: {fqdn} != {expected_fqdn}".format(
+                    fqdn=fqdn, expected_fqdn=expected_fqdn
+                ),
+            )
         ca = self.get_ca_crt()
         logger.info(
-            "hostconf for %s (%s) is domain %s.",
+            "host-conf for %s (%s) is domain %s.",
             fqdn,
             rhsm_id,
             api.env.domain,
         )
-        return {
+        response = {
             "domain_name": api.env.domain,
-            "domain_type": "ipa",
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+            "domain_id": hccplatform.TEST_DOMAIN_ID,
             "auto_enrollment_enabled": True,
-            "ipa": {
+            hccplatform.HCC_DOMAIN_TYPE: {
                 "realm_name": api.env.realm,
-                "ca_cert": ca,
+                "cabundle": ca,
                 "enrollment_servers": [api.env.host],
             },
-            "inventory": {
-                "id": inventory_id,
-            },
+            "inventory_id": inventory_id,
         }
+        validate_schema(response, "/schemas/host-conf/response")
+        return response
 
     def handle_check_host(self, env, smid, fqdn):
-        self.check_method(env, "POST")
         body = self.get_json(env)
+        validate_schema(body, "/schemas/check-host/request")
         logger.info("Checking host %s (%s)", fqdn, smid)
-        try:
-            domain_name = body["domain_name"]
-            domain_type = body["domain_type"]
-        except KeyError as e:
-            raise HTTPException(400, str(e))
+
+        domain_name = body["domain_name"]
+        domain_type = body["domain_type"]
+        domain_id = body["domain_id"]
+        rhsm_id = body["subscription_manager_id"]
+        inventory_id = body["inventory_id"]
+
         if domain_name != api.env.domain:
-            raise HTTPException(403, "unsupported domain name")
-        if domain_type != "ipa":
-            raise HTTPException(403, "unsupported domain type")
+            raise HTTPException.from_error(
+                400,
+                "unsupported domain name: {domain} != {expected_domain}".format(
+                    domain=domain_name, expected_domain=api.env.domain
+                ),
+            )
+        if domain_type != hccplatform.HCC_DOMAIN_TYPE:
+            raise HTTPException.from_error(400, "unsupported domain type")
+        if rhsm_id != smid:
+            raise HTTPException.from_error(400, "path and rhsm_id mismatch")
+
+        # TODO validate domain id
+        assert domain_id
 
         access_token = self.get_access_token()
-        expected_fqdn, inventory_id = self.lookup_inventory(
+        expected_fqdn, expected_inventory_id = self.lookup_inventory(
             smid, access_token=access_token
         )
         if fqdn != expected_fqdn:
-            raise HTTPException(403, "unexpected fqdn")
+            raise HTTPException.from_error(
+                400,
+                "unexpected fqdn: {fqdn} != {expected_fqdn}".format(
+                    fqdn=fqdn, expected_fqdn=expected_fqdn
+                ),
+            )
+        if inventory_id != expected_inventory_id:
+            raise HTTPException.from_error(
+                400,
+                "unexpected inventory id: {inventory_id} != {expected_inventory_id}".format(
+                    inventory_id=inventory_id,
+                    expected_inventory_id=expected_inventory_id,
+                ),
+            )
+
         logger.info("Approving host %s (%s, %s)", fqdn, smid, inventory_id)
-        return {"inventory_id": inventory_id}
+        response = {"inventory_id": inventory_id}
+        validate_schema(response, "/schemas/check-host/response")
+        return response
+
+    def handle_register_domain(self, env, domain_id):
+        logger.info("Register domain %s", domain_id)
+        token = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
+        if token is None:
+            raise HTTPException.from_error(
+                403, "missing X-RH-IDM-Registration-Token"
+            )
+        if token != "mockapi":
+            raise HTTPException.from_error(
+                404, "invalid X-RH-IDM-Registration-Token"
+            )
+        return self._handle_domain(env, domain_id)
+
+    def handle_update_domain(self, env, domain_id):
+        logger.info("Update domain %s", domain_id)
+        return self._handle_domain(env, domain_id)
+
+    def _handle_domain(self, env, domain_id):
+        body = self.get_json(env)
+        validate_schema(body, "/schemas/domain/request")
+
+        domain_name = body["domain_name"]
+        domain_type = body["domain_type"]
+        if domain_name != api.env.domain:
+            raise HTTPException.from_error(400, "unsupported domain name")
+        if domain_type != hccplatform.HCC_DOMAIN_TYPE:
+            raise HTTPException.from_error(400, "unsupported domain type")
+
+        response = {"status": "ok"}
+        validate_schema(response, "/schemas/domain/response")
+        return response
 
     def handle(self, env, start_response):
         self.bootstrap_ipa()
         pathinfo = env["PATH_INFO"]
-        for r, func in self.routes:
+        for method, r, func in self.routes:
             mo = r.match(pathinfo)
             if mo is not None:
+                if method != env["REQUEST_METHOD"]:
+                    raise HTTPException(
+                        405,
+                        "Method {method} not allowed.".format(
+                            method=env["REQUEST_METHOD"]
+                        ),
+                    )
                 result = func(env, **mo.groupdict())
                 data = json.dumps(result)
                 raise HTTPException(
@@ -328,7 +405,9 @@ class Application:
             return [e.message]
         except Exception as e:
             logger.exception("Request failed")
-            e = HTTPException(500, "invalid server error: {e}".format(e=e))
+            e = HTTPException.from_exception(
+                e, 500, "invalid server error: {e}".format(e=e)
+            )
             start_response(str(e), e.headers)
             return [e.message]
 

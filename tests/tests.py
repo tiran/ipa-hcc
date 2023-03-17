@@ -25,13 +25,13 @@ except ImportError:
 else:
     HAS_IPASERVER = True
 
-
-PY2 = sys.version_info.major == 2
+from ipahcc import hccplatform
+from ipahcc.server import schema
 
 
 @contextlib.contextmanager
 def capture_output():
-    if PY2:
+    if hccplatform.PY2:
         out = io.BytesIO()
     else:
         out = io.StringIO()
@@ -118,6 +118,70 @@ class IPAServerTests(IPABaseTests):
             self.assertEqual(e.code, 0)
         else:
             self.fail("SystemExit expected")
+
+
+@unittest.skipUnless(schema.jsonschema, "requires jsonschema")
+class TestJSONSchema(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # disable error logging
+        schema.logger.setLevel(1000)
+
+    def test_hcc_request(self):
+        instance = {
+            "domain_name": "domain.example",
+            "domain_type": "rhel-idm",
+            "domain_id": "71c0bf27-37e7-41ae-b51b-1a8599025e1a",
+            "inventory_id": "91e3fa59-4de2-4a28-90b2-01965b201ade",
+        }
+        schema.validate_schema(instance, "/schemas/hcc/request")
+
+        instance["extra"] = True
+
+        with self.assertRaises(schema.ValidationError):
+            schema.validate_schema(instance, "/schemas/hcc/request")
+
+    def test_domain_request(self):
+        instance = {
+            "domain_name": "ipahcc.test",
+            "domain_type": "rhel-idm",
+            "rhel-idm": {
+                "realm_name": "IPAHCC.TEST",
+                "servers": [
+                    {
+                        "fqdn": "ipaserver.ipahcc.test",
+                        "subscription_manager_id": "547ce70c-9eb5-4783-a619-086aa26f88e5",
+                        "ca_server": True,
+                        "hcc_enrollment_server": True,
+                        "hcc_update_server": True,
+                        "pkinit_server": True,
+                    },
+                    {
+                        "fqdn": "ipareplica1.ipahcc.test",
+                        "subscription_manager_id": "fdebb5ad-f8d7-4234-a1ff-2b9ef074089b",
+                        "ca_server": True,
+                        "hcc_enrollment_server": True,
+                        "hcc_update_server": False,
+                        "pkinit_server": True,
+                    },
+                    {
+                        "fqdn": "ipareplica2.ipahcc.test",
+                        "ca_server": False,
+                        "hcc_enrollment_server": False,
+                        "hcc_update_server": False,
+                        "pkinit_server": True,
+                    },
+                ],
+                "cacerts": [
+                    {
+                        "nickname": "IPAHCC.TEST IPA CA",
+                        "pem": "-----BEGIN CERTIFICATE-----\nMIIE...\n-----END CERTIFICATE-----\n",
+                    }
+                ],
+                "realm_domains": ["ipahcc.test"],
+            },
+        }
+        schema.validate_schema(instance, "/schemas/domain/request")
 
 
 if __name__ == "__main__":

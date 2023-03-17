@@ -41,6 +41,7 @@ HMSIDM_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"
 
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
 RHSM_KEY = "/etc/pki/consumer/key.pem"
+INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
 
 # Hybrid Cloud Console and Host Based Inventory API
 # see https://access.redhat.com/articles/3626371
@@ -48,6 +49,11 @@ TOKEN_CLIENT_ID = "rhsm-api"
 REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"
 
 HCC_CONFIG = "/etc/ipa/hcc.conf"
+
+HCC_DOMAIN_TYPE = "rhel-idm"
+
+# XXX for internal testing
+TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
 
 
 class HCCConfig:
@@ -84,11 +90,11 @@ class HCCConfig:
         return self._environment
 
     @property
-    def hcc_api_url(self):
+    def idm_cert_api_url(self):
         try:
-            return self._cp.get(self._section, "hcc_api_url")
+            return self._cp.get(self._section, "idm_cert_api_url")
         except NoOptionError:
-            return None
+            return self._idm_cert_api.format(base=self._base)
 
     @property
     def token_url(self):
@@ -101,7 +107,3 @@ class HCCConfig:
     @property
     def inventory_hosts_cert_api(self):
         return self._inventory_hosts_cert_api.format(base=self._base)
-
-    @property
-    def idm_cert_api(self):
-        return self._idm_cert_api.format(base=self._base)

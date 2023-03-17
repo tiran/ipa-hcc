@@ -40,10 +40,11 @@ phases:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaserver
-      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-configure.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
       - playbook: prep/ipa-server-install.yaml
       - playbook: prep/ipa-replica-install.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaclient

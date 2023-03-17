@@ -1,11 +1,12 @@
 #!/bin/sh
 set -ex
 
-SITELIB=$(python -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
+PYTHON=/usr/bin/python3
+SITELIB=$($PYTHON -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
 
 ## phase 1, install files
 
-make install_server PYTHON=python PYTHON_SITELIB=$SITELIB
+make install_server PYTHON=$PYTHON PYTHON_SITELIB=$SITELIB
 
 ## phase 2, user, change permissions
 
@@ -19,7 +20,7 @@ chown ipahcc:ipaapi -R /var/cache/ipa-hcc
 semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-hcc(/.*)?' || :
 restorecon -R /var/cache/ipa-hcc || :
 
-python -m compileall ${SITELIB}/ipaserver/install/plugins ${SITELIB}/ipaserver/plugins ${SITELIB}/ipahcc
+$PYTHON -m compileall ${SITELIB}/ipaserver/install/plugins ${SITELIB}/ipaserver/plugins ${SITELIB}/ipahcc
 
 # run updater
 ipa-ldap-updater \
