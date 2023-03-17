@@ -1,4 +1,5 @@
 ---
+# hmsidm-dev metadata file builds and installs RPMs from local checkout
 domains:
   - name: hmsidm-dev.test
     type: IPA
