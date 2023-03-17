@@ -36,8 +36,6 @@ def _get_one(dct, key, default=_missing):
 
 
 class APIError(Exception):
-    dbus_format = "qssa{ss}sqs"
-
     def __init__(
         self,
         status_code,
@@ -46,9 +44,9 @@ class APIError(Exception):
         headers,
         body,
         exit_code=2,
-        error_message=None,
+        exit_message=None,
     ):
-        super(Exception, self).__init__(status_code, reason, error_message)
+        super(Exception, self).__init__(status_code, reason, exit_message)
         # HTTP status code or IPA errno (>= 900)
         self.status_code = status_code
         # HTTP reason or IPA exception name
@@ -62,7 +60,7 @@ class APIError(Exception):
         # exit code for CLI
         self.exit_code = exit_code
         # human readable error message for CLI
-        self.error_message = error_message
+        self.exit_message = exit_message
 
     def __repr__(self):
         # remove newline in JSON
@@ -84,12 +82,12 @@ class APIError(Exception):
             headers,
             body,
             self.exit_code,
-            self.error_message,
+            self.exit_message,
         )
 
     @classmethod
     def from_response(
-        cls, response, exit_code=2, error_message="Request failed"
+        cls, response, exit_code=2, exit_message="Request failed"
     ):
         """Construct exception for failed request response"""
         return cls(
@@ -99,12 +97,12 @@ class APIError(Exception):
             response.headers,
             response.text,
             exit_code,
-            error_message,
+            exit_message,
         )
 
     @classmethod
     def not_found(
-        cls, rhsm_id, response, exit_code=2, error_message=http_responses[404]
+        cls, rhsm_id, response, exit_code=2, exit_message=http_responses[404]
     ):
         """RHSM_ID not found (404)"""
         status_code = 404
@@ -123,11 +121,11 @@ class APIError(Exception):
             response.headers,
             content,
             exit_code,
-            error_message,
+            exit_message,
         )
 
     @classmethod
-    def from_ipaerror(cls, e, exit_code, error_message):
+    def from_ipaerror(cls, e, exit_code, exit_message):
         """From public IPA, expected exception"""
         # does not handle errors.PrivateError
         assert isinstance(e, errors.PublicError)
@@ -149,45 +147,45 @@ class APIError(Exception):
             {},
             content,
             exit_code,
-            error_message,
+            exit_message,
         )
 
     @classmethod
-    def from_other(cls, status_code, exit_code, error_message):
+    def from_other(cls, status_code, exit_code, exit_message):
         """From generic error"""
         reason = http_responses[status_code]
         content = dict(
             status_code=status_code,
             title=reason,
-            details=error_message,
+            details=exit_message,
         )
         return cls(
-            status_code, reason, None, {}, content, exit_code, error_message
+            status_code, reason, None, {}, content, exit_code, exit_message
         )
 
 
 class HCCAPI(object):
     """Register or update domain information in HCC"""
 
-    def __init__(self, api, dry_run=False):
+    def __init__(self, api, timeout=DEFAULT_TIMEOUT, dry_run=False):
         if not api.isdone("finalize") or not api.env.in_server:
             raise ValueError(
-                "api must be an in_server, finalized, and connected API object"
+                "api must be an in_server and finalized API object"
             )
 
         self.api = api
+        self.timeout = timeout
         self.dry_run = dry_run
         self._session = requests.Session()
 
     def __enter__(self):
+        self.api.Backend.ldap2.connect(time_limit=self.timeout)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        pass
+        self.api.Backend.ldap2.disconnect()
 
-    def check_host(
-        self, domain_id, inventory_id, rhsm_id, fqdn, timeout=DEFAULT_TIMEOUT
-    ):
+    def check_host(self, domain_id, inventory_id, rhsm_id, fqdn):
         if not domain_id:
             config = self._get_ipa_config(all=False)
             domain_id = self._get_domain_id(config)
@@ -196,21 +194,18 @@ class HCCAPI(object):
             "domain_id": domain_id,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "inventory_id": inventory_id,
-            "subscription_manager_id": rhsm_id,
-            "fqdn": fqdn,
         }
         schema.validate_schema(info, "/schemas/check-host/request")
         resp = self._submit_idm_api(
             method="POST",
             subpath=("check-host", rhsm_id, fqdn),
             payload=info,
-            timeout=timeout,
             extra_headers=None,
         )
         schema.validate_schema(resp.json(), "/schemas/check-host/response")
         return info, resp
 
-    def register_domain(self, domain_id, token, timeout=DEFAULT_TIMEOUT):
+    def register_domain(self, domain_id, token):
         config = self._get_ipa_config(all=True)
         info = self._get_ipa_info(config)
         schema.validate_schema(info, "/schemas/domain/request")
@@ -221,7 +216,6 @@ class HCCAPI(object):
             method="PUT",
             subpath=("domains", domain_id, "register"),
             payload=info,
-            timeout=timeout,
             extra_headers=extra_headers,
         )
         schema.validate_schema(resp.json(), "/schemas/domain/response")
@@ -234,9 +228,7 @@ class HCCAPI(object):
             logger.debug("hccdomainid=%s set", domain_id)
         return info, resp
 
-    def update_domain(
-        self, update_server_only=False, timeout=DEFAULT_TIMEOUT
-    ):
+    def update_domain(self, update_server_only=False):
         config = self._get_ipa_config(all=True)
         # hcc_update_server_server is a single attribute
         update_server = config.get("hcc_update_server_server")
@@ -256,7 +248,6 @@ class HCCAPI(object):
             method="PUT",
             subpath=("domains", domain_id, "update"),
             payload=info,
-            timeout=timeout,
             extra_headers=None,
         )
         schema.validate_schema(resp.json(), "/schemas/domain/response")
@@ -351,9 +342,7 @@ class HCCAPI(object):
             },
         }
 
-    def _submit_idm_api(
-        self, method, subpath, payload, timeout, extra_headers=None
-    ):
+    def _submit_idm_api(self, method, subpath, payload, extra_headers=None):
         api_url = hccconfig.idm_cert_api_url.rstrip("/")
         url = "/".join((api_url,) + subpath)
         headers = {}
@@ -372,7 +361,7 @@ class HCCAPI(object):
                 method,
                 url,
                 headers=headers,
-                timeout=timeout,
+                timeout=self.timeout,
                 cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
                 json=payload,
             )

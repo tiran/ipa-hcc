@@ -69,7 +69,9 @@ class Application:
             ),
             (
                 "POST",
-                re.compile("^/check-host/(?P<smid>[^/]+)/(?P<fqdn>[^/]+)$"),
+                re.compile(
+                    "^/check-host/(?P<rhsm_id>[^/]+)/(?P<fqdn>[^/]+)$"
+                ),
                 self.handle_check_host,
             ),
             (
@@ -290,15 +292,14 @@ class Application:
         validate_schema(response, "/schemas/host-conf/response")
         return response
 
-    def handle_check_host(self, env, smid, fqdn):
+    def handle_check_host(self, env, rhsm_id, fqdn):
         body = self.get_json(env)
         validate_schema(body, "/schemas/check-host/request")
-        logger.info("Checking host %s (%s)", fqdn, smid)
+        logger.info("Checking host %s (%s)", fqdn, rhsm_id)
 
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
         domain_id = body["domain_id"]
-        rhsm_id = body["subscription_manager_id"]
         inventory_id = body["inventory_id"]
 
         if domain_name != api.env.domain:
@@ -310,15 +311,13 @@ class Application:
             )
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException.from_error(400, "unsupported domain type")
-        if rhsm_id != smid:
-            raise HTTPException.from_error(400, "path and rhsm_id mismatch")
 
         # TODO validate domain id
         assert domain_id
 
         access_token = self.get_access_token()
         expected_fqdn, expected_inventory_id = self.lookup_inventory(
-            smid, access_token=access_token
+            rhsm_id, access_token=access_token
         )
         if fqdn != expected_fqdn:
             raise HTTPException.from_error(
@@ -336,7 +335,7 @@ class Application:
                 ),
             )
 
-        logger.info("Approving host %s (%s, %s)", fqdn, smid, inventory_id)
+        logger.info("Approving host %s (%s, %s)", fqdn, rhsm_id, inventory_id)
         response = {"inventory_id": inventory_id}
         validate_schema(response, "/schemas/check-host/response")
         return response

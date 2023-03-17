@@ -10,7 +10,7 @@ from ipapython import admintool
 from ipaserver.install import installutils
 
 from ipahcc import hccplatform
-from .hccapi import HCCAPI, APIError
+from .hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
 
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class IPAHCCCli(admintool.AdminTool):
         parser.add_option(
             "--timeout",
             type="int",
-            default=10,
+            default=DEFAULT_TIMEOUT,
             help="Timeout for HTTP and LDAP requests",
         )
 
@@ -79,31 +79,20 @@ class IPAHCCCli(admintool.AdminTool):
     def run(self):
         ipalib.api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
         ipalib.api.finalize()
-        try:
-            ipalib.api.Backend.ldap2.connect(time_limit=self.options.timeout)
-        except errors.NetworkError:
-            logger.debug("Failed to connect to IPA", exc_info=True)
-            raise admintool.ScriptError(
-                "The IPA server is not running; cannot proceed.", rval=2
-            )
-
-        timeout = self.options.timeout
 
         try:
             with HCCAPI(
                 ipalib.api,
+                timeout=self.options.timeout,
                 dry_run=False,
             ) as ipahcc:
                 if self.command == "register":
                     ipahcc.register_domain(
-                        domain_id=self.args[1],
-                        token=self.args[2],
-                        timeout=timeout,
+                        domain_id=self.args[1], token=self.args[2]
                     )
                 elif self.command == "update":
                     ipahcc.update_domain(
-                        update_server_only=self.options.update_server_only,
-                        timeout=timeout,
+                        update_server_only=self.options.update_server_only
                     )
                 elif self.command == "check-host":
                     ipahcc.check_host(
@@ -111,13 +100,17 @@ class IPAHCCCli(admintool.AdminTool):
                         inventory_id=self.args[1],
                         rhsm_id=self.args[2],
                         fqdn=self.args[3],
-                        timeout=timeout,
                     )
                 else:
                     raise ValueError(self.command)
         except APIError as e:
             logger.exception("API call failed")
             raise admintool.ScriptError(e.error_message, rval=e.exit_code)
+        except errors.NetworkError:
+            logger.debug("Failed to connect to IPA", exc_info=True)
+            raise admintool.ScriptError(
+                "The IPA server is not running; cannot proceed.", rval=2
+            )
 
 
 if __name__ == "__main__":
