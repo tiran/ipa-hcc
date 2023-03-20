@@ -23,6 +23,7 @@ os.environ["GSS_USE_PROXY"] = "1"
 
 from ipalib import x509  # noqa: E402
 from ipalib import api, errors  # noqa: E402
+from ipapython.version import VENDOR_VERSION  # noqa: E402
 
 hccconfig = hccplatform.HCCConfig()
 
@@ -98,6 +99,12 @@ class Application:
         return int(nas[0].value), nas[1].value
 
     def check_host(self, inventory_id, rhsm_id, fqdn):
+        headers = {
+            "User-Agent": "IPA HCC auto-enrollment (IPA: {VENDOR_VERSION})".format(
+                VENDOR_VERSION=VENDOR_VERSION
+            ),
+            "X-RH-IPA-Version": VENDOR_VERSION,
+        }
         body = {
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": api.env.domain,
@@ -106,7 +113,7 @@ class Application:
         }
         api_url = hccconfig.idm_cert_api_url.rstrip("/")
         url = "/".join((api_url, "check-host", rhsm_id, fqdn))
-        resp = self.session.post(url, json=body)
+        resp = self.session.post(url, json=body, headers=headers)
         resp.raise_for_status()
         j = resp.json()
         return j["inventory_id"]

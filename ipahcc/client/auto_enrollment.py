@@ -14,26 +14,39 @@ import json
 import logging
 import os
 import shutil
+import ssl
 import socket
+import sys
 import tempfile
 import time
-
-import requests
-import requests.exceptions
 
 from ipalib.install import kinit
 from ipalib.util import validate_hostname
 from ipaplatform.paths import paths
 from ipapython.ipautil import run
+from ipapython.version import VENDOR_VERSION
 
 from ipahcc import hccplatform
 
+PY2 = sys.version_info.major == 2
 # IPA >= 4.9.10 / 4.10.1
 HAS_KINIT_PKINIT = hasattr(kinit, "kinit_pkinit")
 FQDN = socket.gethostname()
 
+RHSM_CERT = hccplatform.RHSM_CERT
+RHSM_KEY = hccplatform.RHSM_KEY
+HMSIDM_CA_BUNDLE_PEM = hccplatform.HMSIDM_CA_BUNDLE_PEM
+HCC_DOMAIN_TYPE = hccplatform.HCC_DOMAIN_TYPE
+INSIGHTS_HOST_DETAILS = hccplatform.INSIGHTS_HOST_DETAILS
 hccconfig = hccplatform.HCCConfig()
+del hccplatform
+
 logger = logging.getLogger(__name__)
+
+if PY2:
+    from urllib2 import HTTPError, Request, urlopen
+else:
+    from urllib.request import HTTPError, Request, urlopen
 
 
 def check_arg_hostname(arg):
@@ -124,9 +137,35 @@ KRB5_CONF = """\
 """
 
 
+def _do_post(url, body, timeout, verify=True, cafile=None):
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "IPA HCC auto-enrollment (IPA: {VENDOR_VERSION})".format(
+            VENDOR_VERSION=VENDOR_VERSION
+        ),
+        "X-RH-IPA-Version": VENDOR_VERSION,
+    }
+    data = json.dumps(body)
+    if not PY2:
+        data = data.encode("utf-8")
+    # Requests with data are always POST requests.
+    req = Request(url, data=data, headers=headers)
+    context = ssl.create_default_context(cafile=cafile)
+    context.load_cert_chain(RHSM_CERT, RHSM_KEY)
+    if getattr(context, "post_handshake_auth", None) is not None:
+        context.post_handshake_auth = True
+    if verify:
+        context.verify_mode = ssl.CERT_REQUIRED
+        context.check_hostname = True
+    else:
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+    return urlopen(req, timeout=timeout, context=context)  # nosec
+
+
 def hcc_host_conf(args):
     body = {
-        "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+        "domain_type": HCC_DOMAIN_TYPE,
         "inventory_id": args.inventory_id,
     }
     api_url = hccconfig.idm_cert_api_url.rstrip("/")
@@ -136,33 +175,26 @@ def hcc_host_conf(args):
         "Getting host configuration from %s (secure: %s).", url, verify
     )
     try:
-        resp = requests.post(
-            url,
-            verify=verify,
-            timeout=args.timeout,
-            cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
-            json=body,
-        )
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
+        resp = _do_post(url, body=body, verify=verify, timeout=args.timeout)
+    except HTTPError as e:
         logger.error("Request to %s failed: %s: %s", url, type(e).__name__, e)
         raise SystemExit(2)
-    j = resp.json()
+    j = json.load(resp)
 
     args.ipa_cacert = os.path.join(args.tmpdir, "ca.crt")
     with open(args.ipa_cacert, "w") as f:
-        f.write(j[hccplatform.HCC_DOMAIN_TYPE]["cabundle"])
+        f.write(j[HCC_DOMAIN_TYPE]["cabundle"])
     # IPA CA signs KDC cert
     args.pkinit_anchors.append(
         "FILE:{}".format(args.ipa_cacert),
     )
 
-    if j["domain_type"] != hccplatform.HCC_DOMAIN_TYPE:
+    if j["domain_type"] != HCC_DOMAIN_TYPE:
         raise ValueError(j["domain_type"])
     args.domain = j["domain_name"]
     args.domain_id = j["domain_id"]
-    args.realm = j[hccplatform.HCC_DOMAIN_TYPE]["realm_name"]
-    args.servers = j[hccplatform.HCC_DOMAIN_TYPE]["enrollment_servers"]
+    args.realm = j[HCC_DOMAIN_TYPE]["realm_name"]
+    args.servers = j[HCC_DOMAIN_TYPE]["enrollment_servers"]
     # TODO: use all servers
     if args.override_server is None:
         args.server = args.servers[0]
@@ -182,21 +214,20 @@ def hcc_register(args):
         server=args.server, hostname=args.hostname
     )
     body = {
-        "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+        "domain_type": HCC_DOMAIN_TYPE,
         "domain_name": args.domain,
         "domain_id": args.domain_id,
         "inventory_id": args.inventory_id,
     }
     logger.info("Registering host at %s", url)
-    resp = requests.post(
+    resp = _do_post(
         url,
-        verify=args.ipa_cacert,
+        body=body,
+        verify=True,
+        cafile=args.ipa_cacert,
         timeout=args.timeout,
-        cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
-        json=body,
     )
-    resp.raise_for_status()
-    return resp.json()
+    return json.load(resp)
 
 
 def wait_for_inventory_host(args):
@@ -208,12 +239,12 @@ def wait_for_inventory_host(args):
     sleep_dur = 10
     for i in range(5):
         try:
-            with open(hccplatform.INSIGHTS_HOST_DETAILS) as f:
+            with open(INSIGHTS_HOST_DETAILS) as f:
                 j = json.load(f)
         except (OSError, IOError, ValueError):
             logger.exception(
                 "Cannot read JSON file %s, try again in %i",
-                hccplatform.INSIGHTS_HOST_DETAILS,
+                INSIGHTS_HOST_DETAILS,
                 sleep_dur,
             )
             time.sleep(sleep_dur)
@@ -324,9 +355,9 @@ def parse_args(*args):
     )
 
     # Candlepin CA signs RHSM client cert
-    args.pkinit_anchors = ["FILE:{}".format(hccplatform.HMSIDM_CA_BUNDLE_PEM)]
+    args.pkinit_anchors = ["FILE:{}".format(HMSIDM_CA_BUNDLE_PEM)]
     args.pkinit_identity = "FILE:{cert},{key}".format(
-        cert=hccplatform.RHSM_CERT, key=hccplatform.RHSM_KEY
+        cert=RHSM_CERT, key=RHSM_KEY
     )
 
     # initialized later

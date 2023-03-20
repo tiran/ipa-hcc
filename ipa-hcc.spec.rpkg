@@ -260,12 +260,8 @@ Conflicts: %{alt_name}-client-enrollment
 Obsoletes: %{alt_name}-client-enrollment < %{version}
 Requires: %{package_name}-common = %{version}
 Requires: %{ipa_name}-client >= %{ipa_version}
-%if 0%{?with_python2}
-Requires: python2-requests
-%else
-Requires: python3-requests
-%endif
-Requires: krb5-pkinit
+# ipa-client RHEL 7.9, 8.7, 9.1, and ealier, do not come with pkinit
+Requires: krb5-pkinit-openssl
 # RHEL 7 has no weak dependency "Recommends"
 Requires: rhc
 Requires: insights-client
