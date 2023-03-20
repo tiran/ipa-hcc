@@ -191,6 +191,9 @@ class Application:
                     ipa_org_id=ipa_org_id,
                 ),
             )
+        rhsm_id = hccplatform.text(rhsm_id)
+        inventory_id = hccplatform.text(inventory_id)
+        fqdn = hccplatform.text(fqdn)
         try:
             api.Command.host_add(
                 fqdn,

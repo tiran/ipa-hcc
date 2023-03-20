@@ -1,7 +1,14 @@
 #!/bin/sh
 set -ex
 
-PYTHON=/usr/bin/python3
+if [ -x /usr/libexec/platform-python ]; then
+    PYTHON=/usr/libexec/platform-python
+elif [ -x /usr/bin/python3 ]; then
+    PYTHON=/usr/bin/python3
+elif [ -x /usr/bin/python2 ]; then
+    PYTHON=/usr/bin/python2
+fi
+
 SITELIB=$($PYTHON -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
 
 ## phase 1, install files
