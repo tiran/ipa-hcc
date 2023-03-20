@@ -222,7 +222,9 @@ class HCCAPI(object):
         schema.validate_schema(resp.json(), "/schemas/domain/response")
         # update after successful registration
         try:
-            self.api.Command.config_mod(hccdomainid=domain_id)
+            self.api.Command.config_mod(
+                hccdomainid=hccplatform.text(domain_id)
+            )
         except errors.EmptyModlist:
             logger.debug("hccdomainid=%s already configured", domain_id)
         else:
@@ -270,7 +272,9 @@ class HCCAPI(object):
         hcc_update = config.get("hcc_update_server_server", None)
         pkinit_servers = set(config.get("pkinit_server_server", ()))
 
-        result = self.api.Command.host_find(in_hostgroup="ipaservers")
+        result = self.api.Command.host_find(
+            in_hostgroup=hccplatform.text("ipaservers")
+        )
 
         servers = []
         for server in result["result"]:
@@ -293,10 +297,14 @@ class HCCAPI(object):
     def _get_cacerts(self):
         """Get list of trusted CA cert info objects"""
         try:
-            result = self.api.Command.ca_is_enabled(version="2.107")
+            result = self.api.Command.ca_is_enabled(
+                version=hccplatform.text("2.107")
+            )
             ca_enabled = result["result"]
         except (errors.CommandError, errors.NetworkError):
-            result = self.api.Command.env(server=True, version="2.0")
+            result = self.api.Command.env(
+                server=True, version=hccplatform.text(version="2.0")
+            )
             ca_enabled = result["result"]["enable_ra"]
 
         certs = certstore.get_ca_certs(

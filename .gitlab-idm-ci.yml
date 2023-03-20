@@ -12,3 +12,10 @@ srv92_c79_88_92:
   needs: ["rpms", "tox_check"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92.yaml
+
+# RHEL 7.9 server with 9.2 client
+srv79_c92:
+  extends: .mr_template
+  needs: ["rpms", "tox_check"]
+  variables:
+    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel79.yaml

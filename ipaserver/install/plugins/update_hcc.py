@@ -136,7 +136,9 @@ class update_hcc(Updater):
         """Update rhsm_id of server's host record"""
         host = self.api.env.host
         try:
-            self.api.Command.host_mod(host, hccsubscriptionid=rhsm_id)
+            self.api.Command.host_mod(
+                host, hccsubscriptionid=hccplatform.text(rhsm_id)
+            )
         except errors.EmptyModlist:
             logger.debug(
                 "hccSubscriptionId of host '%s' already configured.", host

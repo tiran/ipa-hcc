@@ -38,7 +38,5 @@
         owner: ipahcc
         group: root
 
-    - name: Restart HTTPD to reload /etc/ipa/hcc.conf
-      systemd:
-        name: httpd
-        state: restarted
+    - name: Restart HTTPD if running to reload /etc/ipa/hcc.conf
+      command: systemctl try-restart httpd

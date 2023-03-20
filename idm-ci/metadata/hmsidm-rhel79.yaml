@@ -1,0 +1,55 @@
+---
+domains:
+  - name: rhel79.hmsidm.test
+    type: IPA
+    hosts:
+      - name: server79.rhel79.hmsidm.test
+        role: master
+        group: ipaserver
+        os: rhel-7.9
+      - name: client92.rhel79.hmsidm.test
+        role: client
+        group: ipaclient
+        os: rhel-9.2
+phases:
+  - name: init
+    steps:
+      - playbook: init/testrunner-dir.yaml
+      - playbook: init/git-clone.yaml
+        extra_vars:
+          url: https://gitlab.cee.redhat.com/identity-management/idmocp/ipa-hcc
+          branch: "{{ lookup('env', 'CI_MERGE_REQUEST_SOURCE_BRANCH_NAME', default='main') }}"
+  - name: provision
+    steps:
+      - playbook: provision/mrack-up.yaml
+      - playbook: provision/wait.yaml
+  - name: prep
+    steps:
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-local-rpms.yaml
+      - playbook: prep/prefer-ipv4.yaml
+      - playbook: prep/redhat-base.yaml
+      - playbook: prep/repos.yaml
+      - playbook: prep/install-ipa-packages.yaml
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
+      - playbook: prep/firewall.yaml
+      - playbook: prep/ipa-network.yaml
+  - name: test
+    steps:
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
+        extra_vars:
+          target_group: ipaserver
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
+      - playbook: prep/ipa-server-install.yaml
+      - playbook: prep/ipa-replica-install.yaml
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
+      # - playbook: prep/hmsidm-auto-enrollment.yaml
+      # trigger auto-enrollment
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
+        extra_vars:
+          target_group: ipaclient
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
+  - name: teardown
+    steps:
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
+      - playbook: teardown/mrack-destroy.yaml
