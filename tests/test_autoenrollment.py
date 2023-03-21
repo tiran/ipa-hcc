@@ -16,14 +16,13 @@ from ipahcc.server import schema
 
 AEDATA = os.path.join(conftest.TESTDATA, "autoenrollment")
 CAFILE = os.path.join(AEDATA, "ca.crt")
-INVENTORY_ID = "1efd5f0e-7589-44ac-a9af-85ba5569d5c3"
 
 with open(CAFILE) as f:
     CADATA = f.read()
 
 HOST_CONF_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-    "inventory_id": INVENTORY_ID,
+    "inventory_id": conftest.INVENTORY_ID,
 }
 
 HOST_CONF_RESPONSE = {
@@ -36,17 +35,17 @@ HOST_CONF_RESPONSE = {
         "cabundle": CADATA,
         "enrollment_servers": [conftest.SERVER_FQDN],
     },
-    "inventory_id": INVENTORY_ID,
+    "inventory_id": conftest.INVENTORY_ID,
 }
 
 REGISTER_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     "domain_name": conftest.DOMAIN,
     "domain_id": hccplatform.TEST_DOMAIN_ID,
-    "inventory_id": INVENTORY_ID,
+    "inventory_id": conftest.INVENTORY_ID,
 }
 
-REGISTER_RESPONSE = {"inventory_id": INVENTORY_ID}
+REGISTER_RESPONSE = {"inventory_id": conftest.INVENTORY_ID}
 
 
 def jsonio(body):
@@ -121,7 +120,7 @@ class TestAutoEnrollment(unittest.TestCase):
         with ae:
             self.assertEqual(ae.inventory_id, None)
             ae.wait_for_inventory_host()
-            self.assertEqual(ae.inventory_id, INVENTORY_ID)
+            self.assertEqual(ae.inventory_id, conftest.INVENTORY_ID)
 
     def test_hcc_host_conf(self):
         ae = auto_enrollment.AutoEnrollment(hostname=conftest.CLIENT_FQDN)
@@ -133,7 +132,7 @@ class TestAutoEnrollment(unittest.TestCase):
             self.assertEqual(urlopen.call_count, 1)
             req = urlopen.call_args[0][0]
             self.assertEqual(
-                req.full_url,
+                req.get_full_url(),
                 "https://console.ipa-hcc.test/api/idm/v1/host-conf/{}".format(
                     conftest.CLIENT_FQDN
                 ),
@@ -164,7 +163,7 @@ class TestAutoEnrollment(unittest.TestCase):
             self.assertEqual(urlopen.call_count, 2)
             req = urlopen.call_args[0][0]
             self.assertEqual(
-                req.full_url,
+                req.get_full_url(),
                 "https://{}/hcc/{}".format(
                     conftest.SERVER_FQDN, conftest.CLIENT_FQDN
                 ),

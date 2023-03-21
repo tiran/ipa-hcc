@@ -17,6 +17,9 @@ DOMAIN = "ipa-hcc.test"
 REALM = DOMAIN.upper()
 CLIENT_FQDN = "client.ipa-hcc.test"
 SERVER_FQDN = "server.ipa-hcc.test"
+RHSM_ID = "1ee437bc-7b65-40cc-8a02-c24c8a7f9368"
+INVENTORY_ID = "1efd5f0e-7589-44ac-a9af-85ba5569d5c3"
+ORG_ID = "16765486"
 
 # initialize first step of IPA API so server imports work
 if not api.isdone("bootstrap"):
