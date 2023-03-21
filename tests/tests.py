@@ -2,66 +2,14 @@
 # very basic tests to ensure code is at least importable.
 #
 
-import contextlib
-import importlib
-import io
-import os
-import sys
 import unittest
 
-from ipalib import api
-
-try:
-    import ipaclient.install  # noqa: F401
-except ImportError:
-    HAS_IPACLIENT_INSTALL = False
-else:
-    HAS_IPACLIENT_INSTALL = True
-
-try:
-    import ipaserver.masters  # noqa: F401
-except ImportError:
-    HAS_IPASERVER = False
-else:
-    HAS_IPASERVER = True
-
-from ipahcc import hccplatform
+import conftest
 from ipahcc.server import schema
 
 
-@contextlib.contextmanager
-def capture_output():
-    if hccplatform.PY2:
-        out = io.BytesIO()
-    else:
-        out = io.StringIO()
-    orig_stdout = sys.stdout
-    orig_stderr = sys.stderr
-    sys.stdout = out
-    sys.stderr = out
-    try:
-        yield out
-    finally:
-        sys.stdout = orig_stdout
-        sys.stderr = orig_stderr
-
-
 class IPABaseTests(unittest.TestCase):
-    register_paths = []
-
-    @classmethod
-    def setUpClass(cls):
-        # initialize first step of IPA API so server imports work
-        if not api.isdone("bootstrap"):
-            api.bootstrap(
-                domain="ipahcc.test",
-            )
-
-        # register additional paths for package imports
-        for name in cls.register_paths:
-            path = os.path.abspath(name.replace(".", os.sep))
-            mod = importlib.import_module(name)
-            mod.__path__.append(path)
+    pass
 
 
 class IPAClientTests(IPABaseTests):
@@ -69,12 +17,12 @@ class IPAClientTests(IPABaseTests):
         # noqa: F401
         from ipahcc import hccplatform  # noqa: F401
 
-    @unittest.skipUnless(HAS_IPACLIENT_INSTALL, "ipaclient.install")
+    @conftest.requires_ipaclient_install
     def test_auto_enrollment_help(self):
         from ipahcc.client import auto_enrollment
 
         try:
-            with capture_output():
+            with conftest.capture_output():
                 auto_enrollment.main(["--help"])
         except SystemExit as e:
             self.assertEqual(e.code, 0)
@@ -91,13 +39,8 @@ class WSGITests(IPABaseTests):
         assert callable(hcc_mockapi.application)
 
 
-@unittest.skipUnless(HAS_IPASERVER, "requires ipaserver")
+@conftest.requires_ipaserver
 class IPAServerTests(IPABaseTests):
-    register_paths = [
-        "ipaserver.install.plugins",
-        "ipaserver.plugins",
-    ]
-
     def test_server_plugin_imports(self):
         from ipaserver.plugins import hccconfig  # noqa: F401
         from ipaserver.plugins import hcchost  # noqa: F401
@@ -112,7 +55,7 @@ class IPAServerTests(IPABaseTests):
         from ipahcc.server.cli import IPAHCCCli
 
         try:
-            with capture_output():
+            with conftest.capture_output():
                 IPAHCCCli.main(["ipa-hc", "--help"])
         except SystemExit as e:
             self.assertEqual(e.code, 0)
@@ -120,7 +63,7 @@ class IPAServerTests(IPABaseTests):
             self.fail("SystemExit expected")
 
 
-@unittest.skipUnless(schema.jsonschema, "requires jsonschema")
+@conftest.requires_jsonschema
 class TestJSONSchema(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
