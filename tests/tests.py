@@ -56,7 +56,7 @@ class IPAServerTests(IPABaseTests):
 
         try:
             with conftest.capture_output():
-                IPAHCCCli.main(["ipa-hc", "--help"])
+                IPAHCCCli.main(["ipa-hcc", "--help"])
         except SystemExit as e:
             self.assertEqual(e.code, 0)
         else:

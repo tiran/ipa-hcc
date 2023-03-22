@@ -42,10 +42,14 @@ clean-idm-ci:
 	rm -f host-info.txt
 
 .PHONY: clean
-clean: clean-idm-ci
-	rm -rf .tox
+clean:
 	find -name '*.pyc' -delete
 	find -name __pycache__ | xargs rm -rf
+	rm -f .coverage*
+
+.PHONY: cleanall
+cleanall: clean clean-idm-ci
+	rm -rf .tox
 
 .PHONY: lint
 lint:

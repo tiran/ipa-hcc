@@ -282,14 +282,14 @@ class HCCAPI(object):
 
             server_info = {
                 "fqdn": fqdn,
-                "subscription_manager_id": _get_one(
-                    server, "hccsubscriptionid", default=None
-                ),
                 "ca_server": (fqdn in ca_servers),
                 "hcc_enrollment_server": (fqdn in hcc_enrollment),
                 "hcc_update_server": (fqdn == hcc_update),
                 "pkinit_server": (fqdn in pkinit_servers),
             }
+            rhsm_id = _get_one(server, "hccsubscriptionid", default=None)
+            if rhsm_id is not None:
+                server_info["subscription_manager_id"] = rhsm_id
             servers.append(server_info)
 
         return servers

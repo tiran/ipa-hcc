@@ -14,7 +14,7 @@ tox_check:
   parallel:
     matrix:
       - TOXENV:
-          - py,py27,py36
+          - py,py27,py36,cov
           - lint,format,bandit
           - jslint,yamllint,maketest
   script:

@@ -24,7 +24,7 @@ class TestRegistrationWSGI(unittest.TestCase):
         self.m_api.isdone.return_value = False
         self.m_api.Command.config_show.return_value = {
             "result": {
-                "hccdomainid": (hccplatform.TEST_DOMAIN_ID,),
+                "hccdomainid": (conftest.DOMAIN_ID,),
                 "hccorgid": (conftest.ORG_ID,),
             }
         }
@@ -83,8 +83,8 @@ class TestRegistrationWSGI(unittest.TestCase):
         body = {
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": conftest.DOMAIN,
-            "domain_id": hccplatform.TEST_DOMAIN_ID,
-            "inventory_id": conftest.INVENTORY_ID,
+            "domain_id": conftest.DOMAIN_ID,
+            "inventory_id": conftest.CLIENT_INVENTORY_ID,
         }
         path = "/{}".format(conftest.CLIENT_FQDN)
         status_code, status_msg, headers, response = self.call_wsgi(
@@ -98,7 +98,7 @@ class TestRegistrationWSGI(unittest.TestCase):
 
         app = wsgi.application
         self.assertEqual(app.org_id, int(conftest.ORG_ID))
-        self.assertEqual(app.domain_id, hccplatform.TEST_DOMAIN_ID)
+        self.assertEqual(app.domain_id, conftest.DOMAIN_ID)
 
         host_add = self.m_api.Command.host_add
         host_add.assert_called_once()
@@ -111,7 +111,7 @@ class TestRegistrationWSGI(unittest.TestCase):
             kwargs,
             {
                 "force": True,
-                "hccinventoryid": conftest.INVENTORY_ID,
-                "hccsubscriptionid": conftest.RHSM_ID,
+                "hccinventoryid": conftest.CLIENT_INVENTORY_ID,
+                "hccsubscriptionid": conftest.CLIENT_RHSM_ID,
             },
         )
