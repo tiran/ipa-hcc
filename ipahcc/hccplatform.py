@@ -5,12 +5,25 @@
 #
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
-import logging
+__all__ = ("is_ipa_configured", "is_ipa_client_configured")
+
+import os
 import sys
 
+from ipaplatform.paths import paths
 from ipaplatform.constants import constants
 
-logger = logging.getLogger(__name__)
+try:
+    from ipalib.facts import is_ipa_configured, is_ipa_client_configured
+except ImportError:
+    # IPA 4.6
+
+    def is_ipa_client_configured():
+        return os.path.isfile(paths.IPA_DEFAULT_CONF)
+
+    def is_ipa_configured(on_master=False):
+        index = os.path.join(paths.SYSRESTORE, "sysrestore.index")
+        return os.path.isfile(index) and is_ipa_client_configured()
 
 
 PY2 = sys.version_info.major == 2
@@ -22,6 +35,7 @@ if PY2:
 else:
     text = str
     from configparser import ConfigParser, NoOptionError
+
 
 # common constants and paths
 HCC_SERVICE = text("hcc-enrollment")

@@ -445,8 +445,8 @@ class AutoEnrollment(object):
         return self._run_ipa_client(extra_args)
 
 
-def main(*args):
-    args = parser.parse_args(*args)
+def main(args=None):
+    args = parser.parse_args(args)
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
         format="%(levelname)s: %(message)s",

@@ -245,7 +245,7 @@ class Application:
     def handle_host_conf(self, env, fqdn):
         cert = self.parse_cert(env, "SSL_CLIENT_CERT")
         org_id, rhsm_id = self.parse_subject(cert.subject)
-        logger.warn(
+        logger.warning(
             "Received host configuration request for org O=%s, CN=%s, FQDN %s",
             org_id,
             rhsm_id,

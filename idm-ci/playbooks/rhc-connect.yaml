@@ -53,11 +53,11 @@
           args:
             creates: /etc/pki/consumer/cert.pem
 
-        - name: Register host with Insights (RHEL 7)
+        # --register for RHEL 7
+        - name: Ensure insights' host-details is available
           shell: "insights-client --register"
           args:
             creates: /var/lib/insights/host-details.json
-          when: ansible_distribution_major_version == '7'
 
         - name: Get subject of RHSM cert
           shell: "openssl x509 -subject -noout -in /etc/pki/consumer/cert.pem"

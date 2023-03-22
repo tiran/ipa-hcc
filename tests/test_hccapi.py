@@ -1,7 +1,6 @@
 import io
 import json
 import os
-import unittest
 
 from requests import Response
 from ipalib import x509
@@ -21,9 +20,10 @@ CACERT = x509.load_certificate_from_file(CAFILE)
 
 
 @conftest.requires_mock
-@conftest.requires_ipaclient_install
-class TestHCCAPI(unittest.TestCase):
+@conftest.requires_ipa_install
+class TestHCCAPI(conftest.IPABaseTests):
     def setUp(self):
+        super(TestHCCAPI, self).setUp()
         self.m_api = mock.Mock()
         self.m_api.isdone.return_value = True
         self.m_api.env = mock.Mock(

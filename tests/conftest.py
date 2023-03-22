@@ -1,5 +1,6 @@
 import contextlib
 import importlib
+import logging
 import io
 import os
 import sys
@@ -32,14 +33,17 @@ if not api.isdone("bootstrap"):
         domain=DOMAIN,
         realm=REALM,
     )
+else:  # pragma: no cover
+    pass
 
 
 try:
     import ipaclient.install  # noqa: F401
+    import ipalib.install  # noqa: F401
 except ImportError:
-    HAS_IPACLIENT_INSTALL = False
+    HAS_IPA_INSTALL = False
 else:
-    HAS_IPACLIENT_INSTALL = True
+    HAS_IPA_INSTALL = True
 
 try:
     import ipaserver.masters  # noqa: F401
@@ -53,7 +57,7 @@ try:
     import gi.repository  # noqa: F401
 except ImportError:
     HAS_DBUS = False
-else:
+else:  # pragma: no cover
     HAS_DBUS = True
 
 try:
@@ -61,20 +65,66 @@ try:
 except ImportError:
     try:
         import mock
-    except ImportError:
+    except ImportError:  # pragma: no cover
         mock = None
 
-requires_ipaclient_install = unittest.skipUnless(
-    HAS_IPACLIENT_INSTALL, "ipaclient.install"
+requires_ipa_install = unittest.skipUnless(
+    HAS_IPA_INSTALL, "requires 'ipaclient.install' or 'ipalib.install'"
 )
-requires_ipaserver = unittest.skipUnless(HAS_IPASERVER, "requires ipaserver")
+requires_ipaserver = unittest.skipUnless(
+    HAS_IPASERVER, "requires 'ipaserver'"
+)
 requires_jsonschema = unittest.skipUnless(
-    schema.jsonschema, "requires jsonschema"
+    schema.jsonschema, "requires 'jsonschema'"
 )
 requires_dbus = unittest.skipUnless(
-    HAS_DBUS, "requires dbus and gi.repository"
+    HAS_DBUS, "requires 'dbus' and 'gi.repository'"
 )
-requires_mock = unittest.skipUnless(mock is not None, "requires mock")
+requires_mock = unittest.skipUnless(
+    mock is not None, "requires 'unittest.mock' or 'mock'"
+)
+
+
+class CaptureHandler(logging.Handler):
+    def __init__(self):
+        super(CaptureHandler, self).__init__()
+        self.records = []
+
+    def emit(self, record):
+        self.records.append(record)
+
+
+class IPABaseTests(unittest.TestCase):
+    def log_capture_start(self):
+        self.log_capture = CaptureHandler()
+        self.log_capture.setFormatter(
+            logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+        )
+
+        root_logger = logging.getLogger(None)
+        self._old_handlers = root_logger.handlers[:]
+        self._old_level = root_logger.level
+        root_logger.handlers = [self.log_capture]
+        root_logger.setLevel(logging.DEBUG)
+        self.addCleanup(self.log_capture_stop)
+
+    def log_capture_stop(self):
+        root_logger = logging.getLogger(None)
+        root_logger.handlers = self._old_handlers
+        root_logger.setLevel(self._old_level)
+
+    def setUp(self):
+        super(IPABaseTests, self).setUp()
+        self.log_capture_start()
+
+    def assert_cli_run(self, mainfunc, *args):
+        try:
+            with capture_output():
+                mainfunc(list(args))
+        except SystemExit as e:
+            self.assertEqual(e.code, 0)
+        else:  # pragma: no cover
+            self.fail("SystemExit expected")
 
 
 @contextlib.contextmanager
