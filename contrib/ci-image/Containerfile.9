@@ -1,7 +1,7 @@
 # quay.io/tiran/ipa-hcc-ci:9
 FROM quay.io/centos/centos:stream9
 RUN dnf --setopt=install_weak_deps=False -y --best install \
-        rpm-build createrepo dnf-utils python3-devel ipa-client python3-ipaserver python3-sssdconfig python3-requests systemd-devel selinux-policy-devel \
+        rpm-build createrepo dnf-utils python3-devel ipa-client python3-ipaserver python3-sssdconfig python3-requests python3-jsonschema python3-dbus python3-gobject-base systemd-devel selinux-policy-devel \
     && dnf clean all
 VOLUME /ipa-hcc
 WORKDIR /ipa-hcc

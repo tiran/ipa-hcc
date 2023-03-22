@@ -1,3 +1,4 @@
+---
 - hosts: ipaserver
   become: true
   become_method: sudo

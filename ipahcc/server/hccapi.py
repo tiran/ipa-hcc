@@ -1,5 +1,6 @@
 """Interface to register or update domains with Hybrid Cloud Console
 """
+import collections
 import logging
 import json
 
@@ -22,9 +23,21 @@ else:
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
 
-
 DEFAULT_TIMEOUT = 10
 _missing = object()
+
+APIResult = collections.namedtuple(
+    "APIResult",
+    [
+        "status_code",  # HTTP status code or IPA errno (>= 900)
+        "reason",  # HTTP reason or IPA exception name
+        "url",  # remote URL or None
+        "headers",  # response header dict or None
+        "body",  # response body (JSON or object)
+        "exit_code",  # exit code for CLI (0: ok)
+        "exit_message",  # human readable error message for CLI
+    ],
+)
 
 
 def _get_one(dct, key, default=_missing):
@@ -37,53 +50,36 @@ def _get_one(dct, key, default=_missing):
 
 
 class APIError(Exception):
-    def __init__(
-        self,
-        status_code,
-        reason,
-        url,
-        headers,
-        body,
-        exit_code=2,
-        exit_message=None,
-    ):
-        super(Exception, self).__init__(status_code, reason, exit_message)
-        # HTTP status code or IPA errno (>= 900)
-        self.status_code = status_code
-        # HTTP reason or IPA exception name
-        self.reason = reason
-        # remote URL or None
-        self.url = url
-        # response header dict or None
-        self.headers = headers
-        # response body (JSON or object)
-        self.body = body
-        # exit code for CLI
-        self.exit_code = exit_code
-        # human readable error message for CLI
-        self.exit_message = exit_message
+    """HCC D-Bus API error"""
 
-    def __repr__(self):
+    def __init__(self, apiresult):
+        super(Exception, self).__init__()
+        self.result = apiresult
+
+    def __str__(self):
         # remove newline in JSON
-        content = self.json.replace("\n", "")
+        # content = self.result.body.replace("\n", "")
         clsname = self.__class__.__name__
-        return "{clsname}: {content}".format(clsname=clsname, content=content)
+        return "{clsname}: {self.result}".format(clsname=clsname, self=self)
+
+    __repr__ = __str__
 
     def to_dbus(self):
         """Convert to D-Bus format"""
-        headers = self.headers or {}
-        url = self.url or ""
-        body = self.body
+        r = self.result
+        headers = r.headers or {}
+        url = r.url or ""
+        body = r.body
         if isinstance(body, dict):
             body = json.dumps(body)
         return (
-            self.status_code,
-            self.reason,
+            r.status_code,
+            r.reason,
             url,
             headers,
             body,
-            self.exit_code,
-            self.exit_message,
+            r.exit_code,
+            r.exit_message,
         )
 
     @classmethod
@@ -92,13 +88,15 @@ class APIError(Exception):
     ):
         """Construct exception for failed request response"""
         return cls(
-            response.status_code,
-            response.reason,
-            response.url,
-            response.headers,
-            response.text,
-            exit_code,
-            exit_message,
+            APIResult(
+                response.status_code,
+                response.reason,
+                response.url,
+                response.headers,
+                response.text,
+                exit_code,
+                exit_message,
+            )
         )
 
     @classmethod
@@ -116,13 +114,15 @@ class APIError(Exception):
             ),
         )
         return cls(
-            status_code,
-            reason,
-            response.url,
-            response.headers,
-            content,
-            exit_code,
-            exit_message,
+            APIResult(
+                status_code,
+                reason,
+                response.url,
+                response.headers,
+                content,
+                exit_code,
+                exit_message,
+            )
         )
 
     @classmethod
@@ -142,13 +142,15 @@ class APIError(Exception):
             details=exc_msg,
         )
         return cls(
-            status_code,
-            reason,
-            None,
-            {},
-            content,
-            exit_code,
-            exit_message,
+            APIResult(
+                status_code,
+                reason,
+                None,
+                {"content-type": "application/json"},
+                content,
+                exit_code,
+                exit_message,
+            )
         )
 
     @classmethod
@@ -161,7 +163,15 @@ class APIError(Exception):
             details=exit_message,
         )
         return cls(
-            status_code, reason, None, {}, content, exit_code, exit_message
+            APIResult(
+                status_code,
+                reason,
+                None,
+                {"content-type": "application/json"},
+                content,
+                exit_code,
+                exit_message,
+            )
         )
 
 

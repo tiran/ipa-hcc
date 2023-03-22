@@ -6,7 +6,7 @@ RUN dnf --setopt=install_weak_deps=False -y --best install \
         python3-devel selinux-policy-devel systemd-devel \
         gcc krb5-devel openldap-devel openldap-compat \
         ipa-client python3-ipaserver python3-requests python3-sssdconfig \
-        python3-jsonschema yamllint \
+        python3-jsonschema python3-dbus python3-gobject-base yamllint \
     && dnf clean all
 RUN python3.6 -m ensurepip \
     && python3.6 -m pip install --upgrade pip \

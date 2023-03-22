@@ -1,10 +1,7 @@
-#!/usr/bin/env python3
 from __future__ import absolute_import
 
 import argparse
 import logging
-import os
-import queue
 import signal
 import threading
 
@@ -21,6 +18,11 @@ from ipaplatform.paths import paths
 
 from ipahcc import hccplatform
 from ipahcc.server.hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
+
+if hccplatform.PY2:
+    from Queue import PriorityQueue
+else:
+    from queue import PriorityQueue
 
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger("ipa-hcc-dbus")
@@ -63,7 +65,7 @@ class LookupQueue:
     }
 
     def __init__(self, timeout=DEFAULT_TIMEOUT, maxsize=0):
-        self._queue = queue.PriorityQueue(maxsize=maxsize)
+        self._queue = PriorityQueue(maxsize=maxsize)
         ipalib.api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
         ipalib.api.finalize()
         self._hccapi = HCCAPI(ipalib.api, timeout=timeout)
@@ -198,12 +200,8 @@ def main(*args):
 
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     dbus.mainloop.glib.threads_init()
-    if os.geteuid() == 0:
-        bus = dbus.SystemBus()
-    else:
-        # for local testing
-        bus = dbus.SessionBus()
-        os.environ["https_proxy"] = "squid.rdu.redhat.com:3128"
+
+    bus = dbus.SystemBus()
     bus_name = dbus.service.BusName(hccplatform.HCC_DBUS_NAME, bus)
     mainloop = GLib.MainLoop()
     obj = IPAHCCDbus(

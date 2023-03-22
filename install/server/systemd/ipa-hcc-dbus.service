@@ -1,0 +1,11 @@
+[Unit]
+Description=IPA Hybrid Cloud Console D-Bus service
+After=syslog.target network.target
+
+[Service]
+Type=dbus
+BusName=com.redhat.console.ipahcc
+ExecStart=/usr/libexec/ipa-hcc/ipa-hcc-dbus
+
+[Install]
+WantedBy=multi-user.target

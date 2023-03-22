@@ -34,6 +34,10 @@ ipa-ldap-updater \
     -S /usr/share/ipa/schema.d/85-hcc.ldif \
     /usr/share/ipa/updates/85-hcc.update \
     /usr/share/ipa/updates/86-hcc-registration-service.update
+
+systemctl daemon-reload
+systemctl reload dbus
+systemctl stop ipa-hcc-dbus
 killall -9 httpd
 systemctl restart httpd.service
 
