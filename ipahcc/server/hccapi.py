@@ -276,19 +276,29 @@ class HCCAPI(object):
 
     def _get_servers(self, config):
         """Get list of IPA server info objects"""
-        # Include location information from
+        # roles and role attributes are in config and server-role plugin
         ca_servers = set(config.get("ca_server_server", ()))
         hcc_enrollment = set(config.get("hcc_enrollment_server_server", ()))
         hcc_update = config.get("hcc_update_server_server", None)
         pkinit_servers = set(config.get("pkinit_server_server", ()))
 
-        result = self.api.Command.host_find(
+        # location and some role names are in server-find plugin
+        servers = self.api.Command.server_find(all=True)
+        location_map = {}
+        for server in servers["result"]:
+            fqdn = _get_one(server, "cn")
+            loc = _get_one(server, "ipalocation_location", default=None)
+            if loc is not None:
+                location_map[fqdn] = loc.to_text()
+
+        # subscription manager id is in host plugin
+        hosts = self.api.Command.host_find(
             in_hostgroup=hccplatform.text("ipaservers")
         )
 
-        servers = []
-        for server in result["result"]:
-            fqdn = _get_one(server, "fqdn")
+        result = []
+        for host in hosts["result"]:
+            fqdn = _get_one(host, "fqdn")
 
             server_info = {
                 "fqdn": fqdn,
@@ -296,13 +306,14 @@ class HCCAPI(object):
                 "hcc_enrollment_server": (fqdn in hcc_enrollment),
                 "hcc_update_server": (fqdn == hcc_update),
                 "pkinit_server": (fqdn in pkinit_servers),
+                "subscription_manager_id": _get_one(
+                    host, "hccsubscriptionid", default=None
+                ),
+                "location": location_map.get(fqdn),
             }
-            rhsm_id = _get_one(server, "hccsubscriptionid", default=None)
-            if rhsm_id is not None:
-                server_info["subscription_manager_id"] = rhsm_id
-            servers.append(server_info)
+            result.append(server_info)
 
-        return servers
+        return result
 
     def _get_cacerts(self):
         """Get list of trusted CA cert info objects"""
@@ -339,7 +350,22 @@ class HCCAPI(object):
     def _get_realm_domains(self):
         """Get list of realm domain names"""
         result = self.api.Command.realmdomains_show()
-        return list(result["result"]["associateddomain"])
+        return sorted(result["result"]["associateddomain"])
+
+    def _get_locations(self):
+        # location_find() does not return servers
+        locations = self.api.Command.location_find()
+        result = []
+        for location in locations["result"]:
+            result.append(
+                {
+                    "name": _get_one(location, "idnsname").to_text(),
+                    "description": _get_one(
+                        location, "description", default=None
+                    ),
+                }
+            )
+        return result
 
     def _get_ipa_config(self, all):
         try:
@@ -358,6 +384,7 @@ class HCCAPI(object):
                 "servers": self._get_servers(config),
                 "cacerts": self._get_cacerts(),
                 "realm_domains": self._get_realm_domains(),
+                "locations": self._get_locations(),
             },
         }
 

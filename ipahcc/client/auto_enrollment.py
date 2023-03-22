@@ -84,6 +84,7 @@ parser.add_argument(
     default=FQDN,
     type=check_arg_hostname,
 )
+# location, domain_name, domain_id
 parser.add_argument(
     "--force",
     help="force setting of Kerberos conf",

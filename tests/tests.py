@@ -81,6 +81,7 @@ class TestJSONSchema(conftest.IPABaseTests):
                     {
                         "fqdn": "ipaserver.ipahcc.test",
                         "subscription_manager_id": "547ce70c-9eb5-4783-a619-086aa26f88e5",
+                        "location": "sigma",
                         "ca_server": True,
                         "hcc_enrollment_server": True,
                         "hcc_update_server": True,
@@ -89,6 +90,7 @@ class TestJSONSchema(conftest.IPABaseTests):
                     {
                         "fqdn": "ipareplica1.ipahcc.test",
                         "subscription_manager_id": "fdebb5ad-f8d7-4234-a1ff-2b9ef074089b",
+                        "location": "tau",
                         "ca_server": True,
                         "hcc_enrollment_server": True,
                         "hcc_update_server": False,
@@ -96,6 +98,8 @@ class TestJSONSchema(conftest.IPABaseTests):
                     },
                     {
                         "fqdn": "ipareplica2.ipahcc.test",
+                        "subscription_manager_id": None,
+                        "location": None,
                         "ca_server": False,
                         "hcc_enrollment_server": False,
                         "hcc_update_server": False,
@@ -109,6 +113,11 @@ class TestJSONSchema(conftest.IPABaseTests):
                     }
                 ],
                 "realm_domains": ["ipahcc.test"],
+                "locations": [
+                    {"name": "kappa", "description": None},
+                    {"name": "sigma", "description": None},
+                    {"name": "tau", "description": "location tau"},
+                ],
             },
         }
         schema.validate_schema(instance, "/schemas/domain/request")

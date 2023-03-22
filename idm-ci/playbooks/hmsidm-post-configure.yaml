@@ -10,3 +10,34 @@
     # TODO: hard-coded test domain_id and token
     - name: Run ipa-hcc register
       command: ipa-hcc register 772e9618-d0f8-4bf8-bfed-d2831f63c619 mockapi
+
+    - name: kinit as IPA admin
+      shell: |
+        echo Secret123 | kinit admin
+
+    - name: Add locations
+      command: "ipa location-add {{ item }}"
+      with_items:
+        - sigma
+        - tau
+      register: result
+      failed_when:
+        - result.rc != 0
+        - '"already exists" not in result.stderr'
+      when: meta_role == 'master'
+
+    - name: Add master server to location sigma
+      command: "ipa server-mod {{ meta_fqdn }} --location=sigma"
+      register: result
+      failed_when:
+        - result.rc != 0
+        - '"already exists" not in result.stderr'
+      when: meta_role == 'master'
+
+    - name: Add replicas to location tau
+      command: "ipa server-mod {{ meta_fqdn }} --location=tau"
+      register: result
+      failed_when:
+        - result.rc != 0
+        - '"already exists" not in result.stderr'
+      when: meta_role == 'replica'

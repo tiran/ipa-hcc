@@ -32,6 +32,12 @@ DEFS = {
         "maxLength": 253,
         "pattern": r"^[a-z0-9\.\-]+$",
     },
+    "location": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 253,
+        "pattern": r"^[a-z][a-z0-9\-]*$",
+    },
     "domain_name": {"$ref": "#/$defs/hostname"},
     "realm_name": {
         "type": "string",
@@ -75,8 +81,11 @@ HOST_CONF_REQUEST = {
     "required": ["inventory_id"],
     "additionalProperties": False,
     "properties": {
-        "domain_type": {"$ref": "#/$defs/domain_type"},
         "inventory_id": {"$ref": "#/$defs/uuid"},
+        # additional selectors / filters
+        "domain_type": {"$ref": "#/$defs/domain_type"},
+        "domain_name": {"$ref": "#/$defs/domain_name"},
+        "location": {"$ref": "#/$defs/location"},
     },
     "$defs": DEFS,
 }
@@ -186,6 +195,24 @@ DOMAIN_REQUEST = {
                     "type": "array",
                     "items": {"$ref": "#/$defs/domain_name"},
                 },
+                # locations is a superset of servers[*]["location"]
+                "locations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "description"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "name": {"$ref": "#/$defs/location"},
+                            "description": {
+                                "oneOf": [
+                                    {"type": "string"},
+                                    {"type": "null"},
+                                ]
+                            },
+                        },
+                    },
+                },
                 "servers": {
                     "type": "array",
                     "items": {
@@ -194,9 +221,17 @@ DOMAIN_REQUEST = {
                         "additionalProperties": False,
                         "properties": {
                             "fqdn": {"$ref": "#/$defs/hostname"},
-                            # optional
                             "subscription_manager_id": {
-                                "$ref": "#/$defs/uuid"
+                                "oneOf": [
+                                    {"$ref": "#/$defs/uuid"},
+                                    {"type": "null"},
+                                ],
+                            },
+                            "location": {
+                                "oneOf": [
+                                    {"$ref": "#/$defs/location"},
+                                    {"type": "null"},
+                                ],
                             },
                             "ca_server": {"type": "boolean"},
                             "hcc_enrollment_server": {"type": "boolean"},
