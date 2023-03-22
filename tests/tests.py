@@ -1,36 +1,22 @@
 #
 # very basic tests to ensure code is at least importable.
 #
-
-import unittest
-
 import conftest
 from ipahcc.server import schema
 
 
-class IPABaseTests(unittest.TestCase):
-    pass
-
-
-class IPAClientTests(IPABaseTests):
+class IPAClientTests(conftest.IPABaseTests):
     def test_platform_imports(self):
         # noqa: F401
         from ipahcc import hccplatform  # noqa: F401
 
-    @conftest.requires_ipaclient_install
     def test_auto_enrollment_help(self):
         from ipahcc.client import auto_enrollment
 
-        try:
-            with conftest.capture_output():
-                auto_enrollment.main(["--help"])
-        except SystemExit as e:
-            self.assertEqual(e.code, 0)
-        else:  # pragma: no cover
-            self.fail("SystemExit expected")
+        self.assert_cli_run(auto_enrollment.main, "--help")
 
 
-class WSGITests(IPABaseTests):
+class WSGITests(conftest.IPABaseTests):
     def test_wsgi_imports(self):
         from ipahcc.registration import wsgi as hcc_registration_service
         from ipahcc.mockapi import wsgi as hcc_mockapi
@@ -40,7 +26,7 @@ class WSGITests(IPABaseTests):
 
 
 @conftest.requires_ipaserver
-class IPAServerTests(IPABaseTests):
+class IPAServerTests(conftest.IPABaseTests):
     def test_server_plugin_imports(self):
         from ipaserver.plugins import hccconfig  # noqa: F401
         from ipaserver.plugins import hcchost  # noqa: F401
@@ -51,46 +37,26 @@ class IPAServerTests(IPABaseTests):
             update_hcc_enrollment_service,
         )
 
+
+@conftest.requires_ipa_install
+class IPAHCCServerTests(conftest.IPABaseTests):
     def test_ipa_hcc_cli_help(self):
         from ipahcc.server.cli import IPAHCCCli
 
-        try:
-            with conftest.capture_output():
-                IPAHCCCli.main(["ipa-hcc", "--help"])
-        except SystemExit as e:
-            self.assertEqual(e.code, 0)
-        else:  # pragma: no cover
-            self.fail("SystemExit expected")
+        # admintool's main() needs argv0
+        self.assert_cli_run(IPAHCCCli.main, "argv0", "--help")
 
     @conftest.requires_dbus
     def test_ipa_hcc_dbus_help(self):
         from ipahcc.server import dbus_service
         from ipahcc.server import dbus_cli
 
-        try:
-            with conftest.capture_output():
-                dbus_service.main(["--help"])
-        except SystemExit as e:
-            self.assertEqual(e.code, 0)
-        else:
-            self.fail("SystemExit expected")
-
-        try:
-            with conftest.capture_output():
-                dbus_cli.main(["--help"])
-        except SystemExit as e:
-            self.assertEqual(e.code, 0)
-        else:  # pragma: no cover
-            self.fail("SystemExit expected")
+        self.assert_cli_run(dbus_service.main, "--help")
+        self.assert_cli_run(dbus_cli.main, "--help")
 
 
 @conftest.requires_jsonschema
-class TestJSONSchema(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # disable error logging
-        schema.logger.setLevel(1000)
-
+class TestJSONSchema(conftest.IPABaseTests):
     def test_hcc_request(self):
         instance = {
             "domain_name": "domain.example",
@@ -146,7 +112,3 @@ class TestJSONSchema(unittest.TestCase):
             },
         }
         schema.validate_schema(instance, "/schemas/domain/request")
-
-
-if __name__ == "__main__":
-    unittest.main()

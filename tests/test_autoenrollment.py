@@ -2,7 +2,6 @@ import io
 import json
 import os
 import ssl
-import unittest
 
 from ipaplatform.paths import paths
 
@@ -56,8 +55,9 @@ def jsonio(body):
 
 
 @conftest.requires_mock
-class TestAutoEnrollment(unittest.TestCase):
+class TestAutoEnrollment(conftest.IPABaseTests):
     def setUp(self):
+        super(TestAutoEnrollment, self).setUp()
         modname = "ipahcc.client.auto_enrollment"
         p = mock.patch.multiple(
             modname,

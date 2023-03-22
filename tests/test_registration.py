@@ -1,7 +1,6 @@
 import io
 import json
 import os
-import unittest
 
 import gssapi
 
@@ -17,8 +16,9 @@ with open(CERT_PEM) as f:
 
 
 @conftest.requires_mock
-class TestRegistrationWSGI(unittest.TestCase):
+class TestRegistrationWSGI(conftest.IPABaseTests):
     def setUp(self):
+        super(TestRegistrationWSGI, self).setUp()
         p = mock.patch.object(wsgi, "api")
         self.m_api = p.start()
         self.m_api.isdone.return_value = False

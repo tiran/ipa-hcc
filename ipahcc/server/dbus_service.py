@@ -188,8 +188,8 @@ class IPAHCCDbus(dbus.service.Object):
         self.loop.quit()
 
 
-def main(*args):
-    args = parser.parse_args(*args)
+def main(args=None):
+    args = parser.parse_args(args)
 
     logging.basicConfig(
         format="%(message)s",

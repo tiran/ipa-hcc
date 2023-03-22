@@ -7,7 +7,6 @@ import ipalib
 from ipalib import errors
 from ipaplatform.paths import paths
 from ipapython import admintool
-from ipaserver.install import installutils
 
 from ipahcc import hccplatform
 from .hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
@@ -51,7 +50,11 @@ class IPAHCCCli(admintool.AdminTool):
     def validate_options(self):
         super(IPAHCCCli, self).validate_options(needs_root=True)
         # fail if server is not installed
-        installutils.check_server_configuration()
+        if not hccplatform.is_ipa_configured():
+            raise admintool.ScriptError(
+                "IPA is not configured on this system.",
+                rval=admintool.SERVER_NOT_CONFIGURED,
+            )
 
         parser = self.option_parser
         if not self.args:

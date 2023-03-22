@@ -35,8 +35,8 @@ parser_update = subparsers.add_parser("update")
 parser_update.add_argument("--update-server-only", action="store_true")
 
 
-def main(*args):
-    args = parser.parse_args(*args)
+def main(args=None):
+    args = parser.parse_args(args)
     # Python < 3.7 does not have required subparser
     if not getattr(args, "action", None):
         parser.error("action required\n")

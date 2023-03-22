@@ -259,7 +259,7 @@ class Application:
 
         cert = self.parse_cert(env, "SSL_CLIENT_CERT")
         org_id, rhsm_id = self.parse_subject(cert.subject)
-        logger.warn(
+        logger.warning(
             "Received self-enrollment request for org O=%s, CN=%s",
             org_id,
             rhsm_id,
