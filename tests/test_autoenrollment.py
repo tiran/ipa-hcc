@@ -22,36 +22,35 @@ with open(CAFILE) as f:
 
 HOST_CONF_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-    "inventory_id": conftest.INVENTORY_ID,
+    "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
 
 HOST_CONF_RESPONSE = {
     "domain_name": conftest.DOMAIN,
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-    "domain_id": hccplatform.TEST_DOMAIN_ID,
+    "domain_id": conftest.DOMAIN_ID,
     "auto_enrollment_enabled": True,
     hccplatform.HCC_DOMAIN_TYPE: {
         "realm_name": conftest.REALM,
         "cabundle": CADATA,
         "enrollment_servers": [conftest.SERVER_FQDN],
     },
-    "inventory_id": conftest.INVENTORY_ID,
+    "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
 
 REGISTER_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     "domain_name": conftest.DOMAIN,
-    "domain_id": hccplatform.TEST_DOMAIN_ID,
-    "inventory_id": conftest.INVENTORY_ID,
+    "domain_id": conftest.DOMAIN_ID,
+    "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
 
-REGISTER_RESPONSE = {"inventory_id": conftest.INVENTORY_ID}
+REGISTER_RESPONSE = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
 
 
 def jsonio(body):
-    j = json.dumps(body)
-    out = io.BytesIO()
-    out.write(j.encode("utf-8"))
+    j = json.dumps(body).encode("utf-8")
+    out = io.BytesIO(j)
     out.seek(0)
     return out
 
@@ -120,7 +119,7 @@ class TestAutoEnrollment(unittest.TestCase):
         with ae:
             self.assertEqual(ae.inventory_id, None)
             ae.wait_for_inventory_host()
-            self.assertEqual(ae.inventory_id, conftest.INVENTORY_ID)
+            self.assertEqual(ae.inventory_id, conftest.CLIENT_INVENTORY_ID)
 
     def test_hcc_host_conf(self):
         ae = auto_enrollment.AutoEnrollment(hostname=conftest.CLIENT_FQDN)
@@ -146,7 +145,7 @@ class TestAutoEnrollment(unittest.TestCase):
                 ssl.CERT_REQUIRED,
             )
             self.assertEqual(ae.domain, conftest.DOMAIN)
-            self.assertEqual(ae.domain_id, hccplatform.TEST_DOMAIN_ID)
+            self.assertEqual(ae.domain_id, conftest.DOMAIN_ID)
             self.assertEqual(ae.realm, conftest.REALM)
             self.assertEqual(ae.servers, [conftest.SERVER_FQDN])
             self.assertEqual(ae.server, conftest.SERVER_FQDN)

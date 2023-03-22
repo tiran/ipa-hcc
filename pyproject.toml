@@ -1,3 +1,30 @@
 [tool.black]
 line-length = 78
 target-version = ['py36']
+
+[tool.coverage.run]
+branch = true
+relative_files = true
+parallel = true
+source = [
+    "ipahcc/",
+    "ipaserver/",
+    "tests/",
+]
+
+[tool.coverage.paths]
+source = [
+   "ipahcc/",
+   "ipaserver/",
+   "*.tox/*/lib*/python*/site-packages/ipahcc",
+   "*.tox/*/lib*/python*/site-packages/ipaserver",
+]
+tests = [
+   "tests/",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if typing.TYPE_CHECKING",
+    "if __name__ == \"__main__\"",
+]
