@@ -253,6 +253,7 @@ class Application:
         )
 
         # just to verify it's json
+        # ignores domain_type, domain_name, location
         body = self.get_json(env)
         validate_schema(body, "/schemas/host-conf/request")
 

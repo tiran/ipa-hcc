@@ -3,6 +3,7 @@ import json
 import os
 
 from requests import Response
+from ipapython.dnsutil import DNSName
 from ipalib import x509
 
 import conftest
@@ -50,6 +51,17 @@ class TestHCCAPI(conftest.IPABaseTests):
             "summary": None,
             "value": None,
         }
+        self.m_api.Command.server_find.return_value = {
+            "count": 1,
+            "result": (
+                {
+                    "cn": (conftest.SERVER_FQDN,),
+                    "ipalocation_location": (DNSName("sigma"),),
+                },
+            ),
+            "summary": "1 host matched",
+            "truncated": False,
+        }
         self.m_api.Command.host_find.return_value = {
             "count": 1,
             "result": (
@@ -65,6 +77,16 @@ class TestHCCAPI(conftest.IPABaseTests):
             "result": {
                 "associateddomain": (conftest.DOMAIN,),
             }
+        }
+        self.m_api.Command.location_find.return_value = {
+            "result": (
+                {"idnsname": (DNSName("kappa"),)},
+                {"idnsname": (DNSName("sigma"),)},
+                {
+                    "idnsname": (DNSName("tau"),),
+                    "description": ("location tau",),
+                },
+            ),
         }
 
         # depends on ipaclient.install
