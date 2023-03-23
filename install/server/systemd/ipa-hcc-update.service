@@ -1,9 +1,7 @@
 [Unit]
 Description=IPA Hybrid Cloud Console domain update service
 Documentation=man:ipa-hcc(1)
-# Only run after IPA is running, stop with IPA
-After=ipa.service
-BindsTo=ipa.service
+After=syslog.target network.target httpd.service
 
 [Service]
 Type=oneshot

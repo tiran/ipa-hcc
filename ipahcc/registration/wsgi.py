@@ -17,8 +17,8 @@ else:
     from http.client import responses as http_responses
 
 # must be set before ipalib or ipapython is imported
-os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_SERVICE_CACHE_DIR
-os.environ["KRB5CCNAME"] = hccplatform.HCC_SERVICE_KRB5CCNAME
+os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR
+os.environ["KRB5CCNAME"] = hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME
 os.environ["GSS_USE_PROXY"] = "1"
 
 from ipalib import x509  # noqa: E402
@@ -119,12 +119,12 @@ class Application:
         return j["inventory_id"]
 
     def kinit_gssproxy(self):
-        service = hccplatform.HCC_SERVICE
+        service = hccplatform.HCC_ENROLLMENT_AGENT
         principal = "{service}/{host}@{realm}".format(
             service=service, host=api.env.host, realm=api.env.realm
         )
         name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
-        store = {"ccache": hccplatform.HCC_SERVICE_KRB5CCNAME}
+        store = {"ccache": hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME}
         return gssapi.Credentials(name=name, store=store, usage="initiate")
 
     def bootstrap_ipa(self):
@@ -330,7 +330,7 @@ def test(rhsm_id, fqdn):
     if os.geteuid() == 0:
         import pwd
 
-        user = pwd.getpwnam(hccplatform.HCC_SERVICE_USER)
+        user = pwd.getpwnam(hccplatform.HCC_ENROLLMENT_AGENT_USER)
         os.setreuid(user.pw_uid, user.pw_uid)
         os.environ["HOME"] = user.pw_dir
         os.environ["USER"] = user.pw_name

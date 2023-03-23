@@ -26,7 +26,7 @@ from ipapython.version import VERSION
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
 from ipaserver.plugins.hccserverroles import (
-    hcc_enrollment_server_attribute,
+    hcc_enrollment_agent_attribute,
     hcc_update_server_attribute,
 )
 from ipahcc import hccplatform
@@ -64,7 +64,7 @@ class update_hcc_enrollment_service(Updater):
     @property
     def service_principal(self):
         return Principal(
-            (hccplatform.HCC_SERVICE, self.api.env.host),
+            (hccplatform.HCC_ENROLLMENT_AGENT, self.api.env.host),
             self.api.env.realm,
         )
 
@@ -76,7 +76,7 @@ class update_hcc_enrollment_service(Updater):
         except errors.NotFound:
             logger.info("Adding service '%s'.", principal)
             # Remove stale keytab
-            remove_file(hccplatform.HCC_SERVICE_KEYTAB)
+            remove_file(hccplatform.HCC_ENROLLMENT_AGENT_KEYTAB)
             # force is required to skip the 'verify_host_resolvable' check
             # in service_add pre-callback. ipa-server-install runs updates
             # before it installs DNS service.
@@ -96,15 +96,15 @@ class update_hcc_enrollment_service(Updater):
 
             host = self.api.env.host
             server_role = self.api.Object.server_role
-            hcc_enrollment_servers = server_role.get_hcc_enrollment_servers()
-            if host not in hcc_enrollment_servers:
+            hcc_enrollment_agents = server_role.get_hcc_enrollment_agents()
+            if host not in hcc_enrollment_agents:
                 logger.info(
                     "Adding '%s' to server role '%s'.",
                     host,
-                    hcc_enrollment_server_attribute.name,
+                    hcc_enrollment_agent_attribute.name,
                 )
-                hcc_enrollment_servers.add(host)
-                server_role.set_hcc_enrollment_servers(hcc_enrollment_servers)
+                hcc_enrollment_agents.add(host)
+                server_role.set_hcc_enrollment_agents(hcc_enrollment_agents)
 
             hcc_update_server = server_role.get_hcc_update_server()
             if hcc_update_server is None:
@@ -126,7 +126,7 @@ class update_hcc_enrollment_service(Updater):
 
     def add_hcc_enrollment_service_keytab(self):
         """Create keytab for hcc-enrollment WSGI app"""
-        keytab = hccplatform.HCC_SERVICE_KEYTAB
+        keytab = hccplatform.HCC_ENROLLMENT_AGENT_KEYTAB
         princname = hccplatform.text(self.service_principal)
         ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
 

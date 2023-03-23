@@ -37,7 +37,8 @@ ipa-ldap-updater \
 
 systemctl daemon-reload
 systemctl reload dbus
-systemctl stop ipa-hcc-dbus
+systemctl restart ipa-hcc-dbus.service
+systemctl restart ipa-hcc-update.timer
 killall -9 httpd
 systemctl restart httpd.service
 

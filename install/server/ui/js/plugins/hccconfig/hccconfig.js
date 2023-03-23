@@ -39,10 +39,16 @@ function(phases, IPA) {
                     read_only: true
                 },
                 {
+                    $type: 'multivalued',
+                    name: 'hcc_enrollment_agent_server',
+                    read_only: true
+                },
+                {
                     $type: 'entity_select',
                     name: 'hcc_update_server_server',
                     other_entity: 'server',
                     other_field: 'cn',
+                    filter_options: {'servrole': "HCC Enrollment server"},
                     flags: ['w_if_no_aci']
                 }
             ]

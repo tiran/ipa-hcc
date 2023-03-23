@@ -36,6 +36,23 @@ default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=
 default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority,OU=Red Hat Network,.*
 default: ipaEnabledFlag: TRUE
 
+# service definitions for ipactl and "HCC Enrollment server" role
+dn: cn=IPAHCCDBus,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
+default: objectClass: ipaConfigObject
+default: objectClass: nsContainer
+default: objectClass: top
+default: cn: IPAHCCDBus
+default: ipaConfigString: enabledService
+default: ipaConfigString: startOrder 45
+
+dn: cn=IPAHCCUpdate,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
+default: objectClass: ipaConfigObject
+default: objectClass: nsContainer
+default: objectClass: top
+default: cn: IPAHCCUpdate
+default: ipaConfigString: enabledService
+default: ipaConfigString: startOrder 46
+
 # roles and privileges for HCC enrollment
 dn: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 default: objectClass: groupofnames

@@ -37,15 +37,14 @@ else:
     from configparser import ConfigParser, NoOptionError
 
 
-# common constants and paths
-HCC_SERVICE = text("hcc-enrollment")
-HCC_SERVICE_USER = "ipahcc"
-HCC_SERVICE_GROUP = getattr(constants, "IPAAPI_GROUP", "ipaapi")
-HCC_SERVICE_CACHE_DIR = "/var/cache/ipa-hcc"
-
-# IPA's gssproxy directory comes with correct SELinux rule.
-HCC_SERVICE_KEYTAB = "/var/lib/ipa/gssproxy/hcc-enrollment.keytab"
-HCC_SERVICE_KRB5CCNAME = "/var/cache/ipa-hcc/krb5ccname"
+# HCC enrollment agent (ipa-hcc-registration-service)
+# Note: IPA's gssproxy directory comes with correct SELinux rule.
+HCC_ENROLLMENT_AGENT = text("hcc-enrollment")
+HCC_ENROLLMENT_AGENT_USER = "ipahcc"
+HCC_ENROLLMENT_AGENT_GROUP = getattr(constants, "IPAAPI_GROUP", "ipaapi")
+HCC_ENROLLMENT_AGENT_CACHE_DIR = "/var/cache/ipa-hcc"
+HCC_ENROLLMENT_AGENT_KEYTAB = "/var/lib/ipa/gssproxy/hcc-enrollment.keytab"
+HCC_ENROLLMENT_AGENT_KRB5CCNAME = "/var/cache/ipa-hcc/krb5ccname"
 
 HCC_ENROLLMENT_ROLE = text("HCC Enrollment Administrators")
 

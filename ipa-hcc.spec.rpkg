@@ -79,6 +79,7 @@ BuildRequires: python2-ipaclient >= %{ipa_version}
 BuildRequires: python-dbus
 BuildRequires: python-gobject-base
 BuildRequires: python2-requests
+BuildRequires: systemd-python
 BuildRequires: python-sssdconfig
 %else
 BuildRequires: python3-devel
@@ -90,6 +91,7 @@ BuildRequires: python3-ipaclient >= %{ipa_version}
 BuildRequires: python3-dbus
 BuildRequires: python3-gobject-base
 BuildRequires: python3-requests
+BuildRequires: python3-systemd
 BuildRequires: python3-sssdconfig
 BuildRequires: python3-jsonschema
 %endif
@@ -130,12 +132,14 @@ Requires(post): %{ipa_name}-server >= %{ipa_version}
 %if 0%{?with_python2}
 Requires: python-dbus
 Requires: python-gobject-base
+Requires: systemd-python
 # not available in RHEL 7
 # Requires: python2-jsonschema
 %else
 Requires: python3-dbus
 Requires: python3-gobject-base
 Requires: python3-jsonschema
+Requires: python3-systemd
 %endif
 
 %{?systemd_requires}
@@ -157,11 +161,11 @@ if [ $? -eq 0 ]; then
 fi
 
 %post server-plugin
+# ipa-hcc-dbus.service and ipa-hcc-update.timer are started by ipactl
 %systemd_post ipa-hcc-dbus.service
 %systemd_post ipa-hcc.update.service
 %systemd_post ipa-hcc.update.timer
 /bin/systemctl daemon-reload
-/bin/systemctl enable ipa-hcc-update.timer
 
 %preun server-plugin
 %systemd_preun ipa-hcc-dbus.service
