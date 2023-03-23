@@ -15,8 +15,8 @@ tox_check:
     matrix:
       - TOXENV:
           - py,py27,py36,cov
-          - lint,format,bandit
-          - jslint,yamllint,maketest
+          - lint,format,bandit,pylint2
+          - jslint,yamllint,pylint3,maketest
   script:
     - tox -e $TOXENV
   only:

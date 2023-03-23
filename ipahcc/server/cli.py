@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class IPAHCCCli(admintool.AdminTool):
+    command = None
     command_name = "ipa-hcc"
     usage = "\n".join(
         [
@@ -28,8 +29,8 @@ class IPAHCCCli(admintool.AdminTool):
     description = "Register or update IPA domain in Hybrid Cloud Console"
 
     @classmethod
-    def add_options(cls, parser):
-        super(IPAHCCCli, cls).add_options(parser)
+    def add_options(cls, parser, debug_option=False):
+        super(IPAHCCCli, cls).add_options(parser, debug_option)
 
         parser.add_option(
             "--timeout",
@@ -47,7 +48,7 @@ class IPAHCCCli(admintool.AdminTool):
         )
         parser.add_option_group(update_group)
 
-    def validate_options(self):
+    def validate_options(self, needs_root=True):
         super(IPAHCCCli, self).validate_options(needs_root=True)
         # fail if server is not installed
         if not hccplatform.is_ipa_configured():

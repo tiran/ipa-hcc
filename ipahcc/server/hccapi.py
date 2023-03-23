@@ -9,16 +9,18 @@ import requests
 import requests.exceptions
 
 from ipalib import errors
-from ipalib.install import certstore
+from ipalib.install import certstore  # pylint: disable=import-error
 from ipapython.version import VENDOR_VERSION
 
 from ipahcc import hccplatform
 from . import schema
 
+# pylint: disable=import-error
 if hccplatform.PY2:
     from httplib import responses as http_responses
 else:
     from http.client import responses as http_responses
+# pylint: enable=import-error
 
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ class APIError(Exception):
     """HCC D-Bus API error"""
 
     def __init__(self, apiresult):
-        super(Exception, self).__init__()
+        super(APIError, self).__init__()
         self.result = apiresult
 
     def __str__(self):
@@ -106,13 +108,13 @@ class APIError(Exception):
         """RHSM_ID not found (404)"""
         status_code = 404
         reason = http_responses[status_code]
-        content = dict(
-            status=status_code,
-            title=reason,
-            details="Host with owner id '{rhsm_id}' not found in inventory.".format(
+        content = {
+            "status": status_code,
+            "title": reason,
+            "details": "Host with owner id '{rhsm_id}' not found in inventory.".format(
                 rhsm_id=rhsm_id
             ),
-        )
+        }
         return cls(
             APIResult(
                 status_code,
@@ -136,11 +138,11 @@ class APIError(Exception):
         reason = "{exc_name}: {exc_msg}".format(
             exc_name=exc_name, exc_msg=exc_msg
         )
-        content = dict(
-            status_code=status_code,
-            title=exc_name,
-            details=exc_msg,
-        )
+        content = {
+            "status_code": status_code,
+            "title": exc_name,
+            "details": exc_msg,
+        }
         return cls(
             APIResult(
                 status_code,
@@ -157,11 +159,11 @@ class APIError(Exception):
     def from_other(cls, status_code, exit_code, exit_message):
         """From generic error"""
         reason = http_responses[status_code]
-        content = dict(
-            status_code=status_code,
-            title=reason,
-            details=exit_message,
-        )
+        content = {
+            "status_code": status_code,
+            "title": reason,
+            "details": exit_message,
+        }
         return cls(
             APIResult(
                 status_code,
@@ -198,7 +200,7 @@ class HCCAPI(object):
 
     def check_host(self, domain_id, inventory_id, rhsm_id, fqdn):
         if not domain_id:
-            config = self._get_ipa_config(all=False)
+            config = self._get_ipa_config(all_fields=False)
             domain_id = self._get_domain_id(config)
         info = {
             "domain_name": self.api.env.domain,
@@ -217,7 +219,7 @@ class HCCAPI(object):
         return info, resp
 
     def register_domain(self, domain_id, token):
-        config = self._get_ipa_config(all=True)
+        config = self._get_ipa_config(all_fields=True)
         info = self._get_ipa_info(config)
         schema.validate_schema(info, "/schemas/domain/request")
         extra_headers = {
@@ -242,7 +244,7 @@ class HCCAPI(object):
         return info, resp
 
     def update_domain(self, update_server_only=False):
-        config = self._get_ipa_config(all=True)
+        config = self._get_ipa_config(all_fields=True)
         # hcc_update_server_server is a single attribute
         update_server = config.get("hcc_update_server_server")
         if update_server_only and update_server != self.api.env.host:
@@ -367,9 +369,9 @@ class HCCAPI(object):
             )
         return result
 
-    def _get_ipa_config(self, all):
+    def _get_ipa_config(self, all_fields=False):
         try:
-            return self.api.Command.config_show(all=all)["result"]
+            return self.api.Command.config_show(all=all_fields)["result"]
         except Exception as e:
             msg = "Unable to get global configuration from IPA"
             logger.exception(msg)
@@ -406,7 +408,7 @@ class HCCAPI(object):
         logger.debug("body: %s", body)
         if self.dry_run:
             logger.warning("Skip %s request %s, body:\n%s", method, url, body)
-            return
+            return None
         try:
             resp = self._session.request(
                 method,

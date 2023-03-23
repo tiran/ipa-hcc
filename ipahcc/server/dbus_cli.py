@@ -59,7 +59,7 @@ def main(args=None):
         print("D-Bus error: {e}".format(e=e), file=sys.stderr)
         sys.exit(255)
     except APIError as e:
-        logger.error("API error: {e}".format(e=e))
+        logger.error("API error: %s", e)
         print(e.result.exit_message, file=sys.stderr)
         sys.exit(e.result.exit_code)
     else:

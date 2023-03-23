@@ -10,6 +10,7 @@ Installation with older clients that lack PKINIT:
 """
 
 import argparse
+import io
 import json
 import logging
 import os
@@ -26,6 +27,7 @@ from ipapython.ipautil import run
 from ipapython.version import VENDOR_VERSION
 
 try:
+    # pylint: disable=unused-import,ungrouped-imports
     from ipalib.install.kinit import kinit_pkinit  # noqa: F401
 except ImportError:
     HAS_KINIT_PKINIT = False
@@ -48,10 +50,12 @@ del hccplatform
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=import-error
 if PY2:
     from urllib2 import HTTPError, Request, urlopen
 else:
     from urllib.request import HTTPError, Request, urlopen
+# pylint: enable=import-error
 
 
 def check_arg_hostname(arg):
@@ -281,9 +285,9 @@ class AutoEnrollment(object):
         once the host is registered.
         """
         sleep_dur = 10
-        for i in range(5):
+        for _ in range(5):
             try:
-                with open(INSIGHTS_HOST_DETAILS) as f:
+                with io.open(INSIGHTS_HOST_DETAILS, encoding="utf-8") as f:
                     j = json.load(f)
             except (OSError, IOError, ValueError):
                 logger.exception(
@@ -302,6 +306,7 @@ class AutoEnrollment(object):
                     self.inventory_id,
                 )
                 return result
+        raise ValueError("Failed to read {}".format(INSIGHTS_HOST_DETAILS))
 
     def hcc_host_conf(self):
         body = {
@@ -322,7 +327,7 @@ class AutoEnrollment(object):
             )
             raise SystemExit(2)
 
-        with open(self.ipa_cacert, "w") as f:
+        with io.open(self.ipa_cacert, "w", encoding="utf-8") as f:
             f.write(j[HCC_DOMAIN_TYPE]["cabundle"])
         # IPA CA signs KDC cert
         self.pkinit_anchors.append(
@@ -376,8 +381,10 @@ class AutoEnrollment(object):
             extra_kdcs="\n    ".join(extra_kdcs).strip(),
             hostname=self.hostname,
         )
+        if PY2:
+            conf = conf.decode("utf-8")
         logger.debug("Creating %s with content:\n%s", self.krb_name, conf)
-        with open(self.krb_name, "w") as f:
+        with io.open(self.krb_name, "w", encoding="utf-8") as f:
             f.write(conf)
 
     def pkinit(self, host_principal):

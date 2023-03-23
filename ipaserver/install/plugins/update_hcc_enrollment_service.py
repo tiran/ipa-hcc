@@ -11,21 +11,25 @@ import logging
 from ipalib import errors
 from ipalib import Registry
 from ipalib import Updater
-from ipalib.install.kinit import kinit_keytab
+from ipalib.install.kinit import kinit_keytab  # pylint: disable=import-error
+
+from ipapython.certdb import NSSDatabase, parse_trust_flags
+from ipapython.kerberos import Principal
+from ipapython import ipautil
+from ipapython.version import VERSION
+
+from ipaplatform.paths import paths
+from ipaplatform.services import knownservices
 
 try:
+    # pylint: disable=ungrouped-imports
     from ipapython.ipaldap import realm_to_ldapi_uri
     from ipapython.ipautil import remove_file
 except ImportError:
     # IPA 4.6
     from ipaserver.install.installutils import realm_to_ldapi_uri, remove_file
-from ipapython.certdb import NSSDatabase, parse_trust_flags
-from ipapython.kerberos import Principal
-from ipapython import ipautil
-from ipapython.version import VERSION
-from ipaplatform.paths import paths
-from ipaplatform.services import knownservices
-from ipaserver.plugins.hccserverroles import (
+
+from ipaserver.plugins.hccserverroles import (  # pylint:disable=import-error
     hcc_enrollment_agent_attribute,
     hcc_update_server_attribute,
 )
@@ -133,7 +137,7 @@ class update_hcc_enrollment_service(Updater):
         if os.path.isfile(keytab):
             try:
                 kinit_keytab(princname, keytab, "MEMORY:")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 # keytab from previous installation?
                 logger.debug("keytab %s is outdated: %s", keytab, e)
                 remove_file(keytab)
@@ -190,6 +194,7 @@ class update_hcc_enrollment_service(Updater):
         if modified and knownservices.httpd.is_running():
             logger.debug("Restarting httpd")
             knownservices.httpd.restart()
+        return modified
 
     def execute(self, **options):
         self.add_hcc_enrollment_service()

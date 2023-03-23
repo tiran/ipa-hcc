@@ -8,11 +8,15 @@
 from ipalib import _
 from ipalib import errors
 from ipalib.parameters import Int, Str
+
+# pylint: disable=import-error
 from ipaserver.plugins.config import config
 from ipaserver.plugins.config import config_show
 from ipaserver.plugins.config import config_mod
 from ipaserver.plugins.internal import i18n_messages
 from ipaserver.plugins.hccserverroles import hcc_enrollment_server_role
+
+# pylint: enable=import-error
 
 hcc_config_class = "hccconfig"
 
@@ -75,6 +79,9 @@ config.managed_permissions.update(
         },
     },
 )
+
+
+# pylint: disable=unused-argument
 
 
 def config_show_hcc_postcb(self, ldap, dn, entry_attrs, *keys, **options):

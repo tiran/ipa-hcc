@@ -1,13 +1,16 @@
 #
 # very basic tests to ensure code is at least importable.
 #
+
 import conftest
 from ipahcc.server import schema
+
+# pylint: disable=import-outside-toplevel
 
 
 class IPAClientTests(conftest.IPABaseTests):
     def test_platform_imports(self):
-        # noqa: F401
+        # pylint: disable=unused-import,unused-variable
         from ipahcc import hccplatform  # noqa: F401
 
     def test_auto_enrollment_help(self):
@@ -28,12 +31,14 @@ class WSGITests(conftest.IPABaseTests):
 @conftest.requires_ipaserver
 class IPAServerTests(conftest.IPABaseTests):
     def test_server_plugin_imports(self):
+        # pylint: disable=unused-import,unused-variable,import-error
         from ipaserver.plugins import hccconfig  # noqa: F401
         from ipaserver.plugins import hcchost  # noqa: F401
         from ipaserver.plugins import hccserverroles  # noqa: F401
         from ipaserver.install.plugins import update_hcc  # noqa: F401
 
     def test_registration_service_imports(self):
+        # pylint: disable=unused-import,unused-variable,import-error
         from ipaserver.install.plugins import (  # noqa: F401
             update_hcc_enrollment_service,
         )

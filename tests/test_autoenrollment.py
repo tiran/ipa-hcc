@@ -16,7 +16,7 @@ from ipahcc.server import schema
 AEDATA = os.path.join(conftest.TESTDATA, "autoenrollment")
 CAFILE = os.path.join(AEDATA, "ca.crt")
 
-with open(CAFILE) as f:
+with io.open(CAFILE, encoding="utf-8") as f:
     CADATA = f.read()
 
 HOST_CONF_REQUEST = {
