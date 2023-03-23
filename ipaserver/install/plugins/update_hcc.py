@@ -7,7 +7,6 @@
 """
 import logging
 
-from augeas import Augeas
 from cryptography.x509.oid import NameOID
 
 from ipalib import errors
@@ -16,6 +15,8 @@ from ipalib import Updater
 from ipalib import x509
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
+
+from augeas import Augeas  # pylint: disable=import-error
 
 from ipahcc import hccplatform
 
@@ -156,7 +157,7 @@ class update_hcc(Updater):
             org_id, rhsm_id = self.parse_rhsm_cert()
         except (OSError, IOError):  # Python 2
             logger.exception("Unable to read %s", hccplatform.RHSM_CERT)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             logger.exception("Failed to parse %s", hccplatform.RHSM_CERT)
         else:
             self.configure_global_hcc_orgid(org_id)

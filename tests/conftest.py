@@ -38,6 +38,7 @@ else:  # pragma: no cover
 
 
 try:
+    # pylint: disable=unused-import,ungrouped-imports
     import ipaclient.install  # noqa: F401
     import ipalib.install  # noqa: F401
 except ImportError:
@@ -46,6 +47,7 @@ else:
     HAS_IPA_INSTALL = True
 
 try:
+    # pylint: disable=unused-import
     import ipaserver.masters  # noqa: F401
 except ImportError:
     HAS_IPASERVER = False
@@ -53,6 +55,7 @@ else:
     HAS_IPASERVER = True
 
 try:
+    # pylint: disable=unused-import
     import dbus.mainloop.glib  # noqa: F401
     import gi.repository  # noqa: F401
 except ImportError:
@@ -61,6 +64,7 @@ else:  # pragma: no cover
     HAS_DBUS = True
 
 try:
+    # pylint: disable=unused-import
     from unittest import mock
 except ImportError:
     try:

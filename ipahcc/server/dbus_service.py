@@ -25,9 +25,10 @@ except ImportError:
     sd = None
 
 if hccplatform.PY2:
+    # pylint: disable=import-error
     from Queue import PriorityQueue
 else:
-    from queue import PriorityQueue
+    from queue import PriorityQueue  # pylint: disable=import-error
 
 hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger("ipa-hcc-dbus")
@@ -61,7 +62,7 @@ parser.add_argument(
 DBUS_RETURN = "qssa{ss}sqs"
 
 
-class LookupQueue:
+class LookupQueue(object):
     priorities = {
         "stop": -1,
         "register_domain": 30,
@@ -114,7 +115,7 @@ class LookupQueue:
                 # err_cb can only return exception name + string, use ok_cb()
                 # to return structured information.
                 ok_cb(*e.to_dbus())
-            except BaseException as e:
+            except BaseException as e:  # pylint: disable=broad-except
                 logger.exception("Unexpected error: %s %r", method, args)
                 err_cb(e)
 
@@ -187,7 +188,7 @@ class IPAHCCDbus(dbus.service.Object):
     def stop(self):
         self.signal_handler(signal.SIGTERM, None)
 
-    def signal_handler(self, sig, stack):
+    def signal_handler(self, sig, stack):  # pylint: disable=unused-argument
         self._lq.stop()
         self._lq_thread.join()
         self.loop.quit()

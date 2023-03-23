@@ -11,6 +11,7 @@ from conftest import mock
 
 from ipahcc import hccplatform
 
+# pylint: disable=import-error
 if hccplatform.PY2:
     from httplib import responses as http_responses
 else:
@@ -90,6 +91,7 @@ class TestHCCAPI(conftest.IPABaseTests):
         }
 
         # depends on ipaclient.install
+        # pylint: disable=import-outside-toplevel
         from ipahcc.server import hccapi
 
         p = mock.patch.object(hccapi.certstore, "get_ca_certs")
@@ -101,6 +103,7 @@ class TestHCCAPI(conftest.IPABaseTests):
 
         self.m_session = mock.Mock()
         self.hccapi = hccapi.HCCAPI(self.m_api)
+        # pylint: disable=protected-access
         self.hccapi._session = self.m_session
 
     def mkresponse(self, status_code, body):
@@ -125,6 +128,8 @@ class TestHCCAPI(conftest.IPABaseTests):
             conftest.CLIENT_RHSM_ID,
             conftest.CLIENT_FQDN,
         )
+        self.assertIsInstance(info, dict)
+        self.assertIsInstance(resp, Response)
 
     def test_register_domain(self):
         body = {"status": "ok"}
@@ -132,8 +137,12 @@ class TestHCCAPI(conftest.IPABaseTests):
         info, resp = self.hccapi.register_domain(
             conftest.DOMAIN_ID, "mockapi"
         )
+        self.assertIsInstance(info, dict)
+        self.assertIsInstance(resp, Response)
 
     def test_update_domain(self):
         body = {"status": "ok"}
         self.m_session.request.return_value = self.mkresponse(200, body)
         info, resp = self.hccapi.update_domain()
+        self.assertIsInstance(info, dict)
+        self.assertIsInstance(resp, Response)

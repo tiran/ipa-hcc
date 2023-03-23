@@ -11,7 +11,7 @@ from ipahcc import hccplatform
 from ipahcc.registration import wsgi
 
 CERT_PEM = os.path.join(conftest.TESTDATA, "autoenrollment", "cert.pem")
-with open(CERT_PEM) as f:
+with io.open(CERT_PEM, encoding="utf-8") as f:
     CERT_DATA = f.read()
 
 

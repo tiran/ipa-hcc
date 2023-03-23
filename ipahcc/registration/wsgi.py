@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import json
 import logging
 import os
@@ -11,18 +13,20 @@ import requests
 from ipahcc import hccplatform
 from ipahcc.server import schema
 
+# pylint: disable=import-error
 if hccplatform.PY2:
     from httplib import responses as http_responses
 else:
     from http.client import responses as http_responses
+# pylint: enable=import-error
 
 # must be set before ipalib or ipapython is imported
 os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR
 os.environ["KRB5CCNAME"] = hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME
 os.environ["GSS_USE_PROXY"] = "1"
 
-from ipalib import x509  # noqa: E402
-from ipalib import api, errors  # noqa: E402
+# pylint: disable=wrong-import-position,wrong-import-order
+from ipalib import api, errors, x509  # noqa: E402
 from ipapython.version import VENDOR_VERSION  # noqa: E402
 
 hccconfig = hccplatform.HCCConfig()
@@ -47,6 +51,7 @@ class HTTPException(Exception):
 
     @classmethod
     def from_exception(cls, e, code, title):
+        assert isinstance(e, Exception)
         body = {
             "status": code,
             "title": title,
@@ -67,7 +72,7 @@ class HTTPException(Exception):
         return "{} {}".format(self.code, http_responses[self.code])
 
 
-class Application:
+class Application(object):
     def __init__(self):
         # cached org_id from IPA config_show
         self._org_id = None
@@ -294,7 +299,7 @@ class Application:
                 logger.info("%s: %s", str(e), e.message)
             start_response(str(e), e.headers)
             return [e.message]
-        except Exception as e:
+        except BaseException as e:  # pylint: disable=broad-except
             logger.exception("Request failed")
             e = HTTPException.from_exception(
                 e, 500, "invalid server error: {e}".format(e=e)
@@ -306,29 +311,20 @@ class Application:
 application = Application()
 
 
-def test(rhsm_id, fqdn):
+def test(inventory_id, rhsm_id, fqdn):
     logging.basicConfig(
         level=logging.DEBUG,
         format="[%(asctime)s %(name)s] <%(levelname)s>: %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%SZ",
         force=True,
     )
-    if False:
-        # extra debug output
-        from http.client import HTTPConnection
-
-        requests_log = logging.getLogger("urllib3")
-        requests_log.setLevel(logging.DEBUG)
-        requests_log.propagate = True
-        HTTPConnection.debuglevel = 1
-
     # Internal testing VM has issues with IPv6 connections:
     # import urllib3.util.connection
     # urllib3.util.connection.HAS_IPV6 = False
 
     # switch effective UID for gssproxy
     if os.geteuid() == 0:
-        import pwd
+        import pwd  # pylint: disable=import-outside-toplevel
 
         user = pwd.getpwnam(hccplatform.HCC_ENROLLMENT_AGENT_USER)
         os.setreuid(user.pw_uid, user.pw_uid)
@@ -336,10 +332,10 @@ def test(rhsm_id, fqdn):
         os.environ["USER"] = user.pw_name
 
     application.connect_ipa()
-    print(application.check_host(rhsm_id, fqdn))
+    print(application.check_host(inventory_id, rhsm_id, fqdn))
     print(application.get_ipa_org_id())
     application.disconnect_ipa()
 
 
-if __name__ == "__main__" and len(sys.argv) == 2:
-    test(sys.argv[1])
+if __name__ == "__main__" and len(sys.argv) == 4:
+    test(sys.argv[1], sys.argv[2], sys.argv[4])

@@ -23,12 +23,15 @@ except ImportError:
 
     def is_ipa_configured(on_master=False):
         index = os.path.join(paths.SYSRESTORE, "sysrestore.index")
-        return os.path.isfile(index) and is_ipa_client_configured()
+        return os.path.isfile(index) and (
+            on_master or is_ipa_client_configured()
+        )
 
 
 PY2 = sys.version_info.major == 2
 
 if PY2:
+    # pylint: disable=undefined-variable,import-error
     text = unicode  # noqa: F821
     from ConfigParser import SafeConfigParser as ConfigParser  # noqa: F821
     from ConfigParser import NoOptionError  # noqa: F821
@@ -72,11 +75,10 @@ HCC_CONFIG = "/etc/ipa/hcc.conf"
 
 HCC_DOMAIN_TYPE = "rhel-idm"
 
-# XXX for internal testing
 TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
 
 
-class HCCConfig:
+class HCCConfig(object):
     _defaults = {
         "environment": "prod",
         "refresh_token": "",

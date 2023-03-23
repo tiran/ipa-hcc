@@ -11,12 +11,14 @@ testing, though.
 """
 
 import logging
+import io
 import json
 import re
 
 from cryptography.x509.oid import NameOID
 import requests
 
+from ipalib import api
 from ipalib import x509
 from ipaplatform.paths import paths
 from ipahcc import hccplatform
@@ -27,8 +29,6 @@ if hccplatform.PY2:
     from time import time as monotonic_time
 else:
     from time import monotonic as monotonic_time
-
-from ipalib import api  # noqa: E402
 
 hccconfig = hccplatform.HCCConfig()
 
@@ -49,7 +49,7 @@ def validate_schema(instance, schema_id):
         )
 
 
-class Application:
+class Application(object):
     def __init__(self):
         # inventory bearer token + validity timestamp
         self.access_token = None
@@ -126,7 +126,7 @@ class Application:
             return self.access_token
 
         try:
-            with open(refresh_token_file, "r") as f:
+            with io.open(refresh_token_file, "r", encoding="utf-8") as f:
                 refresh_token = f.read().strip()
         except IOError as e:
             logger.error(
@@ -213,7 +213,7 @@ class Application:
             api.bootstrap(in_server=False)
 
     def get_ca_crt(self):
-        with open(paths.IPA_CA_CRT, "r") as f:
+        with io.open(paths.IPA_CA_CRT, "r", encoding="utf-8") as f:
             ipa_ca_pem = f.read()
         return ipa_ca_pem
 
@@ -239,7 +239,7 @@ class Application:
             raise HTTPException(400, "JSON object expected")
         return result
 
-    def handle_root(self, env):
+    def handle_root(self, env):  # pylint: disable=unused-argument
         return {}
 
     def handle_host_conf(self, env, fqdn):
@@ -368,12 +368,14 @@ class Application:
             raise HTTPException.from_error(400, "unsupported domain name")
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException.from_error(400, "unsupported domain type")
+        if domain_id != hccplatform.TEST_DOMAIN_ID:
+            raise HTTPException.from_error(400, "unsupported domain id")
 
         response = {"status": "ok"}
         validate_schema(response, "/schemas/domain/response")
         return response
 
-    def handle(self, env, start_response):
+    def handle(self, env):
         self.bootstrap_ipa()
         pathinfo = env["PATH_INFO"]
         for method, r, func in self.routes:
@@ -397,13 +399,13 @@ class Application:
 
     def __call__(self, env, start_response):
         try:
-            return self.handle(env, start_response)
+            return self.handle(env)
         except HTTPException as e:
             if e.code >= 400:
                 logger.info("%s: %s", str(e), e.message)
             start_response(str(e), e.headers)
             return [e.message]
-        except Exception as e:
+        except BaseException as e:  # pylint: disable=broad-except
             logger.exception("Request failed")
             e = HTTPException.from_exception(
                 e, 500, "invalid server error: {e}".format(e=e)

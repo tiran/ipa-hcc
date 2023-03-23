@@ -12,10 +12,14 @@ from ipalib import errors
 from ipaplatform.base import services as base_services
 from ipaplatform.redhat import services as rh_services
 from ipaplatform.fedora import services as fed_services
+
+# pylint: disable=import-error
 from ipaserver import masters
 from ipaserver import servroles
 from ipaserver.plugins import serverroles
 from ipaserver.plugins.serverrole import server_role
+
+# pylint: enable=import-error
 
 from ipahcc.hccplatform import text
 
@@ -55,9 +59,11 @@ masters.SERVICE_LIST.update(ipa_hcc_service_entries)
 # patch ipaplatform.services
 base_services.wellknownservices.extend(ipa_hcc_systemd_names)
 rh_services.redhat_system_units.update(ipa_hcc_units)
-rh_services.knownservices._KnownServices__d.update(ipa_hcc_knownservices)
 fed_services.fedora_system_units.update(ipa_hcc_units)
+# pylint: disable=protected-access
+rh_services.knownservices._KnownServices__d.update(ipa_hcc_knownservices)
 fed_services.knownservices._KnownServices__d.update(ipa_hcc_knownservices)
+# pylint: enable=protected-access
 
 hcc_enrollment_server_role = servroles.ServiceBasedRole(
     text("hcc_enrollment_server_server"),

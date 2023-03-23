@@ -1,0 +1,50 @@
+[MASTER]
+persistent=yes
+jobs=0
+extension-pkg-whitelist=
+    _ldap,
+    cryptography,
+    gssapi,
+    netifaces
+
+[CLASSES]
+valid-metaclass-classmethod-first-arg=cls
+
+[MESSAGES CONTROL]
+
+enable=
+    all,
+
+disable=
+    # all informational warnings
+    I,
+    # unknown pylint option
+    bad-option-value,
+    # TODOs
+    missing-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    missing-module-docstring,
+    no-name-in-module,
+    invalid-name,
+    no-member,
+    fixme,
+    # Python 2 compat
+    consider-using-f-string,
+    useless-object-inheritance,
+    raise-missing-from,
+    super-with-arguments,
+    # complexity
+    too-many-instance-attributes,
+    too-many-arguments,
+    # style choices
+    bad-continuation,
+    no-else-return,
+    no-else-raise,
+    no-self-use,
+    duplicate-code,
+
+
+[REPORTS]
+output-format=colorized
+reports=no

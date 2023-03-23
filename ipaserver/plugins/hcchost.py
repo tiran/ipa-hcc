@@ -7,12 +7,16 @@
 """
 from ipalib import _
 from ipalib import errors
-from ipapython.dn import DN
 from ipalib.parameters import Int, Str
+from ipapython.dn import DN
+
+# pylint: disable=import-error
 from ipaserver.plugins.host import host
 from ipaserver.plugins.host import host_add
 from ipaserver.plugins.host import host_mod
 from ipaserver.plugins.internal import i18n_messages
+
+# pylint: enable=import-error
 
 UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 UUID_ERRMSG = "must be an UUID"
@@ -89,6 +93,7 @@ host.managed_permissions.update(
 )
 
 
+# pylint: disable=unused-argument
 def get_config_orgid(ldap):
     config = ldap.get_ipa_config()
     cfg_orgids = config.get("hccorgid")
