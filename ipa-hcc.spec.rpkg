@@ -225,7 +225,7 @@ python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 i
 if [ $? -eq 0 ]; then
     # update/create HCC enrollment service
     /usr/sbin/ipa-ldap-updater --quiet \
-        %{_datadir}/ipa/updates/86-hcc-enrollment-service.update
+        %{_datadir}/ipa/updates/86-hcc-registration-service.update
 
     # pick up new gssproxy and HTTPD config (restart if running)
     /bin/systemctl try-restart gssproxy.service httpd.service
