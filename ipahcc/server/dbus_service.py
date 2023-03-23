@@ -19,6 +19,11 @@ from ipaplatform.paths import paths
 from ipahcc import hccplatform
 from ipahcc.server.hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
 
+try:
+    from systemd import daemon as sd
+except ImportError:
+    sd = None
+
 if hccplatform.PY2:
     from Queue import PriorityQueue
 else:
@@ -132,7 +137,7 @@ class IPAHCCDbus(dbus.service.Object):
     def __init__(
         self, conn, object_path, bus_name, loop, timeout=DEFAULT_TIMEOUT
     ):
-        super().__init__(conn, object_path, bus_name)
+        super(IPAHCCDbus, self).__init__(conn, object_path, bus_name)
         self.loop = loop
         self._lq = LookupQueue(timeout)
         self._lq_thread = threading.Thread(target=self._lq.run)
@@ -213,6 +218,10 @@ def main(args=None):
     )
     signal.signal(signal.SIGINT, obj.signal_handler)
     signal.signal(signal.SIGTERM, obj.signal_handler)
+    # notify systemd service
+    if sd is not None and sd.booted():
+        sd.notify("READY=1")
+
     mainloop.run()
 
 

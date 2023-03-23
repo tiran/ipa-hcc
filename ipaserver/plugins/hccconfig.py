@@ -9,8 +9,10 @@ from ipalib import _
 from ipalib import errors
 from ipalib.parameters import Int, Str
 from ipaserver.plugins.config import config
+from ipaserver.plugins.config import config_show
 from ipaserver.plugins.config import config_mod
 from ipaserver.plugins.internal import i18n_messages
+from ipaserver.plugins.hccserverroles import hcc_enrollment_server_role
 
 hcc_config_class = "hccconfig"
 
@@ -40,6 +42,12 @@ takes_params = (
     Str(
         "hcc_enrollment_server_server*",
         label=_("IPA servers capable of HCC auto-enrollment"),
+        doc=_("IPA server which have HCC enrollment plugins"),
+        flags={"virtual_attribute", "no_create"},
+    ),
+    Str(
+        "hcc_enrollment_agent_server*",
+        label=_("IPA servers with HCC enrollment agent"),
         doc=_("IPA server which can process HCC auto-enrollment requests"),
         flags={"virtual_attribute", "no_create"},
     ),
@@ -69,6 +77,16 @@ config.managed_permissions.update(
 )
 
 
+def config_show_hcc_postcb(self, ldap, dn, entry_attrs, *keys, **options):
+    self.obj.show_servroles_attributes(
+        entry_attrs, hcc_enrollment_server_role.name, **options
+    )
+    return dn
+
+
+config_show.register_post_callback(config_show_hcc_postcb)
+
+
 def config_mod_hcc_precb(self, ldap, dn, entry, attrs_list, *keys, **options):
     if hcc_config_attributes.intersection(options):
         # add HCC object class
@@ -80,17 +98,36 @@ def config_mod_hcc_precb(self, ldap, dn, entry, attrs_list, *keys, **options):
         ):
             entry["objectclass"].append(hcc_config_class)
 
+    config_updates = {}
+
     if "hcc_update_server_server" in options:
         new_update = options["hcc_update_server_server"]
-
         try:
             self.api.Object.server.get_dn_if_exists(new_update)
         except errors.NotFound:
             raise self.api.Object.server.handle_not_found(new_update)
+        config_updates["hcc_update_server_server"] = new_update
 
+    if "hcc_enrollment_agent_server" in options:
+        new_agents = options["hcc_enrollment_agent_server"]
+        for agent in new_agents:
+            try:
+                self.api.Object.server.get_dn_if_exists(agent)
+            except errors.NotFound:
+                raise self.api.Object.server.handle_not_found(agent)
+            config_updates["hcc_enrollment_agent_server"] = new_agents
+
+    if config_updates:
         backend = self.api.Backend.serverroles
-        backend.config_update(hcc_update_server_server=new_update)
+        backend.config_update(**config_updates)
 
+    return dn
+
+
+def config_mod_hcc_postcb(self, ldap, dn, entry_attrs, *keys, **options):
+    self.obj.show_servroles_attributes(
+        entry_attrs, hcc_enrollment_server_role.name, **options
+    )
     return dn
 
 
@@ -100,7 +137,10 @@ def config_mod_hcc_exccb(
     if (
         isinstance(exc, errors.EmptyModlist)
         and call_func.__name__ == "update_entry"
-        and "hcc_update_server_server" in options
+        and (
+            "hcc_update_server_server" in options
+            or "hcc_enrollment_agent_server" in options
+        )
     ):
         return
     else:
@@ -108,6 +148,7 @@ def config_mod_hcc_exccb(
 
 
 config_mod.register_pre_callback(config_mod_hcc_precb)
+config_mod.register_post_callback(config_mod_hcc_postcb)
 config_mod.register_exc_callback(config_mod_hcc_exccb)
 
 i18n_messages.messages["hccconfig"] = {

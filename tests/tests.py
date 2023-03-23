@@ -30,6 +30,7 @@ class IPAServerTests(conftest.IPABaseTests):
     def test_server_plugin_imports(self):
         from ipaserver.plugins import hccconfig  # noqa: F401
         from ipaserver.plugins import hcchost  # noqa: F401
+        from ipaserver.plugins import hccserverroles  # noqa: F401
         from ipaserver.install.plugins import update_hcc  # noqa: F401
 
     def test_registration_service_imports(self):
