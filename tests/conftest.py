@@ -1,15 +1,26 @@
+# pylint: disable=too-many-locals,ungrouped-imports
+
 import contextlib
 import importlib
 import logging
 import io
+import json
 import os
 import sys
 import unittest
 
 from ipalib import api
+from ipaplatform.paths import paths
+from requests import Response
 
 from ipahcc import hccplatform
 from ipahcc.server import schema
+
+# pylint: disable=import-error
+if hccplatform.PY2:
+    from httplib import responses as http_responses
+else:
+    from http.client import responses as http_responses
 
 BASEDIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 TESTDATA = os.path.join(BASEDIR, "tests", "data")
@@ -24,6 +35,19 @@ CLIENT_INVENTORY_ID = "1efd5f0e-7589-44ac-a9af-85ba5569d5c3"
 SERVER_RHSM_ID = "e658e3eb-148c-46a6-b48a-099f9593191a"
 SERVER_INVENTORY_ID = "f0468001-7632-4d3f-afd2-770c93825adf"
 ORG_ID = "16765486"
+
+RHSM_CERT = os.path.join(TESTDATA, "autoenrollment", "cert.pem")
+RHSM_KEY = os.path.join(TESTDATA, "autoenrollment", "key.pem")
+IPA_CA_CRT = os.path.join(TESTDATA, "autoenrollment", "ca.crt")
+HOST_DETAILS = os.path.join(TESTDATA, "autoenrollment", "host-details.json")
+
+# patch
+paths.IPA_CA_CRT = IPA_CA_CRT
+
+with io.open(RHSM_CERT, encoding="utf-8") as f:
+    RHSM_CERT_DATA = f.read()
+with io.open(IPA_CA_CRT, encoding="utf-8") as f:
+    IPA_CA_DATA = f.read()
 
 # initialize first step of IPA API so server imports work
 if not api.isdone("bootstrap"):
@@ -99,6 +123,8 @@ class CaptureHandler(logging.Handler):
 
 
 class IPABaseTests(unittest.TestCase):
+    maxDiff = None
+
     def log_capture_start(self):
         self.log_capture = CaptureHandler()
         self.log_capture.setFormatter(
@@ -120,6 +146,62 @@ class IPABaseTests(unittest.TestCase):
     def setUp(self):
         super(IPABaseTests, self).setUp()
         self.log_capture_start()
+
+    def get_mock_env(self):
+        return mock.Mock(
+            in_server=True,
+            domain=DOMAIN,
+            realm=REALM,
+            host=SERVER_FQDN,
+            basedn="dc=ipa-hcc,dc=test",
+        )
+
+    def mkresponse(self, status_code, body):
+        j = json.dumps(body).encode("utf-8")
+        resp = Response()
+        resp.url = None
+        resp.status_code = status_code
+        resp.reason = http_responses[status_code]
+        resp.encoding = "utf-8"
+        resp.headers["content-type"] = "application/json"
+        resp.headers["content-length"] = len(j)
+        resp.raw = io.BytesIO(j)
+        resp.raw.seek(0)
+        return resp
+
+    def call_wsgi(
+        self,
+        path,
+        body,
+        content_type="application/json",
+        method="POST",
+        extra_headers=None,
+    ):
+        dump = json.dumps(body).encode("utf-8")
+        wsgi_input = io.BytesIO()
+        wsgi_input.write(dump)
+        wsgi_input.seek(0)
+        env = {
+            "REQUEST_METHOD": method,
+            "PATH_INFO": path,
+            "CONTENT_TYPE": content_type,
+            "CONTENT_LENGTH": len(dump),
+            "SSL_CLIENT_CERT": RHSM_CERT_DATA,
+            "wsgi.input": wsgi_input,
+        }
+        if extra_headers:
+            for key, value in extra_headers.items():
+                key = "HTTP_" + key.upper().replace("-", "_")
+                env[key] = value
+        start_response = mock.Mock()
+        response = self.app(env, start_response)
+        status = start_response.call_args[0][0]
+        status_code, status_msg = status.split(" ", 1)
+        status_code = int(status_code)
+        headers = dict(start_response.call_args[0][1])
+        if headers["Content-Type"] == "application/json":
+            response = json.loads(b"".join(response).decode("utf-8"))
+        return status_code, status_msg, headers, response
 
     def assert_cli_run(self, mainfunc, *args):
         try:

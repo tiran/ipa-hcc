@@ -1,7 +1,3 @@
-import io
-import json
-import os
-
 from requests import Response
 from ipapython.dnsutil import DNSName
 from ipalib import x509
@@ -9,16 +5,7 @@ from ipalib import x509
 import conftest
 from conftest import mock
 
-from ipahcc import hccplatform
-
-# pylint: disable=import-error
-if hccplatform.PY2:
-    from httplib import responses as http_responses
-else:
-    from http.client import responses as http_responses
-
-CAFILE = os.path.join(conftest.TESTDATA, "autoenrollment", "ca.crt")
-CACERT = x509.load_certificate_from_file(CAFILE)
+CACERT = x509.load_certificate_from_file(conftest.IPA_CA_CRT)
 
 
 @conftest.requires_mock
@@ -28,13 +15,7 @@ class TestHCCAPI(conftest.IPABaseTests):
         super(TestHCCAPI, self).setUp()
         self.m_api = mock.Mock()
         self.m_api.isdone.return_value = True
-        self.m_api.env = mock.Mock(
-            in_server=True,
-            domain=conftest.DOMAIN,
-            realm=conftest.REALM,
-            host=conftest.SERVER_FQDN,
-            basedn="dc=ipa-hcc,dc=test",
-        )
+        self.m_api.env = self.get_mock_env()
         self.m_api.Command.ca_is_enabled.return_value = {"result": True}
         # note: stripped down config_show() output
         self.m_api.Command.config_show.return_value = {
@@ -105,19 +86,6 @@ class TestHCCAPI(conftest.IPABaseTests):
         self.hccapi = hccapi.HCCAPI(self.m_api)
         # pylint: disable=protected-access
         self.hccapi._session = self.m_session
-
-    def mkresponse(self, status_code, body):
-        j = json.dumps(body).encode("utf-8")
-        resp = Response()
-        resp.url = None
-        resp.status_code = status_code
-        resp.reason = http_responses[status_code]
-        resp.encoding = "utf-8"
-        resp.headers["content-type"] = "application/json"
-        resp.headers["content-length"] = len(j)
-        resp.raw = io.BytesIO(j)
-        resp.raw.seek(0)
-        return resp
 
     def test_check_host(self):
         body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
