@@ -286,7 +286,9 @@ class Application(object):
             hccplatform.HCC_DOMAIN_TYPE: {
                 "realm_name": api.env.realm,
                 "cabundle": ca,
-                "enrollment_servers": [api.env.host],
+                "enrollment_servers": [
+                    {"fqdn": api.env.host, "location": None},
+                ],
             },
             "inventory_id": inventory_id,
         }

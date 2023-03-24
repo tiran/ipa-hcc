@@ -58,9 +58,9 @@ try:
     # pylint: disable=unused-import
     import dbus.mainloop.glib  # noqa: F401
     import gi.repository  # noqa: F401
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_DBUS = False
-else:  # pragma: no cover
+else:
     HAS_DBUS = True
 
 try:

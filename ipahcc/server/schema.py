@@ -35,7 +35,7 @@ DEFS = {
     "location": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 253,
+        "maxLength": 63,
         "pattern": r"^[a-z][a-z0-9\-]*$",
     },
     "domain_name": {"$ref": "#/$defs/hostname"},
@@ -85,6 +85,7 @@ HOST_CONF_REQUEST = {
         # additional selectors / filters
         "domain_type": {"$ref": "#/$defs/domain_type"},
         "domain_name": {"$ref": "#/$defs/domain_name"},
+        "domain_id": {"$ref": "#/$defs/uuid"},
         "location": {"$ref": "#/$defs/location"},
     },
     "$defs": DEFS,
@@ -116,7 +117,20 @@ HOST_CONF_RESPONSE = {
                 "cabundle": {"type": "string"},
                 "enrollment_servers": {
                     "type": "array",
-                    "items": {"$ref": "#/$defs/hostname"},
+                    "items": {
+                        "type": "object",
+                        "required": ["fqdn", "location"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "fqdn": {"$ref": "#/$defs/hostname"},
+                            "location": {
+                                "oneOf": [
+                                    {"$ref": "#/$defs/location"},
+                                    {"type": "null"},
+                                ],
+                            },
+                        },
+                    },
                 },
                 "realm_name": {"$ref": "#/$defs/realm_name"},
             },
