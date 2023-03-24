@@ -10,19 +10,24 @@ Installation with older clients that lack PKINIT:
 """
 
 import argparse
+import collections
 import io
 import json
 import logging
 import os
+import random
 import shutil
 import ssl
 import socket
 import sys
 import tempfile
 import time
+import uuid
 
-from ipalib.util import validate_hostname
+from dns.exception import DNSException
+from ipalib import util
 from ipaplatform.paths import paths
+from ipapython.dnsutil import query_srv
 from ipapython.ipautil import run
 from ipapython.version import VENDOR_VERSION
 
@@ -60,7 +65,31 @@ else:
 
 def check_arg_hostname(arg):
     try:
-        validate_hostname(arg)
+        util.validate_hostname(arg)
+    except ValueError as e:
+        raise argparse.ArgumentError(None, str(e))
+    return arg.lower()
+
+
+def check_arg_domain_name(arg):
+    try:
+        util.validate_domain_name(arg)
+    except ValueError as e:
+        raise argparse.ArgumentError(None, str(e))
+    return arg.lower()
+
+
+def check_arg_location(arg):
+    try:
+        util.validate_dns_label(arg)
+    except ValueError as e:
+        raise argparse.ArgumentError(None, str(e))
+    return arg.lower()
+
+
+def check_arg_uuid(arg):
+    try:
+        uuid.UUID(arg)
     except ValueError as e:
         raise argparse.ArgumentError(None, str(e))
     return arg.lower()
@@ -88,7 +117,6 @@ parser.add_argument(
     default=FQDN,
     type=check_arg_hostname,
 )
-# location, domain_name, domain_id
 parser.add_argument(
     "--force",
     help="force setting of Kerberos conf",
@@ -99,6 +127,27 @@ parser.add_argument(
     help="timeout for HTTP request",
     type=int,
     default=10,
+)
+
+group = parser.add_argument_group("domain filter")
+# location, domain_name, domain_id
+group.add_argument(
+    "--domain-name",
+    metavar="NAME",
+    help="Request enrollment into domain",
+    type=check_arg_domain_name,
+)
+group.add_argument(
+    "--domain-id",
+    metavar="UUID",
+    help="Request enrollment into domain by HCC domain id",
+    type=check_arg_uuid,
+)
+group.add_argument(
+    "--location",
+    help="Prefer servers from location",
+    type=check_arg_location,
+    default=None,
 )
 # hidden arguments for internal testing
 parser.add_argument(
@@ -148,24 +197,8 @@ KRB5_CONF = """\
 
 
 class AutoEnrollment(object):
-    def __init__(
-        self,
-        hostname,
-        override_server=None,
-        timeout=10,
-        force=False,
-        insecure=False,
-        debug=0,
-        upto=None,
-    ):
-        # arguments
-        self.hostname = hostname
-        self.override_server = override_server
-        self.timeout = timeout
-        self.force = force
-        self.insecure = insecure
-        self.debug = debug
-        self.upto = upto
+    def __init__(self, args):
+        self.args = args
         # initialized later
         self.servers = None
         self.server = None
@@ -185,7 +218,7 @@ class AutoEnrollment(object):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.debug >= 2:
+        if self.args.debug >= 2:
             logger.info("Keeping temporary directory %s", self.tmpdir)
         else:
             shutil.rmtree(self.tmpdir)
@@ -216,7 +249,9 @@ class AutoEnrollment(object):
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
 
-        resp = urlopen(req, timeout=self.timeout, context=context)  # nosec
+        resp = urlopen(
+            req, timeout=self.args.timeout, context=context
+        )  # nosec
         j = json.load(resp)
         logger.debug("Server response: %s", j)
         return j
@@ -232,7 +267,7 @@ class AutoEnrollment(object):
             env["LC_ALL"] = "C.UTF-8"
             env["KRB5_CONFIG"] = self.krb_name
             env["KRB5CCNAME"] = os.path.join(self.tmpdir, "ccache")
-            if self.debug >= 2:
+            if self.args.debug >= 2:
                 env["KRB5_TRACE"] = "/dev/stderr"
         else:
             env = None
@@ -260,10 +295,12 @@ class AutoEnrollment(object):
         self.hcc_register()
         self.check_upto("register")
 
-        if HAS_KINIT_PKINIT and self.upto is None:
+        if HAS_KINIT_PKINIT and self.args.upto is None:
             self.ipa_client_pkinit()
         else:
-            host_principal = "host/{}@{}".format(self.hostname, self.realm)
+            host_principal = "host/{}@{}".format(
+                self.args.hostname, self.realm
+            )
             self.create_krb5_conf()
             self.pkinit(host_principal)
             self.check_upto("pkinit")
@@ -274,7 +311,7 @@ class AutoEnrollment(object):
             self.ipa_client_keytab(keytab)
 
     def check_upto(self, phase):
-        if self.upto is not None and self.upto == phase:
+        if self.args.upto is not None and self.args.upto == phase:
             logger.info("Stopping at phase %s", phase)
             parser.exit(0)
 
@@ -302,20 +339,78 @@ class AutoEnrollment(object):
                 self.inventory_id = result["id"]
                 logger.info(
                     "Host '%s' has inventory id '%s'.",
-                    self.hostname,
+                    self.args.hostname,
                     self.inventory_id,
                 )
                 return result
         raise ValueError("Failed to read {}".format(INSIGHTS_HOST_DETAILS))
+
+    def _lookup_dns_srv(self):
+        """Lookup IPA servers via LDAP SRV records
+
+        Returns a list of hostnames sorted by priority (takes locations
+        into account).
+        """
+        ldap_srv = "_ldap._tcp.{domain}.".format(domain=self.domain)
+        try:
+            anser = query_srv(ldap_srv)
+        except DNSException as e:
+            logger.error("DNS SRV lookup error: %s", e)
+            return []
+        result = []
+        for rec in anser:
+            result.append(str(rec.target).rstrip(".").lower())
+        logger.debug("%s servers: %r", ldap_srv, result)
+        return result
+
+    @classmethod
+    def _sort_servers(cls, server_list, dns_srvs, location=None):
+        """Sort servers by location and DNS SRV records
+
+        1) If `location` is set, prefer servers from that location.
+        2) Keep ordering of DNS SRV records. SRV lookup already sorts by priority and
+           uses weighted randomization.
+        3) Ignore any server in DNS SRV records that is not in `server_list`.
+        4) Append additional servers (with randomization).
+        """
+        # ordered dict is required to keep stable sorting under Python 2.7
+        # fqdn -> location
+        enrollment_servers = collections.OrderedDict(
+            (s["fqdn"].rstrip(".").lower(), s.get("location"))
+            for s in server_list
+        )
+        # decorate-sort-undecorate, larger value means higher priority
+        # [0.0, 1.0) is used for additional servers
+        dsu = collections.OrderedDict(
+            (name, i)
+            for i, name in enumerate(reversed(dns_srvs), start=1)
+            if name in enrollment_servers  # only enrollment-servers
+        )
+        for fqdn, server_location in enrollment_servers.items():
+            idx = dsu.get(fqdn)
+            # sort additional servers after DNS SRV entries, randomize order
+            if idx is None:
+                idx = random.random()  # [0.0, 1.0)
+            # bump servers with current location
+            if location is not None and server_location == location:
+                idx += 1000
+            dsu[fqdn] = idx
+
+        return sorted(dsu, key=dsu.get, reverse=True)
 
     def hcc_host_conf(self):
         body = {
             "domain_type": HCC_DOMAIN_TYPE,
             "inventory_id": self.inventory_id,
         }
+        for key in ["domain_name", "domain_id", "location"]:
+            value = getattr(self.args, key)
+            if value is not None:
+                body[key] = value
+
         api_url = hccconfig.idm_cert_api_url.rstrip("/")
-        url = "/".join((api_url, "host-conf", self.hostname))
-        verify = not self.insecure
+        url = "/".join((api_url, "host-conf", self.args.hostname))
+        verify = not self.args.insecure
         logger.info(
             "Getting host configuration from %s (secure: %s).", url, verify
         )
@@ -339,12 +434,16 @@ class AutoEnrollment(object):
         self.domain = j["domain_name"]
         self.domain_id = j["domain_id"]
         self.realm = j[HCC_DOMAIN_TYPE]["realm_name"]
-        self.servers = j[HCC_DOMAIN_TYPE]["enrollment_servers"]
+        self.servers = self._sort_servers(
+            j[HCC_DOMAIN_TYPE]["enrollment_servers"],
+            self._lookup_dns_srv(),
+            self.args.location,
+        )
         # TODO: use all servers
-        if self.override_server is None:
+        if self.args.override_server is None:
             self.server = self.servers[0]
         else:
-            self.server = self.override_server
+            self.server = self.args.override_server
         logger.info("Domain: %s", self.domain)
         logger.info("Realm: %s", self.realm)
         logger.info("Servers: %s", ", ".join(self.servers))
@@ -355,7 +454,7 @@ class AutoEnrollment(object):
         TODO: On 404 try next server
         """
         url = "https://{server}/hcc/{hostname}".format(
-            server=self.server, hostname=self.hostname
+            server=self.server, hostname=self.args.hostname
         )
         body = {
             "domain_type": HCC_DOMAIN_TYPE,
@@ -379,7 +478,7 @@ class AutoEnrollment(object):
             domain=self.domain,
             server=self.server,
             extra_kdcs="\n    ".join(extra_kdcs).strip(),
-            hostname=self.hostname,
+            hostname=self.args.hostname,
         )
         if PY2:
             conf = conf.decode("utf-8")
@@ -419,17 +518,15 @@ class AutoEnrollment(object):
         cmd = [
             paths.IPA_CLIENT_INSTALL,
             "--ca-cert-file", self.ipa_cacert,
-            "--hostname", self.hostname,
+            "--hostname", self.args.hostname,
+            "--domain", self.domain,
+            "--realm", self.realm,
         ]
         # fmt: on
-        if self.realm:
-            cmd.extend(["--realm", self.realm])
-        if self.domain:
-            cmd.extend(["--domain", self.domain])
-        if self.servers:
-            for server in self.servers:
-                cmd.extend(["--server", server])
-        if self.force:
+        # TODO: Make ipa-client-install prefer servers from current location.
+        if self.args.override_server:
+            cmd.extend(["--server", self.args.override_server])
+        if self.args.force:
             cmd.append("--force")
         cmd.append("--unattended")
         cmd.extend(extra_args)
@@ -444,12 +541,11 @@ class AutoEnrollment(object):
     def ipa_client_pkinit(self):
         """Install IPA client with PKINIT"""
         extra_args = [
-            "--pkinit-identity={}".format(self.pkinit_identity),
+            "--pkinit-identity",
+            self.pkinit_identity,
         ]
         for anchor in self.pkinit_anchors:
-            extra_args.append(
-                "--pkinit-anchor={anchor}".format(anchor=anchor),
-            )
+            extra_args.extend(["--pkinit-anchor", anchor])
         return self._run_ipa_client(extra_args)
 
 
@@ -467,15 +563,7 @@ def main(args=None):
             )
         )
 
-    with AutoEnrollment(
-        hostname=args.hostname,
-        override_server=args.override_server,
-        timeout=args.timeout,
-        force=args.force,
-        insecure=args.insecure,
-        debug=args.debug,
-        upto=args.upto,
-    ) as autoenrollment:
+    with AutoEnrollment(args) as autoenrollment:
         autoenrollment.enroll_host()
 
     logger.info("Done")

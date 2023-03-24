@@ -3,6 +3,7 @@ import json
 import os
 import ssl
 
+from dns.rdtypes.IN.SRV import SRV
 from ipaplatform.paths import paths
 
 import conftest
@@ -32,7 +33,9 @@ HOST_CONF_RESPONSE = {
     hccplatform.HCC_DOMAIN_TYPE: {
         "realm_name": conftest.REALM,
         "cabundle": CADATA,
-        "enrollment_servers": [conftest.SERVER_FQDN],
+        "enrollment_servers": [
+            {"fqdn": conftest.SERVER_FQDN, "location": None},
+        ],
     },
     "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
@@ -89,6 +92,16 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         ]
         self.addCleanup(p.stop)
 
+        p = mock.patch.object(auto_enrollment, "query_srv")
+        self.m_query_srv = p.start()
+        self.m_query_srv.return_value = [
+            SRV(1, 33, 0, 100, 389, conftest.SERVER_FQDN)
+        ]
+        self.addCleanup(p.stop)
+
+    def parse_args(self, *args):
+        return auto_enrollment.parser.parse_args(args=args)
+
     @conftest.requires_jsonschema
     def test_schema(self):
         schema.validate_schema(
@@ -104,8 +117,63 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             REGISTER_RESPONSE, "/schemas/check-host/response"
         )
 
+    def assert_args_error(self, *args):
+        with self.assertRaises(SystemExit):
+            with conftest.capture_output():
+                self.parse_args(*args)
+
+    def test_args(self):
+        args = self.parse_args(
+            # fmt: off
+            "--hostname", conftest.CLIENT_FQDN,
+            "--timeout", "20",
+            "--domain-name", conftest.DOMAIN,
+            "--domain-id", conftest.DOMAIN_ID,
+            "--location", "sigma",
+            "--upto", "host-conf",
+            "--override-server", conftest.SERVER_FQDN,
+            # fmt: on
+        )
+        self.assertEqual(args.timeout, 20)
+        self.assert_args_error("--hostname", "invalid_hostname")
+        self.assert_args_error("--domain-name", "invalid_domain")
+        self.assert_args_error("--domain-id", "invalid_domain")
+        self.assert_args_error("--location", "invalid.location")
+
+    def test_sort_servers(self):
+        p = mock.patch("random.random", return_value=0.5)
+        p.start()
+        self.addCleanup(p.stop)
+        # pylint: disable=protected-access
+        sort_servers = auto_enrollment.AutoEnrollment._sort_servers
+        # pylint: enable=protected-access
+        s1 = "srv1.ipa.example"
+        s2 = "srv2.ipa.example"
+        s3 = "srv3.ipa.example"
+        s4 = "srv4.ipa.example"
+        a = "other.ipa.example"
+        server_list = [
+            {"fqdn": s1},
+            {"fqdn": s2, "location": "sigma"},
+            {"fqdn": s3, "location": "tau"},
+            {"fqdn": s4, "location": "sigma"},
+        ]
+        r = sort_servers(server_list, [])
+        self.assertEqual(r, [s1, s2, s3, s4])
+        r = sort_servers(server_list, [s1, a, s4, s3])
+        self.assertEqual(r, [s1, s4, s3, s2])
+        r = sort_servers(server_list, [], "sigma")
+        self.assertEqual(r, [s2, s4, s1, s3])
+        r = sort_servers(server_list, [], "kappa")
+        self.assertEqual(r, [s1, s2, s3, s4])
+        r = sort_servers(server_list, [s1, a, s4, s3], "sigma")
+        self.assertEqual(r, [s4, s2, s1, s3])
+        r = sort_servers(server_list, [s1, a, s4, s3], "kappa")
+        self.assertEqual(r, [s1, s4, s3, s2])
+
     def test_basic(self):
-        ae = auto_enrollment.AutoEnrollment(hostname=conftest.CLIENT_FQDN)
+        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        ae = auto_enrollment.AutoEnrollment(args)
         self.assertEqual(ae.tmpdir, None)
         with ae:
             tmpdir = ae.tmpdir
@@ -115,14 +183,16 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertFalse(os.path.isdir(tmpdir))
 
     def test_wait_for_inventor(self):
-        ae = auto_enrollment.AutoEnrollment(hostname=conftest.CLIENT_FQDN)
+        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             self.assertEqual(ae.inventory_id, None)
             ae.wait_for_inventory_host()
             self.assertEqual(ae.inventory_id, conftest.CLIENT_INVENTORY_ID)
 
     def test_hcc_host_conf(self):
-        ae = auto_enrollment.AutoEnrollment(hostname=conftest.CLIENT_FQDN)
+        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             ae.wait_for_inventory_host()
 
@@ -139,7 +209,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(
                 req.data, json.dumps(HOST_CONF_REQUEST).encode("utf-8")
             )
-            self.assertEqual(urlopen.call_args[1]["timeout"], ae.timeout)
+            self.assertEqual(urlopen.call_args[1]["timeout"], ae.args.timeout)
             self.assertEqual(
                 urlopen.call_args[1]["context"].verify_mode,
                 ssl.CERT_REQUIRED,
@@ -151,7 +221,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(ae.server, conftest.SERVER_FQDN)
 
     def test_hcc_register(self):
-        ae = auto_enrollment.AutoEnrollment(hostname=conftest.CLIENT_FQDN)
+        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             ae.wait_for_inventory_host()
             urlopen = self.m_urlopen
@@ -168,8 +239,49 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 ),
             )
 
-    def test_enroll_host(self):
-        ae = auto_enrollment.AutoEnrollment(hostname=conftest.CLIENT_FQDN)
+    def test_enroll_host_pkinit(self):
+        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+
+        with mock.patch.object(auto_enrollment, "HAS_KINIT_PKINIT", True):
+            ae = auto_enrollment.AutoEnrollment(args)
+            with ae:
+                tmpdir = ae.tmpdir
+                ae.enroll_host()
+
+        self.assertEqual(self.m_urlopen.call_count, 2)
+        self.assertEqual(self.m_run.call_count, 1)
+
+        args, kwargs = self.m_run.call_args_list[0]
+        self.assertEqual(
+            args[0],
+            [
+                paths.IPA_CLIENT_INSTALL,
+                "--ca-cert-file",
+                "{}/ca.crt".format(tmpdir),
+                "--hostname",
+                conftest.CLIENT_FQDN,
+                "--domain",
+                conftest.DOMAIN,
+                "--realm",
+                conftest.REALM,
+                "--unattended",
+                "--pkinit-identity",
+                "FILE:{},{}".format(
+                    auto_enrollment.RHSM_CERT, auto_enrollment.RHSM_KEY
+                ),
+                "--pkinit-anchor",
+                "FILE:{}".format(auto_enrollment.HMSIDM_CA_BUNDLE_PEM),
+                "--pkinit-anchor",
+                "FILE:{}/ca.crt".format(tmpdir),
+            ],
+        )
+        self.assertEqual(
+            kwargs, {"stdin": None, "env": None, "raiseonerr": True}
+        )
+
+    def test_enroll_host_keytab(self):
+        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             tmpdir = ae.tmpdir
             ae.enroll_host()
@@ -235,12 +347,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 cacert,
                 "--hostname",
                 conftest.CLIENT_FQDN,
-                "--realm",
-                conftest.REALM,
                 "--domain",
                 conftest.DOMAIN,
-                "--server",
-                conftest.SERVER_FQDN,
+                "--realm",
+                conftest.REALM,
                 "--unattended",
                 "--keytab",
                 keytab,
