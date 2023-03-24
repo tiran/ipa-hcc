@@ -113,7 +113,7 @@ class Application(object):
         self,
         refresh_token_file=hccplatform.REFRESH_TOKEN_FILE,
         url=hccconfig.token_url,
-    ):
+    ):  # pragma: no cover
         """Get a bearer access token from an offline token
 
         TODO: Poor man's OAuth2 workflow. Replace with

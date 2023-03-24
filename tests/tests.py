@@ -3,16 +3,13 @@
 #
 
 import conftest
+from ipahcc import hccplatform
 from ipahcc.server import schema
 
 # pylint: disable=import-outside-toplevel
 
 
 class IPAClientTests(conftest.IPABaseTests):
-    def test_platform_imports(self):
-        # pylint: disable=unused-import,unused-variable
-        from ipahcc import hccplatform  # noqa: F401
-
     def test_auto_enrollment_help(self):
         from ipahcc.client import auto_enrollment
 
@@ -79,14 +76,14 @@ class TestJSONSchema(conftest.IPABaseTests):
 
     def test_domain_request(self):
         instance = {
-            "domain_name": "ipahcc.test",
-            "domain_type": "rhel-idm",
-            "rhel-idm": {
-                "realm_name": "IPAHCC.TEST",
+            "domain_name": conftest.DOMAIN,
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+            hccplatform.HCC_DOMAIN_TYPE: {
+                "realm_name": conftest.REALM,
                 "servers": [
                     {
-                        "fqdn": "ipaserver.ipahcc.test",
-                        "subscription_manager_id": "547ce70c-9eb5-4783-a619-086aa26f88e5",
+                        "fqdn": conftest.SERVER_FQDN,
+                        "subscription_manager_id": conftest.SERVER_RHSM_ID,
                         "location": "sigma",
                         "ca_server": True,
                         "hcc_enrollment_server": True,
@@ -115,10 +112,10 @@ class TestJSONSchema(conftest.IPABaseTests):
                 "cacerts": [
                     {
                         "nickname": "IPAHCC.TEST IPA CA",
-                        "pem": "-----BEGIN CERTIFICATE-----\nMIIE...\n-----END CERTIFICATE-----\n",
+                        "pem": conftest.IPA_CA_DATA,
                     }
                 ],
-                "realm_domains": ["ipahcc.test"],
+                "realm_domains": [conftest.DOMAIN],
                 "locations": [
                     {"name": "kappa", "description": None},
                     {"name": "sigma", "description": None},

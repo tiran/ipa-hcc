@@ -14,12 +14,6 @@ from ipahcc.client import auto_enrollment
 from ipahcc.server import schema
 
 
-AEDATA = os.path.join(conftest.TESTDATA, "autoenrollment")
-CAFILE = os.path.join(AEDATA, "ca.crt")
-
-with io.open(CAFILE, encoding="utf-8") as f:
-    CADATA = f.read()
-
 HOST_CONF_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     "inventory_id": conftest.CLIENT_INVENTORY_ID,
@@ -32,7 +26,7 @@ HOST_CONF_RESPONSE = {
     "auto_enrollment_enabled": True,
     hccplatform.HCC_DOMAIN_TYPE: {
         "realm_name": conftest.REALM,
-        "cabundle": CADATA,
+        "cabundle": conftest.IPA_CA_DATA,
         "enrollment_servers": [
             {"fqdn": conftest.SERVER_FQDN, "location": None},
         ],
@@ -65,12 +59,12 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         p = mock.patch.multiple(
             modname,
             HAS_KINIT_PKINIT=False,
-            RHSM_CERT=os.path.join(AEDATA, "cert.pem"),
-            RHSM_KEY=os.path.join(AEDATA, "key.pem"),
+            RHSM_CERT=conftest.RHSM_CERT,
+            RHSM_KEY=conftest.RHSM_KEY,
             HMSIDM_CA_BUNDLE_PEM=os.path.join(
                 conftest.BASEDIR, "install/common/redhat-candlepin-bundle.pem"
             ),
-            INSIGHTS_HOST_DETAILS=os.path.join(AEDATA, "host-details.json"),
+            INSIGHTS_HOST_DETAILS=conftest.HOST_DETAILS,
             hccconfig=mock.Mock(
                 environment="test",
                 idm_cert_api_url="https://console.ipa-hcc.test/api/idm/v1",

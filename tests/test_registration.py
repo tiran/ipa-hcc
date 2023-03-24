@@ -1,7 +1,3 @@
-import io
-import json
-import os
-
 import gssapi
 
 import conftest
@@ -10,15 +6,12 @@ from conftest import mock
 from ipahcc import hccplatform
 from ipahcc.registration import wsgi
 
-CERT_PEM = os.path.join(conftest.TESTDATA, "autoenrollment", "cert.pem")
-with io.open(CERT_PEM, encoding="utf-8") as f:
-    CERT_DATA = f.read()
-
 
 @conftest.requires_mock
 class TestRegistrationWSGI(conftest.IPABaseTests):
     def setUp(self):
         super(TestRegistrationWSGI, self).setUp()
+        self.app = wsgi.application
         p = mock.patch.object(wsgi, "api")
         self.m_api = p.start()
         self.m_api.isdone.return_value = False
@@ -37,30 +30,6 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
         p = mock.patch.object(gssapi, "Credentials")
         self.m_gss_credentials = p.start()
         self.addCleanup(p.stop)
-
-    def call_wsgi(
-        self, path, body, content_type="application/json", method="POST"
-    ):
-        dump = json.dumps(body).encode("utf-8")
-        wsgi_input = io.BytesIO()
-        wsgi_input.write(dump)
-        wsgi_input.seek(0)
-        env = {
-            "REQUEST_METHOD": method,
-            "PATH_INFO": path,
-            "CONTENT_TYPE": content_type,
-            "CONTENT_LENGTH": len(dump),
-            "SSL_CLIENT_CERT": CERT_DATA,
-            "wsgi.input": wsgi_input,
-        }
-        start_response = mock.Mock()
-        result = wsgi.application(env, start_response)
-        status = start_response.call_args[0][0]
-        status_code, status_msg = status.split(" ", 1)
-        status_code = int(status_code)
-        headers = dict(start_response.call_args[0][1])
-        response = json.loads(b"".join(result).decode("utf-8"))
-        return status_code, status_msg, headers, response
 
     def test_ipaapi(self):
         app = wsgi.application
