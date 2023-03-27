@@ -41,7 +41,7 @@ REGISTER_REQUEST = {
     "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
 
-REGISTER_RESPONSE = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
+REGISTER_RESPONSE = {"status": "ok", "kdc_cabundle": conftest.KDC_CA_DATA}
 
 
 def jsonio(body):
@@ -49,6 +49,22 @@ def jsonio(body):
     out = io.BytesIO(j)
     out.seek(0)
     return out
+
+
+class TestAutoEnrollmentNoMock(conftest.IPABaseTests):
+    def test_module_attributes(self):
+        self.assertEqual(hccplatform.RHSM_CERT, auto_enrollment.RHSM_CERT)
+        self.assertEqual(hccplatform.RHSM_KEY, auto_enrollment.RHSM_KEY)
+        self.assertEqual(
+            hccplatform.HCC_DOMAIN_TYPE, auto_enrollment.HCC_DOMAIN_TYPE
+        )
+        self.assertEqual(
+            hccplatform.INSIGHTS_HOST_DETAILS,
+            auto_enrollment.INSIGHTS_HOST_DETAILS,
+        )
+        self.assertEqual(
+            hccplatform.HTTP_HEADERS, auto_enrollment.HTTP_HEADERS
+        )
 
 
 @conftest.requires_mock
@@ -61,9 +77,6 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             HAS_KINIT_PKINIT=False,
             RHSM_CERT=conftest.RHSM_CERT,
             RHSM_KEY=conftest.RHSM_KEY,
-            HMSIDM_CA_BUNDLE_PEM=os.path.join(
-                conftest.BASEDIR, "install/common/redhat-candlepin-bundle.pem"
-            ),
             INSIGHTS_HOST_DETAILS=conftest.HOST_DETAILS,
             hccconfig=mock.Mock(
                 environment="test",
@@ -105,10 +118,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             HOST_CONF_RESPONSE, "/schemas/host-conf/response"
         )
         schema.validate_schema(
-            REGISTER_REQUEST, "/schemas/check-host/request"
+            REGISTER_REQUEST, "/schemas/hcc-host-register/request"
         )
         schema.validate_schema(
-            REGISTER_RESPONSE, "/schemas/check-host/response"
+            REGISTER_RESPONSE, "/schemas/hcc-host-register/response"
         )
 
     def assert_args_error(self, *args):
@@ -203,6 +216,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(
                 req.data, json.dumps(HOST_CONF_REQUEST).encode("utf-8")
             )
+            self.assertEqual(
+                req.get_header("Content-type"), "application/json"
+            )
             self.assertEqual(urlopen.call_args[1]["timeout"], ae.args.timeout)
             self.assertEqual(
                 urlopen.call_args[1]["context"].verify_mode,
@@ -232,6 +248,15 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                     conftest.SERVER_FQDN, conftest.CLIENT_FQDN
                 ),
             )
+            self.assertTrue(os.path.isfile(ae.ipa_cacert))
+            self.assertTrue(os.path.isfile(ae.kdc_cacert))
+
+            with io.open(ae.ipa_cacert, "r", encoding="utf-8") as f:
+                data = f.read()
+            self.assertEqual(data, conftest.IPA_CA_DATA)
+            with io.open(ae.kdc_cacert, "r", encoding="utf-8") as f:
+                data = f.read()
+            self.assertEqual(data, conftest.KDC_CA_DATA)
 
     def test_enroll_host_pkinit(self):
         args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
@@ -241,6 +266,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             with ae:
                 tmpdir = ae.tmpdir
                 ae.enroll_host()
+                self.assertTrue(os.path.isfile(ae.ipa_cacert))
+                self.assertTrue(os.path.isfile(ae.kdc_cacert))
 
         self.assertEqual(self.m_urlopen.call_count, 2)
         self.assertEqual(self.m_run.call_count, 1)
@@ -251,7 +278,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             [
                 paths.IPA_CLIENT_INSTALL,
                 "--ca-cert-file",
-                "{}/ca.crt".format(tmpdir),
+                "{}/ipa_ca.crt".format(tmpdir),
                 "--hostname",
                 conftest.CLIENT_FQDN,
                 "--domain",
@@ -264,9 +291,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                     auto_enrollment.RHSM_CERT, auto_enrollment.RHSM_KEY
                 ),
                 "--pkinit-anchor",
-                "FILE:{}".format(auto_enrollment.HMSIDM_CA_BUNDLE_PEM),
+                "FILE:{}/kdc_ca.crt".format(tmpdir),
                 "--pkinit-anchor",
-                "FILE:{}/ca.crt".format(tmpdir),
+                "FILE:{}/ipa_ca.crt".format(tmpdir),
             ],
         )
         self.assertEqual(
@@ -279,13 +306,15 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         with ae:
             tmpdir = ae.tmpdir
             ae.enroll_host()
+            self.assertTrue(os.path.isfile(ae.ipa_cacert))
+            self.assertTrue(os.path.isfile(ae.kdc_cacert))
 
         self.assertEqual(self.m_urlopen.call_count, 2)
         self.assertEqual(self.m_run.call_count, 3)
 
         principal = "host/{}@{}".format(conftest.CLIENT_FQDN, conftest.REALM)
         keytab = "{}/host.keytab".format(tmpdir)
-        cacert = "{}/ca.crt".format(tmpdir)
+        cacert = "{}/ipa_ca.crt".format(tmpdir)
         # kinit
         args, kwargs = self.m_run.call_args_list[0]
         self.assertEqual(
@@ -293,11 +322,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             [
                 paths.KINIT,
                 "-X",
-                "X509_anchors=FILE:{}".format(
-                    auto_enrollment.HMSIDM_CA_BUNDLE_PEM
-                ),
+                "X509_anchors=FILE:{}/kdc_ca.crt".format(tmpdir),
                 "-X",
-                "X509_anchors=FILE:{}/ca.crt".format(tmpdir),
+                "X509_anchors=FILE:{}/ipa_ca.crt".format(tmpdir),
                 "-X",
                 "X509_user_identity=FILE:{},{}".format(
                     auto_enrollment.RHSM_CERT, auto_enrollment.RHSM_KEY

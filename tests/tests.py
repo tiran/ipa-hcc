@@ -67,12 +67,14 @@ class TestJSONSchema(conftest.IPABaseTests):
             "domain_id": "71c0bf27-37e7-41ae-b51b-1a8599025e1a",
             "inventory_id": "91e3fa59-4de2-4a28-90b2-01965b201ade",
         }
-        schema.validate_schema(instance, "/schemas/hcc/request")
+        schema.validate_schema(instance, "/schemas/hcc-host-register/request")
 
         instance["extra"] = True
 
         with self.assertRaises(schema.ValidationError):
-            schema.validate_schema(instance, "/schemas/hcc/request")
+            schema.validate_schema(
+                instance, "/schemas/hcc-host-register/request"
+            )
 
     def test_domain_request(self):
         instance = {

@@ -5,6 +5,7 @@ ignore:
   - ".venv"
   - config
   - credentials
+  - ".tox"
 
 rules:
   line-length: disable

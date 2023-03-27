@@ -1,5 +1,8 @@
+VERSION = 0.7
+
 srcdir = .
 DEST =
+
 # /etc
 SYSCONFDIR := $(shell rpm --eval '%{_sysconfdir}')
 # /usr/share
@@ -33,7 +36,7 @@ CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem
 
 
 .PHONY: all
-all: test rehash lint
+all: test rehash lint version
 
 .PHONY: clean-idm-ci
 clean-idm-ci:
@@ -61,6 +64,12 @@ lint:
 black:
 	$(BLACK) .
 
+.PHONY: version
+version:
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' \
+		$(srcdir)/ipahcc/hccplatform.py \
+		$(srcdir)/ipahcc/client/auto_enrollment.py
+
 .PHONY: rpkg
 rpkg:
 	@rm -rf .tox/rpkg
@@ -70,8 +79,8 @@ rpkg:
 
 .PHONY: test
 test:
-	openssl verify -purpose sslclient -CAfile $(srcdir)/install/common/redhat-candlepin-bundle.pem $(CERT)
-	openssl verify -purpose sslclient -CApath $(srcdir)/install/common/cacerts/ $(CERT)
+	openssl verify -purpose sslclient -CAfile $(srcdir)/install/server/redhat-candlepin-bundle.pem $(CERT)
+	openssl verify -purpose sslclient -CApath $(srcdir)/install/server/cacerts/ $(CERT)
 
 .PHONY: run-idm-ci
 run-idm-ci:
@@ -92,18 +101,16 @@ rehash:
 install_common:
 	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc
 	$(CP_PD) $(srcdir)/ipahcc/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc/hccplatform.py
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa
 	$(CP_CONFIG) $(srcdir)/install/common/ipa/hcc.conf $(DEST)$(SYSCONFDIR)/ipa/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa/hcc
-	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc/cacerts
-	$(CP_PD) $(srcdir)/install/common/redhat-candlepin-bundle.pem $(DEST)$(DATADIR)/ipa-hcc/
-	$(CP_PD) $(srcdir)/install/common/cacerts/*.pem $(DEST)$(DATADIR)/ipa-hcc/cacerts/
-	openssl rehash $(DEST)$(DATADIR)/ipa-hcc/cacerts
 
 .PHONY: install_client
 install_client: install_common
 	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/client
 	$(CP_PD) $(srcdir)/ipahcc/client/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/client/
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc/client/auto_enrollment.py
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-auto-enrollment.service $(DEST)$(UNITDIR)/
 	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
@@ -119,6 +126,10 @@ install_server_plugin: install_common
 	$(CP_PD) $(srcdir)/install/server/ipa-hcc $(DEST)$(SBINDIR)/
 	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(SBINDIR)/ipa-hcc
 	chmod 755 $(DEST)$(SBINDIR)/ipa-hcc
+	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc/cacerts
+	$(CP_PD) $(srcdir)/install/server/redhat-candlepin-bundle.pem $(DEST)$(DATADIR)/ipa-hcc/
+	$(CP_PD) $(srcdir)/install/server/cacerts/*.pem $(DEST)$(DATADIR)/ipa-hcc/cacerts/
+	openssl rehash $(DEST)$(DATADIR)/ipa-hcc/cacerts || true
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/server/systemd/ipa-hcc-update.* $(DEST)$(UNITDIR)/
 	$(CP_PD) $(srcdir)/install/server/systemd/ipa-hcc-dbus.service $(DEST)$(UNITDIR)/

@@ -7,6 +7,7 @@ import ipalib
 from ipalib import errors
 from ipaplatform.paths import paths
 from ipapython import admintool
+from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 from ipahcc import hccplatform
 from .hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
@@ -31,6 +32,10 @@ class IPAHCCCli(admintool.AdminTool):
     @classmethod
     def add_options(cls, parser, debug_option=False):
         super(IPAHCCCli, cls).add_options(parser, debug_option)
+
+        parser.version = "ipa-hcc {} (IPA {})".format(
+            hccplatform.VERSION, IPA_VERSION
+        )
 
         parser.add_option(
             "--timeout",

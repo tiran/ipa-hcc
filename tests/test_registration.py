@@ -63,7 +63,13 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
         self.assertEqual(status_code, 200)
         self.assertEqual(status_msg, "OK")
         self.assertEqual(headers["Content-Type"], "application/json")
-        self.assertEqual(response, {"status": "ok"})
+        self.assertEqual(
+            response,
+            {
+                "status": "ok",
+                "kdc_cabundle": conftest.KDC_CA_DATA,
+            },
+        )
 
         app = wsgi.application
         self.assertEqual(app.org_id, int(conftest.ORG_ID))

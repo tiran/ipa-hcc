@@ -38,16 +38,22 @@ ORG_ID = "16765486"
 
 RHSM_CERT = os.path.join(TESTDATA, "autoenrollment", "cert.pem")
 RHSM_KEY = os.path.join(TESTDATA, "autoenrollment", "key.pem")
-IPA_CA_CRT = os.path.join(TESTDATA, "autoenrollment", "ca.crt")
+IPA_CA_CRT = os.path.join(TESTDATA, "autoenrollment", "ipa_ca.crt")
+KDC_CA_CRT = os.path.join(
+    BASEDIR, "install", "server", "redhat-candlepin-bundle.pem"
+)
 HOST_DETAILS = os.path.join(TESTDATA, "autoenrollment", "host-details.json")
 
 # patch
 paths.IPA_CA_CRT = IPA_CA_CRT
+hccplatform.HMSIDM_CA_BUNDLE_PEM = KDC_CA_CRT
 
 with io.open(RHSM_CERT, encoding="utf-8") as f:
     RHSM_CERT_DATA = f.read()
 with io.open(IPA_CA_CRT, encoding="utf-8") as f:
     IPA_CA_DATA = f.read()
+with io.open(KDC_CA_CRT, encoding="utf-8") as f:
+    KDC_CA_DATA = f.read()
 
 # initialize first step of IPA API so server imports work
 if not api.isdone("bootstrap"):

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import io
 import json
 import logging
 import os
@@ -27,7 +28,6 @@ os.environ["GSS_USE_PROXY"] = "1"
 
 # pylint: disable=wrong-import-position,wrong-import-order
 from ipalib import api, errors, x509  # noqa: E402
-from ipapython.version import VENDOR_VERSION  # noqa: E402
 
 hccconfig = hccplatform.HCCConfig()
 
@@ -79,6 +79,7 @@ class Application(object):
         self._domain_id = None
         # requests session for persistent HTTP connection
         self.session = requests.Session()
+        self.session.headers.update(hccplatform.HTTP_HEADERS)
 
     def parse_cert(self, env, envname):
         cert_pem = env.get(envname)
@@ -104,12 +105,6 @@ class Application(object):
         return int(nas[0].value), nas[1].value
 
     def check_host(self, inventory_id, rhsm_id, fqdn):
-        headers = {
-            "User-Agent": "IPA HCC auto-enrollment (IPA: {VENDOR_VERSION})".format(
-                VENDOR_VERSION=VENDOR_VERSION
-            ),
-            "X-RH-IPA-Version": VENDOR_VERSION,
-        }
         body = {
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": api.env.domain,
@@ -118,7 +113,7 @@ class Application(object):
         }
         api_url = hccconfig.idm_cert_api_url.rstrip("/")
         url = "/".join((api_url, "check-host", rhsm_id, fqdn))
-        resp = self.session.post(url, json=body, headers=headers)
+        resp = self.session.post(url, json=body)
         resp.raise_for_status()
         j = resp.json()
         return j["inventory_id"]
@@ -242,6 +237,12 @@ class Application(object):
             raise HTTPException.from_error(413, "Request entity too large.")
         return json.load(env["wsgi.input"])
 
+    def get_kdc_cadata(self):
+        with io.open(
+            hccplatform.HMSIDM_CA_BUNDLE_PEM, "r", encoding="utf-8"
+        ) as f:
+            return f.read()
+
     def handle(self, env):
         method = env["REQUEST_METHOD"]
         if method != "POST":
@@ -254,7 +255,7 @@ class Application(object):
 
         body = self.get_json(env)
         try:
-            schema.validate_schema(body, "/schemas/hcc/request")
+            schema.validate_schema(body, "/schemas/hcc-host-register/request")
         except schema.ValidationError as e:
             raise HTTPException.from_exception(e, 400, "Invalid request body")
 
@@ -283,8 +284,10 @@ class Application(object):
             rhsm_id,
         )
         # TODO: return value?
-        response = {"status": "ok"}
-        schema.validate_schema(response, "/schemas/hcc/response")
+        response = {"status": "ok", "kdc_cabundle": self.get_kdc_cadata()}
+        schema.validate_schema(
+            response, "/schemas/hcc-host-register/response"
+        )
         raise HTTPException(
             200,
             json.dumps(response),

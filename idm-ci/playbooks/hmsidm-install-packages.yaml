@@ -10,7 +10,7 @@
           - ipa-hcc-server-plugin
           - ipa-hcc-mockapi
         state: latest
-        update_cache: yes
+        update_cache: true
 
 - hosts: ipaclient
   become: true
@@ -21,7 +21,7 @@
         name:
           - ipa-hcc-client-enrollment
         state: latest
-        update_cache: yes
+        update_cache: true
 
 - hosts: ipaserver:ipaclient
   become: true
