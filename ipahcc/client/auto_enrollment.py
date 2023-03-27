@@ -29,7 +29,7 @@ from ipalib import util
 from ipaplatform.paths import paths
 from ipapython.dnsutil import query_srv
 from ipapython.ipautil import run
-from ipapython.version import VENDOR_VERSION
+from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 try:
     # pylint: disable=unused-import,ungrouped-imports
@@ -45,11 +45,14 @@ from ipahcc import hccplatform
 PY2 = sys.version_info.major == 2
 FQDN = socket.gethostname()
 
+# version is updated by Makefile
+VERSION = "0.7"
+
 RHSM_CERT = hccplatform.RHSM_CERT
 RHSM_KEY = hccplatform.RHSM_KEY
-HMSIDM_CA_BUNDLE_PEM = hccplatform.HMSIDM_CA_BUNDLE_PEM
 HCC_DOMAIN_TYPE = hccplatform.HCC_DOMAIN_TYPE
 INSIGHTS_HOST_DETAILS = hccplatform.INSIGHTS_HOST_DETAILS
+HTTP_HEADERS = hccplatform.HTTP_HEADERS
 hccconfig = hccplatform.HCCConfig()
 del hccplatform
 
@@ -104,6 +107,13 @@ parser.add_argument(
     dest="debug",
     default=False,
     type=int,
+)
+parser.add_argument(
+    "--version",
+    "-V",
+    help="Show version number and exit",
+    action="version",
+    version="ipa-hcc {} (IPA {})".format(VERSION, IPA_VERSION),
 )
 parser.add_argument(
     "--insecure",
@@ -206,10 +216,6 @@ class AutoEnrollment(object):
         self.realm = None
         self.domain_id = None
         self.inventory_id = None
-        self.pkinit_identity = "FILE:{cert},{key}".format(
-            cert=RHSM_CERT, key=RHSM_KEY
-        )
-        self.pkinit_anchors = ["FILE:{}".format(HMSIDM_CA_BUNDLE_PEM)]
         # internals
         self.tmpdir = None
 
@@ -227,11 +233,8 @@ class AutoEnrollment(object):
     def _do_post(self, url, body, verify, cafile=None):
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "IPA HCC auto-enrollment (IPA: {VENDOR_VERSION})".format(
-                VENDOR_VERSION=VENDOR_VERSION
-            ),
-            "X-RH-IPA-Version": VENDOR_VERSION,
         }
+        headers.update(HTTP_HEADERS)
         logger.debug("POST request %s: %s", url, body)
         data = json.dumps(body)
         if not PY2:
@@ -275,7 +278,24 @@ class AutoEnrollment(object):
 
     @property
     def ipa_cacert(self):
-        return os.path.join(self.tmpdir, "ca.crt")
+        return os.path.join(self.tmpdir, "ipa_ca.crt")
+
+    @property
+    def kdc_cacert(self):
+        return os.path.join(self.tmpdir, "kdc_ca.crt")
+
+    @property
+    def pkinit_anchors(self):
+        return [
+            # Candlepin CA chain signs RHSM client cert
+            "FILE:{}".format(self.kdc_cacert),
+            # IPA CA signs KDC cert
+            "FILE:{}".format(self.ipa_cacert),
+        ]
+
+    @property
+    def pkinit_identity(self):
+        return "FILE:{cert},{key}".format(cert=RHSM_CERT, key=RHSM_KEY)
 
     @property
     def krb_name(self):
@@ -424,10 +444,6 @@ class AutoEnrollment(object):
 
         with io.open(self.ipa_cacert, "w", encoding="utf-8") as f:
             f.write(j[HCC_DOMAIN_TYPE]["cabundle"])
-        # IPA CA signs KDC cert
-        self.pkinit_anchors.append(
-            "FILE:{}".format(self.ipa_cacert),
-        )
 
         if j["domain_type"] != HCC_DOMAIN_TYPE:
             raise ValueError(j["domain_type"])
@@ -447,6 +463,7 @@ class AutoEnrollment(object):
         logger.info("Domain: %s", self.domain)
         logger.info("Realm: %s", self.realm)
         logger.info("Servers: %s", ", ".join(self.servers))
+        return j
 
     def hcc_register(self):
         """Register this host with /hcc API endpoint
@@ -464,6 +481,10 @@ class AutoEnrollment(object):
         }
         logger.info("Registering host at %s", url)
         j = self._do_post(url, body=body, verify=True, cafile=self.ipa_cacert)
+        if j["status"] != "ok":
+            raise SystemExit(3)
+        with io.open(self.kdc_cacert, "w", encoding="utf-8") as f:
+            f.write(j["kdc_cabundle"])
         return j
 
     def create_krb5_conf(self):

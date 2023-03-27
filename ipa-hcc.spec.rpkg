@@ -308,6 +308,7 @@ touch debugfiles.list
 export PYTHONPATH=%{buildroot}%{python_sitelib}
 %{python} -Wignore -m unittest discover  -s tests/
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --help >/dev/null
+%{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --version
 %if %{with server_plugin}
 %{buildroot}%{_sbindir}/ipa-hcc --help >/dev/null
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-dbus --help >/dev/null
@@ -317,19 +318,19 @@ export PYTHONPATH=%{buildroot}%{python_sitelib}
 rm -rf $RPM_BUILD_ROOT
 
 # common
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_common install_client
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_client
 
 %if %{with server_plugin}
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_server_plugin
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_server_plugin
 %endif
 
 %if %{with registration_service}
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_registration_service
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_registration_service
 touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %endif
 
 %if %{with mockapi}
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} install_mockapi
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_mockapi
 %endif
 
 
@@ -337,9 +338,6 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
-%dir %{_datadir}/ipa-hcc/
-%{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
-%{_datadir}/ipa-hcc/cacerts
 %{python_sitelib}/ipahcc/*.py*
 %if %{with pycache}
 %{python_sitelib}/ipahcc/__pycache__/*.pyc
@@ -353,6 +351,9 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
 %{_libexecdir}/ipa-hcc/ipa-hcc-dbus
+%dir %{_datadir}/ipa-hcc/
+%{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
+%{_datadir}/ipa-hcc/cacerts
 %{_unitdir}/ipa-hcc-update.*
 %{_unitdir}/ipa-hcc-dbus.service
 %{_datadir}/dbus-1/system.d/com.redhat.console.ipahcc.conf

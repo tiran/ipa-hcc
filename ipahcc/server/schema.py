@@ -49,7 +49,7 @@ DEFS = {
 }
 
 HCC_REQUEST = {
-    "$id": "/schemas/hcc/request",
+    "$id": "/schemas/hcc-host-register/request",
     "type": "object",
     "required": ["domain_type", "domain_name", "domain_id", "inventory_id"],
     "additionalProperties": False,
@@ -63,15 +63,17 @@ HCC_REQUEST = {
 }
 
 HCC_RESPONSE = {
-    "$id": "/schemas/hcc/response",
+    "$id": "/schemas/hcc-host-register/response",
     "type": "object",
     "required": [
         # XXX
         "status",
+        "kdc_cabundle",
     ],
     "additionalProperties": False,
     "properties": {
         "status": {"type": "string"},
+        "kdc_cabundle": {"type": "string"},
     },
 }
 

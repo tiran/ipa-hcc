@@ -7,11 +7,13 @@
 """
 __all__ = ("is_ipa_configured", "is_ipa_client_configured")
 
+import json
 import os
 import sys
 
 from ipaplatform.paths import paths
 from ipaplatform.constants import constants
+from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 try:
     from ipalib.facts import is_ipa_configured, is_ipa_client_configured
@@ -39,6 +41,21 @@ else:
     text = str
     from configparser import ConfigParser, NoOptionError
 
+# version is updated by Makefile
+VERSION = "0.7"
+
+# common HTTP request headers
+HTTP_HEADERS = {
+    "User-Agent": "IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})".format(
+        VERSION=VERSION, IPA_VERSION=IPA_VERSION
+    ),
+    "X-RH-IDM-Version": json.dumps(
+        {
+            "ipa-hcc": VERSION,
+            "ipa": IPA_VERSION,
+        }
+    ),
+}
 
 # HCC enrollment agent (ipa-hcc-registration-service)
 # Note: IPA's gssproxy directory comes with correct SELinux rule.
@@ -86,9 +103,6 @@ class HCCConfig(object):
 
     _token_url = "https://sso.{base}/auth/realms/redhat-external/protocol/openid-connect/token"
     _inventory_hosts_api = "https://console.{base}/api/inventory/v1/hosts"
-    _inventory_hosts_cert_api = (
-        "https://cert.console.{base}/api/inventory/v1/hosts"
-    )
     _idm_cert_api = "https://cert.console.{base}/api/idm/v1"
 
     _section = "hcc"
@@ -125,7 +139,3 @@ class HCCConfig(object):
     @property
     def inventory_hosts_api(self):
         return self._inventory_hosts_api.format(base=self._base)
-
-    @property
-    def inventory_hosts_cert_api(self):
-        return self._inventory_hosts_cert_api.format(base=self._base)

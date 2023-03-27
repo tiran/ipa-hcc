@@ -7,6 +7,7 @@ import uuid
 
 import dbus.exceptions
 
+from ipahcc import hccplatform
 from . import dbus_client
 from .hccapi import APIError
 
@@ -19,6 +20,15 @@ def uuidtype(v):
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--version",
+    "-V",
+    help="Show version number and exit",
+    action="version",
+    version="ipa-hcc {} (IPA {})".format(
+        hccplatform.VERSION, hccplatform.IPA_VERSION
+    ),
+)
 subparsers = parser.add_subparsers(dest="action")
 
 parser_check_host = subparsers.add_parser("check-host")

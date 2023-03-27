@@ -45,6 +45,15 @@ parser.add_argument(
     action="store_true",
 )
 parser.add_argument(
+    "--version",
+    "-V",
+    help="Show version number and exit",
+    action="version",
+    version="ipa-hcc {} (IPA {})".format(
+        hccplatform.VERSION, hccplatform.IPA_VERSION
+    ),
+)
+parser.add_argument(
     "--timeout",
     help="Timeout for HTTP and LDAP requests",
     dest="timeout",

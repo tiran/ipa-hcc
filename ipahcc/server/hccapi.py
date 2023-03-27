@@ -10,7 +10,7 @@ import requests.exceptions
 
 from ipalib import errors
 from ipalib.install import certstore  # pylint: disable=import-error
-from ipapython.version import VENDOR_VERSION
+
 
 from ipahcc import hccplatform
 from . import schema
@@ -190,6 +190,7 @@ class HCCAPI(object):
         self.timeout = timeout
         self.dry_run = dry_run
         self._session = requests.Session()
+        self._session.headers.update(hccplatform.HTTP_HEADERS)
 
     def __enter__(self):
         self.api.Backend.ldap2.connect(time_limit=self.timeout)
@@ -393,12 +394,7 @@ class HCCAPI(object):
     def _submit_idm_api(self, method, subpath, payload, extra_headers=None):
         api_url = hccconfig.idm_cert_api_url.rstrip("/")
         url = "/".join((api_url,) + subpath)
-        headers = {
-            "User-Agent": "IPA HCC auto-enrollment {VENDOR_VERSION}".format(
-                VENDOR_VERSION=VENDOR_VERSION
-            ),
-            "X-RH-IPA-Version": VENDOR_VERSION,
-        }
+        headers = {}
         if extra_headers:
             headers.update(extra_headers)
         logger.debug(

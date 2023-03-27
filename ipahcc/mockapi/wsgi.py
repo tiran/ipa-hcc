@@ -21,6 +21,7 @@ import requests
 from ipalib import api
 from ipalib import x509
 from ipaplatform.paths import paths
+
 from ipahcc import hccplatform
 from ipahcc.server import schema
 from ipahcc.registration.wsgi import HTTPException
@@ -56,6 +57,7 @@ class Application(object):
         self.valid_until = 0
         # requests session for persistent HTTP connection
         self.session = requests.Session()
+        self.session.headers.update(hccplatform.HTTP_HEADERS)
         self.routes = [
             (
                 "GET",
