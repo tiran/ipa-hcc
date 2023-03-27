@@ -1,5 +1,5 @@
 ---
-- hosts: all:!ad
+- hosts: ipaclient
   become: true
   become_method: sudo
   tasks:
@@ -7,19 +7,10 @@
         file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
         name: hmsidm_config
 
-    - name: Configure env in /etc/ipa/hcc.conf
-      ini_file:
-        path: /etc/ipa/hcc.conf
-        section: hcc
-        option: environment
-        value: "{{ hmsidm_config.rhc_env }}"
-
-    - name: Configure mockapi in /etc/ipa/hcc.conf
-      ini_file:
-        path: /etc/ipa/hcc.conf
-        section: hcc
-        option: idm_cert_api_url
-        value: "https://{{ hostvars[groups.ipaserver.0].meta_fqdn }}/mockapi"
+    - name: Configure /etc/sysconfig/ipa-hcc-auto-enrollment
+      template:
+        src: ipa-hcc-auto-enrollment.j2
+        dest: /etc/sysconfig/ipa-hcc-auto-enrollment
 
 - hosts: ipaserver
   become: true
@@ -28,6 +19,11 @@
     - include_vars:
         file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
         name: hmsidm_config
+
+    - name: Configure /etc/ipa/hcc.conf
+      template:
+        src: hcc.conf.j2
+        dest: /etc/ipa/hcc.conf
 
     # See https://access.redhat.com/articles/3626371
     - name: Write Red Hat API offline token to /etc/ipa/hcc/refresh_token

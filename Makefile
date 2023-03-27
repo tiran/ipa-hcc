@@ -113,6 +113,8 @@ install_client: install_common
 	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc/client/auto_enrollment.py
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-auto-enrollment.service $(DEST)$(UNITDIR)/
+	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/sysconfig
+	$(CP_CONFIG) $(srcdir)/install/client/sysconfig/ipa-hcc-auto-enrollment $(DEST)$(SYSCONFDIR)/sysconfig/
 	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
 	$(CP_PD) $(srcdir)/install/client/ipa-hcc-auto-enrollment $(DEST)$(LIBEXECDIR)/ipa-hcc/
 	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment

@@ -36,10 +36,9 @@ if PY2:
     # pylint: disable=undefined-variable,import-error
     text = unicode  # noqa: F821
     from ConfigParser import SafeConfigParser as ConfigParser  # noqa: F821
-    from ConfigParser import NoOptionError  # noqa: F821
 else:
     text = str
-    from configparser import ConfigParser, NoOptionError
+    from configparser import ConfigParser
 
 # version is updated by Makefile
 VERSION = "0.7"
@@ -95,15 +94,15 @@ HCC_DOMAIN_TYPE = "rhel-idm"
 TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
 
 
-class HCCConfig(object):
+class _HCCConfig(object):
     _defaults = {
-        "environment": "prod",
-        "refresh_token": "",
+        "hcc_api_host": "cert.console.redhat.com",
+        "token_url": (
+            "https://sso.redhat.com/auth/realms/redhat-external"
+            "/protocol/openid-connect/token"
+        ),
+        "inventory_url": "https://console.redhat.com/api/inventory/v1",
     }
-
-    _token_url = "https://sso.{base}/auth/realms/redhat-external/protocol/openid-connect/token"
-    _inventory_hosts_api = "https://console.{base}/api/inventory/v1/hosts"
-    _idm_cert_api = "https://cert.console.{base}/api/idm/v1"
 
     _section = "hcc"
 
@@ -111,31 +110,22 @@ class HCCConfig(object):
         self._cp = ConfigParser(defaults=self._defaults)
         self._cp.add_section(self._section)
         self._cp.read(HCC_CONFIG)
-        self._environment = self._cp.get(self._section, "environment")
-        if self._environment == "prod":
-            self._base = "redhat.com"
-        elif self._environment == "stage":
-            self._base = "stage.redhat.com"
-        else:
-            raise ValueError(
-                "Invalid environment {}".format(self._environment)
-            )
 
     @property
-    def environment(self):
-        return self._environment
-
-    @property
-    def idm_cert_api_url(self):
-        try:
-            return self._cp.get(self._section, "idm_cert_api_url")
-        except NoOptionError:
-            return self._idm_cert_api.format(base=self._base)
+    def hcc_api_host(self):
+        return self._cp.get(self._section, "hcc_api_host")
 
     @property
     def token_url(self):
-        return self._token_url.format(base=self._base)
+        return self._cp.get(self._section, "token_url")
 
     @property
-    def inventory_hosts_api(self):
-        return self._inventory_hosts_api.format(base=self._base)
+    def inventory_url(self):
+        return self._cp.get(self._section, "inventory_url")
+
+
+_hccconfig = _HCCConfig()
+
+HCC_API_HOST = _hccconfig.hcc_api_host
+TOKEN_URL = _hccconfig.token_url
+INVENTORY_URL = _hccconfig.inventory_url

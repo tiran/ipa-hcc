@@ -5,11 +5,12 @@ from ipalib import x509
 import conftest
 from conftest import mock
 
+from ipahcc.server import hccapi
+
 CACERT = x509.load_certificate_from_file(conftest.IPA_CA_CRT)
 
 
 @conftest.requires_mock
-@conftest.requires_ipa_install
 class TestHCCAPI(conftest.IPABaseTests):
     def setUp(self):
         super(TestHCCAPI, self).setUp()
@@ -71,11 +72,7 @@ class TestHCCAPI(conftest.IPABaseTests):
             ),
         }
 
-        # depends on ipaclient.install
-        # pylint: disable=import-outside-toplevel
-        from ipahcc.server import hccapi
-
-        p = mock.patch.object(hccapi.certstore, "get_ca_certs")
+        p = mock.patch.object(hccapi, "get_ca_certs")
         self.m_get_ca_certs = p.start()
         self.m_get_ca_certs.return_value = [
             (CACERT, "IPA-HCC.TEST IPA CA", True, None)
@@ -84,8 +81,7 @@ class TestHCCAPI(conftest.IPABaseTests):
 
         self.m_session = mock.Mock()
         self.hccapi = hccapi.HCCAPI(self.m_api)
-        # pylint: disable=protected-access
-        self.hccapi._session = self.m_session
+        self.hccapi.session = self.m_session
 
     def test_check_host(self):
         body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}

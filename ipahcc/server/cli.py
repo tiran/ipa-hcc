@@ -12,7 +12,6 @@ from ipapython.version import VENDOR_VERSION as IPA_VERSION
 from ipahcc import hccplatform
 from .hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
 
-hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
 
 

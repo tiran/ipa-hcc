@@ -30,7 +30,6 @@ if hccplatform.PY2:
 else:
     from queue import PriorityQueue  # pylint: disable=import-error
 
-hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger("ipa-hcc-dbus")
 
 
@@ -38,11 +37,12 @@ parser = argparse.ArgumentParser(
     "ipa-hcc-dbus", "IPA Hybrid Cloud Console D-Bus service"
 )
 parser.add_argument(
-    "--debug",
-    "-d",
-    help="Enable debug logging",
-    dest="debug",
-    action="store_true",
+    "--verbose",
+    "-v",
+    help="Enable verbose logging",
+    dest="verbose",
+    default=0,
+    action="count",
 )
 parser.add_argument(
     "--version",
@@ -106,6 +106,7 @@ class LookupQueue(object):
         argcount = method.__func__.__code__.co_argcount
         if len(args) != argcount - 1:
             raise ValueError(args, argcount)
+        logger.info("Queue %s%s", name, args)
         self._queue.put((prio, name, args, ok_cb, err_cb))
 
     def run(self):
@@ -115,10 +116,13 @@ class LookupQueue(object):
                 logger.info("Stopping lookup queue")
                 break
             try:
+                logger.info("API call %s%s", name, args)
                 with self._hccapi as hccapi:
                     method = getattr(hccapi, name)
                     _info, response = method(*args)
-                ok_cb(*self._response_to_dbus(response))
+                result = self._response_to_dbus(response)
+                logger.info("Result: %r", result)
+                ok_cb(*result)
             except APIError as e:
                 logger.exception("API call failed: %s %r", method, args)
                 # err_cb can only return exception name + string, use ok_cb()
@@ -164,10 +168,10 @@ class IPAHCCDbus(dbus.service.Object):
     ):
         """Check host by RHSM uuid"""
         args = (
-            domain_id,
-            inventory_id,
-            rhsm_id,
-            fqdn,
+            str(domain_id),
+            str(inventory_id),
+            str(rhsm_id),
+            str(fqdn),
         )
         self._lq.add_task("check_host", args, ok_cb, err_cb)
 
@@ -179,7 +183,7 @@ class IPAHCCDbus(dbus.service.Object):
     )
     def register_domain(self, domain_id, token, ok_cb, err_cb):
         """Register a new domain"""
-        args = domain_id, token
+        args = (str(domain_id), str(token))
         self._lq.add_task("register_domain", args, ok_cb, err_cb)
 
     @dbus.service.method(
@@ -190,7 +194,7 @@ class IPAHCCDbus(dbus.service.Object):
     )
     def update_domain(self, update_server_only, ok_cb, err_cb):
         """Register a new domain"""
-        args = (update_server_only,)
+        args = (bool(update_server_only),)
         self._lq.add_task("update_domain", args, ok_cb, err_cb)
 
     @dbus.service.signal(hccplatform.HCC_DBUS_IFACE_NAME)
@@ -208,11 +212,8 @@ def main(args=None):
 
     logging.basicConfig(
         format="%(message)s",
-        level=logging.DEBUG if args.debug else logging.INFO,
+        level=logging.DEBUG if args.verbose else logging.INFO,
     )
-    if hccconfig.environment != "prod":
-        logger.warning("Using environment '%s'", hccconfig.environment)
-
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     dbus.mainloop.glib.threads_init()
 

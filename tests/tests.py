@@ -49,7 +49,6 @@ class IPAHCCServerTests(conftest.IPABaseTests):
         # admintool's main() needs argv0
         self.assert_cli_run(IPAHCCCli.main, "argv0", "--help")
 
-    @conftest.requires_dbus
     def test_ipa_hcc_dbus_help(self):
         from ipahcc.server import dbus_service
         from ipahcc.server import dbus_cli

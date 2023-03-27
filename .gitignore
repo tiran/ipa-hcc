@@ -16,6 +16,7 @@ __pycache__
 # idm-ci te
 /config/
 /credentials/
+/logs/
 /mrack.conf
 /mrack.log
 /runner.log

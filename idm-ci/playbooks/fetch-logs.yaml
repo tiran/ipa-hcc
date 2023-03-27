@@ -1,0 +1,64 @@
+---
+- hosts: all:!ad
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Create misc directiry
+      file:
+        state: directory
+        path: "/var/log/00misc"
+    - name: Dump journald log since last boot
+      shell: |
+        journalctl -b > /var/log/00misc/journal.log
+    - name: Dump installed rpms
+      shell: |
+        rpm -qa | sort > /var/log/00misc/installed-rpms.log
+    - name: Dump AVC messages
+      shell: |
+        ausearch -m avc > /var/log/00misc/ausearch.log | true
+      ignore_errors: true
+    - name: Copy Insights JSON
+      shell: |
+        cp -a /var/lib/insights/*.json /var/log/00misc/
+      ignore_errors: true
+    - name: Archive system logs
+      archive:
+        path: /var/log/*
+        dest: var-log.tgz
+
+    - name: Create log dir on controller
+      file:
+        state: directory
+        path: "{{ twd }}/logs/{{ inventory_hostname }}"
+      delegate_to: localhost
+    - name: Fetch system logs archive
+      synchronize:
+        src: var-log.tgz
+        dest: "{{ twd }}/{{ inventory_hostname }}-var-log.tgz"
+        mode: pull
+    - name: Unpack system logs
+      unarchive:
+        remote_src: true
+        src: "{{ twd }}/{{ inventory_hostname }}-var-log.tgz"
+        dest: "{{ twd }}/logs/{{ inventory_hostname }}"
+        mode: "a+rX"
+      delegate_to: localhost
+    - name: Remove system logs archive
+      file:
+        state: absent
+        path: "{{ twd }}/{{ inventory_hostname }}-var-log.tgz"
+      delegate_to: localhost
+    # FileNotFoundError: [Errno 2] No such file or directory: '/builds/identity-management/idmocp/ipa-hcc/3522044/11277020/logs/client92.rhel79.hmsidm.test/README'
+    - name: Create workaround for "idm-artifacts upload" bug
+      file:
+        state: touch
+        path: "{{ twd }}/logs/{{ inventory_hostname }}/README"
+      delegate_to: localhost
+    - name: Find log files
+      command: "find {{ twd }}/logs/{{ inventory_hostname }} -type f"
+      register: out
+      delegate_to: localhost
+    - name: Show log files
+      debug:
+        msg: "{{ out.stdout }}"
+      delegate_to: localhost

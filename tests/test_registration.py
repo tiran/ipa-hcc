@@ -1,3 +1,5 @@
+import json
+
 import gssapi
 
 import conftest
@@ -5,15 +7,15 @@ from conftest import mock
 
 from ipahcc import hccplatform
 from ipahcc.registration import wsgi
+from ipahcc.server import dbus_client
 
 
 @conftest.requires_mock
 class TestRegistrationWSGI(conftest.IPABaseTests):
     def setUp(self):
         super(TestRegistrationWSGI, self).setUp()
-        self.app = wsgi.application
-        p = mock.patch.object(wsgi, "api")
-        self.m_api = p.start()
+        self.m_api = mock.Mock()
+        self.m_api.env = self.get_mock_env()
         self.m_api.isdone.return_value = False
         self.m_api.Command.config_show.return_value = {
             "result": {
@@ -21,18 +23,19 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
                 "hccorgid": (conftest.ORG_ID,),
             }
         }
-        self.addCleanup(p.stop)
 
-        p = mock.patch.object(wsgi.application, "session")
-        self.m_session = p.start()
-        self.addCleanup(p.stop)
+        self.app = wsgi.Application(self.m_api)
 
         p = mock.patch.object(gssapi, "Credentials")
         self.m_gss_credentials = p.start()
         self.addCleanup(p.stop)
 
+        p = mock.patch.object(dbus_client, "_dbus_getmethod")
+        self.m_dbus_method = p.start()
+        self.addCleanup(p.stop)
+
     def test_ipaapi(self):
-        app = wsgi.application
+        app = self.app
         api = self.m_api
         app.bootstrap_ipa()
         api.bootstrap.assert_called()
@@ -49,6 +52,17 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
         api.Backend.rpcclient.disconnect.assert_called_once()
 
     def test_register(self):
+        self.m_dbus_method.return_value = mock.Mock(
+            return_value=(
+                200,
+                "OK",
+                "url",
+                {"content-type": "application/json"},
+                json.dumps({"inventory_id": conftest.CLIENT_INVENTORY_ID}),
+                0,
+                "",
+            )
+        )
         body = {
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": conftest.DOMAIN,
@@ -71,7 +85,7 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
             },
         )
 
-        app = wsgi.application
+        app = self.app
         self.assertEqual(app.org_id, int(conftest.ORG_ID))
         self.assertEqual(app.domain_id, conftest.DOMAIN_ID)
 

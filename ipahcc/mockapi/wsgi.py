@@ -31,7 +31,6 @@ if hccplatform.PY2:
 else:
     from time import monotonic as monotonic_time
 
-hccconfig = hccplatform.HCCConfig()
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-mockapi")
@@ -111,11 +110,7 @@ class Application(object):
             )
         return int(nas[0].value), nas[1].value
 
-    def get_access_token(
-        self,
-        refresh_token_file=hccplatform.REFRESH_TOKEN_FILE,
-        url=hccconfig.token_url,
-    ):  # pragma: no cover
+    def get_access_token(self):  # pragma: no cover
         """Get a bearer access token from an offline token
 
         TODO: Poor man's OAuth2 workflow. Replace with
@@ -127,6 +122,7 @@ class Application(object):
         if self.access_token and monotonic_time() < self.valid_until:
             return self.access_token
 
+        refresh_token_file = hccplatform.REFRESH_TOKEN_FILE
         try:
             with io.open(refresh_token_file, "r", encoding="utf-8") as f:
                 refresh_token = f.read().strip()
@@ -143,6 +139,7 @@ class Application(object):
             "client_id": hccplatform.TOKEN_CLIENT_ID,
             "refresh_token": refresh_token,
         }
+        url = hccplatform.TOKEN_URL
         start = monotonic_time()
         resp = self.session.post(url, data)
         dur = monotonic_time() - start
@@ -165,17 +162,13 @@ class Application(object):
         self.valid_until = monotonic_time() + j["expires_in"] - 10
         return self.access_token
 
-    def lookup_inventory(
-        self,
-        rhsm_id,
-        access_token,
-        url=hccconfig.inventory_hosts_api,
-    ):
+    def lookup_inventory(self, rhsm_id, access_token):
         """Lookup host by subscription manager id
 
         Returns FQDN, inventory_id
         """
-        logger.debug("Looking up %s in console inventory", rhsm_id)
+        url = hccplatform.INVENTORY_URL.rstrip("/") + "/hosts"
+        logger.debug("Looking up %s in console inventory %s", rhsm_id, url)
         headers = {
             "Authorization": "Bearer {access_token}".format(
                 access_token=access_token

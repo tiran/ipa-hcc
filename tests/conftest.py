@@ -86,15 +86,6 @@ else:
 
 try:
     # pylint: disable=unused-import
-    import dbus.mainloop.glib  # noqa: F401
-    import gi.repository  # noqa: F401
-except ImportError:  # pragma: no cover
-    HAS_DBUS = False
-else:
-    HAS_DBUS = True
-
-try:
-    # pylint: disable=unused-import
     from unittest import mock
 except ImportError:
     try:
@@ -110,9 +101,6 @@ requires_ipaserver = unittest.skipUnless(
 )
 requires_jsonschema = unittest.skipUnless(
     schema.jsonschema, "requires 'jsonschema'"
-)
-requires_dbus = unittest.skipUnless(
-    HAS_DBUS, "requires 'dbus' and 'gi.repository'"
 )
 requires_mock = unittest.skipUnless(
     mock is not None, "requires 'unittest.mock' or 'mock'"

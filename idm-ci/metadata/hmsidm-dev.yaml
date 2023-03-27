@@ -37,9 +37,9 @@ phases:
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-rpkg-local.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
-      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
   - name: server
     steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaserver
@@ -55,6 +55,9 @@ phases:
         extra_vars:
           target_group: ipaclient
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
+  - name: collect
+    steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
   - name: teardown
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
