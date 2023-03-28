@@ -145,7 +145,7 @@
             msg:
               - "rhc connect -o ORGID -a KEY"
               - "Create /etc/ipa/hcc/refresh_token (owned by ipahcc:root)"
-              - "dnf install ipa-hcc-registration-service ipa-hcc-server-plugin"
+              - "dnf install ipa-hcc-server"
 
     # CLIENT specific
     - name: IPA client installation
@@ -160,7 +160,7 @@
         - name: install IPA HCC client enrollment package
           package:
             name:
-              - ipa-hcc-client-enrollment
+              - ipa-hcc-client
             state: present
 
         - name: add server to /etc/hosts

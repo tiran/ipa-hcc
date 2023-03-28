@@ -195,7 +195,7 @@ class APIError(Exception):
 class HCCAPI(object):
     """Register or update domain information in HCC"""
 
-    def __init__(self, api, timeout=DEFAULT_TIMEOUT, dry_run=False):
+    def __init__(self, api, timeout=DEFAULT_TIMEOUT):
         # if not api.isdone("finalize") or not api.env.in_server:
         #     raise ValueError(
         #         "api must be an in_server and finalized API object"
@@ -203,7 +203,6 @@ class HCCAPI(object):
 
         self.api = api
         self.timeout = timeout
-        self.dry_run = dry_run
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
 
@@ -439,9 +438,6 @@ class HCCAPI(object):
         )
         body = json.dumps(payload, indent=2)
         logger.debug("body: %s", body)
-        if self.dry_run:
-            logger.warning("Skip %s request %s, body:\n%s", method, url, body)
-            return None
         try:
             resp = self.session.request(
                 method,

@@ -7,17 +7,12 @@ import dbus.mainloop.glib
 from ipahcc import hccplatform
 from .hccapi import APIError, APIResult
 
-__all__ = ("init", "check_host", "register_domain", "update_domain")
+__all__ = ("check_host", "register_domain", "update_domain")
 
 logger = logging.getLogger("dbus-client")
 
 
-def init():
-    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-    dbus.mainloop.glib.threads_init()
-
-
-def _dbus_getmethod(method_name, bus=None):
+def _dbus_getmethod(method_name, bus=None):  # pragma: no cover
     """Get method wrapper from HCC D-Bus service"""
     if bus is None:
         bus = dbus.SystemBus()

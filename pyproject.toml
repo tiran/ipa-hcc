@@ -7,15 +7,18 @@ branch = true
 relative_files = true
 parallel = true
 source = [
-    "ipahcc/",
-    "ipaserver/",
-    "tests/",
+    "ipahcc_auto_enrollment",
+    "ipahcc",
+    "ipaserver",
+    "tests",
 ]
 
 [tool.coverage.paths]
 source = [
+   "ipahcc_auto_enrollment.py",
    "ipahcc/",
    "ipaserver/",
+   "*.tox/*/lib*/python*/site-packages/ipahcc_auto_enrollment.py",
    "*.tox/*/lib*/python*/site-packages/ipahcc",
    "*.tox/*/lib*/python*/site-packages/ipaserver",
 ]

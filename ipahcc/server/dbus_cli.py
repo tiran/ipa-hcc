@@ -62,7 +62,7 @@ def main(args=None):
             result = dbus_client.register_domain(args.domain_id, args.token)
         elif args.action == "update":
             result = dbus_client.update_domain(args.update_server_only)
-        else:
+        else:  # pragma: no cover
             raise ValueError(args.action)
     except dbus.exceptions.DBusException as e:
         logger.exception("D-Bus call failed")

@@ -11,9 +11,9 @@ from ipahcc.server import schema
 
 class IPAClientTests(conftest.IPABaseTests):
     def test_auto_enrollment_help(self):
-        from ipahcc.client import auto_enrollment
+        import ipahcc_auto_enrollment
 
-        self.assert_cli_run(auto_enrollment.main, "--help")
+        self.assert_cli_run(ipahcc_auto_enrollment.main, "--help")
 
 
 class WSGITests(conftest.IPABaseTests):
@@ -41,7 +41,6 @@ class IPAServerTests(conftest.IPABaseTests):
         )
 
 
-@conftest.requires_ipa_install
 class IPAHCCServerTests(conftest.IPABaseTests):
     def test_ipa_hcc_cli_help(self):
         from ipahcc.server.cli import IPAHCCCli

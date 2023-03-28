@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """IPA client auto-enrollment for Hybrid Cloud Console
 
 Installation with older clients that lack PKINIT:
@@ -40,20 +41,28 @@ else:
     # IPA >= 4.9.10 / 4.10.1
     HAS_KINIT_PKINIT = True
 
-from ipahcc import hccplatform
-
 PY2 = sys.version_info.major == 2
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
 VERSION = "0.7"
 
-RHSM_CERT = hccplatform.RHSM_CERT
-RHSM_KEY = hccplatform.RHSM_KEY
-HCC_DOMAIN_TYPE = hccplatform.HCC_DOMAIN_TYPE
-INSIGHTS_HOST_DETAILS = hccplatform.INSIGHTS_HOST_DETAILS
-HTTP_HEADERS = hccplatform.HTTP_HEADERS
-del hccplatform
+# copied from ipahcc.hccplatform
+RHSM_CERT = "/etc/pki/consumer/cert.pem"
+RHSM_KEY = "/etc/pki/consumer/key.pem"
+INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
+HCC_DOMAIN_TYPE = "rhel-idm"
+HTTP_HEADERS = {
+    "User-Agent": "IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})".format(
+        VERSION=VERSION, IPA_VERSION=IPA_VERSION
+    ),
+    "X-RH-IDM-Version": json.dumps(
+        {
+            "ipa-hcc": VERSION,
+            "ipa": IPA_VERSION,
+        }
+    ),
+}
 
 logger = logging.getLogger(__name__)
 
