@@ -78,10 +78,6 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             RHSM_CERT=conftest.RHSM_CERT,
             RHSM_KEY=conftest.RHSM_KEY,
             INSIGHTS_HOST_DETAILS=conftest.HOST_DETAILS,
-            hccconfig=mock.Mock(
-                environment="test",
-                idm_cert_api_url="https://console.ipa-hcc.test/api/idm/v1",
-            ),
         )
         p.start()
         self.addCleanup(p.stop)
@@ -139,9 +135,11 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             "--location", "sigma",
             "--upto", "host-conf",
             "--override-server", conftest.SERVER_FQDN,
+            "--hcc-api-host", conftest.SERVER_FQDN,
             # fmt: on
         )
         self.assertEqual(args.timeout, 20)
+        self.assertEqual(args.hcc_api_host, conftest.SERVER_FQDN)
         self.assert_args_error("--hostname", "invalid_hostname")
         self.assert_args_error("--domain-name", "invalid_domain")
         self.assert_args_error("--domain-id", "invalid_domain")
@@ -198,7 +196,12 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(ae.inventory_id, conftest.CLIENT_INVENTORY_ID)
 
     def test_hcc_host_conf(self):
-        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        args = self.parse_args(
+            "--hostname",
+            conftest.CLIENT_FQDN,
+            "--hcc-api-host",
+            conftest.SERVER_FQDN,
+        )
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             ae.wait_for_inventory_host()
@@ -209,8 +212,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             req = urlopen.call_args[0][0]
             self.assertEqual(
                 req.get_full_url(),
-                "https://console.ipa-hcc.test/api/idm/v1/host-conf/{}".format(
-                    conftest.CLIENT_FQDN
+                "https://{}/api/idm/v1/host-conf/{}".format(
+                    conftest.SERVER_FQDN, conftest.CLIENT_FQDN
                 ),
             )
             self.assertEqual(

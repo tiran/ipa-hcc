@@ -17,16 +17,22 @@ def init():
     dbus.mainloop.glib.threads_init()
 
 
-def _dbus_call(method_name, *args, **kwargs):
-    bus = kwargs.get("bus")
+def _dbus_getmethod(method_name, bus=None):
+    """Get method wrapper from HCC D-Bus service"""
     if bus is None:
         bus = dbus.SystemBus()
+    obj = bus.get_object(
+        hccplatform.HCC_DBUS_NAME, hccplatform.HCC_DBUS_OBJ_PATH
+    )
+    iface = dbus.Interface(obj, hccplatform.HCC_DBUS_IFACE_NAME)
+    return getattr(iface, method_name)
+
+
+def _dbus_call(method_name, *args, **kwargs):
+    method = _dbus_getmethod(method_name, kwargs.get("bus"))
+    logger.info("D-Bus call: %s%s", method_name, args)
     try:
-        obj = bus.get_object(
-            hccplatform.HCC_DBUS_NAME, hccplatform.HCC_DBUS_OBJ_PATH
-        )
-        iface = dbus.Interface(obj, hccplatform.HCC_DBUS_IFACE_NAME)
-        result = getattr(iface, method_name)(*args)
+        result = method(*args)
     except dbus.exceptions.DBusException:
         logger.exception(
             "D-Bus service %s failed with an internal error",

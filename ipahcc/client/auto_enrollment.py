@@ -53,7 +53,6 @@ RHSM_KEY = hccplatform.RHSM_KEY
 HCC_DOMAIN_TYPE = hccplatform.HCC_DOMAIN_TYPE
 INSIGHTS_HOST_DETAILS = hccplatform.INSIGHTS_HOST_DETAILS
 HTTP_HEADERS = hccplatform.HTTP_HEADERS
-hccconfig = hccplatform.HCCConfig()
 del hccplatform
 
 logger = logging.getLogger(__name__)
@@ -101,12 +100,12 @@ def check_arg_uuid(arg):
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "--debug",
-    "-d",
-    help="Enable debug logging",
-    dest="debug",
-    default=False,
-    type=int,
+    "--verbose",
+    "-v",
+    help="Enable verbose logging",
+    dest="verbose",
+    default=0,
+    action="count",
 )
 parser.add_argument(
     "--version",
@@ -137,6 +136,16 @@ parser.add_argument(
     help="timeout for HTTP request",
     type=int,
     default=10,
+)
+DEFAULT_HCC_API_HOST = "cert.console.redhat.com"
+parser.add_argument(
+    "--hcc-api-host",
+    help=(
+        "URL of Hybrid Cloud Console API with cert auth "
+        "(default: {})".format(DEFAULT_HCC_API_HOST)
+    ),
+    default=DEFAULT_HCC_API_HOST,
+    type=str,
 )
 
 group = parser.add_argument_group("domain filter")
@@ -224,7 +233,7 @@ class AutoEnrollment(object):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.args.debug >= 2:
+        if self.args.verbose >= 2:
             logger.info("Keeping temporary directory %s", self.tmpdir)
         else:
             shutil.rmtree(self.tmpdir)
@@ -270,7 +279,7 @@ class AutoEnrollment(object):
             env["LC_ALL"] = "C.UTF-8"
             env["KRB5_CONFIG"] = self.krb_name
             env["KRB5CCNAME"] = os.path.join(self.tmpdir, "ccache")
-            if self.args.debug >= 2:
+            if self.args.verbose >= 2:
                 env["KRB5_TRACE"] = "/dev/stderr"
         else:
             env = None
@@ -428,8 +437,9 @@ class AutoEnrollment(object):
             if value is not None:
                 body[key] = value
 
-        api_url = hccconfig.idm_cert_api_url.rstrip("/")
-        url = "/".join((api_url, "host-conf", self.args.hostname))
+        url = "https://{api_host}/api/idm/v1/host-conf/{hostname}".format(
+            api_host=self.args.hcc_api_host, hostname=self.args.hostname
+        )
         verify = not self.args.insecure
         logger.info(
             "Getting host configuration from %s (secure: %s).", url, verify
@@ -573,7 +583,7 @@ class AutoEnrollment(object):
 def main(args=None):
     args = parser.parse_args(args)
     logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
+        level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(levelname)s: %(message)s",
     )
 

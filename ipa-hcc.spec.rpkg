@@ -415,7 +415,7 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %attr(0755,root,root) %dir %{_libexecdir}/ipa-hcc
 %attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
-
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/ipa-hcc-auto-enrollment
 
 %changelog
 {{{ git_dir_changelog }}}

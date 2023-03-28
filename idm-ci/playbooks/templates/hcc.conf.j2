@@ -1,0 +1,11 @@
+[hcc]
+# use mockapi
+hcc_api_host={{ meta_fqdn }}
+
+{% if hmsidm_config.rhc_env == 'stage' %}
+token_url=https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+inventory_url=https://console.stage.redhat.com/api/inventory/v1
+{% else %}
+token_url=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+inventory_url=https://console.redhat.com/api/inventory/v1
+{% endif %}

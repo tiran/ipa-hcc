@@ -60,5 +60,6 @@ phases:
       - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
   - name: teardown
     steps:
+      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
       - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
       - playbook: teardown/mrack-destroy.yaml

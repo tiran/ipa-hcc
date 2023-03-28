@@ -9,7 +9,18 @@ import requests
 import requests.exceptions
 
 from ipalib import errors
-from ipalib.install import certstore  # pylint: disable=import-error
+
+# WIP: workaround until registration service uses D-Bus client
+try:
+    from ipalib.install.certstore import (
+        get_ca_certs,
+    )  # pylint: disable=import-error
+except ImportError:
+
+    def get_ca_certs(
+        ldap2, basedn, realm, ca_enabled
+    ):  # pylint: disable=unused-argument
+        raise NotImplementedError
 
 
 from ipahcc import hccplatform
@@ -22,7 +33,6 @@ else:
     from http.client import responses as http_responses
 # pylint: enable=import-error
 
-hccconfig = hccplatform.HCCConfig()
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 10
@@ -181,16 +191,16 @@ class HCCAPI(object):
     """Register or update domain information in HCC"""
 
     def __init__(self, api, timeout=DEFAULT_TIMEOUT, dry_run=False):
-        if not api.isdone("finalize") or not api.env.in_server:
-            raise ValueError(
-                "api must be an in_server and finalized API object"
-            )
+        # if not api.isdone("finalize") or not api.env.in_server:
+        #     raise ValueError(
+        #         "api must be an in_server and finalized API object"
+        #     )
 
         self.api = api
         self.timeout = timeout
         self.dry_run = dry_run
-        self._session = requests.Session()
-        self._session.headers.update(hccplatform.HTTP_HEADERS)
+        self.session = requests.Session()
+        self.session.headers.update(hccplatform.HTTP_HEADERS)
 
     def __enter__(self):
         self.api.Backend.ldap2.connect(time_limit=self.timeout)
@@ -331,7 +341,7 @@ class HCCAPI(object):
             )
             ca_enabled = result["result"]["enable_ra"]
 
-        certs = certstore.get_ca_certs(
+        certs = get_ca_certs(
             self.api.Backend.ldap2,
             self.api.env.basedn,
             self.api.env.realm,
@@ -392,7 +402,9 @@ class HCCAPI(object):
         }
 
     def _submit_idm_api(self, method, subpath, payload, extra_headers=None):
-        api_url = hccconfig.idm_cert_api_url.rstrip("/")
+        api_url = "https://{hcc_api_host}/api/idm/v1".format(
+            hcc_api_host=hccplatform.HCC_API_HOST
+        )
         url = "/".join((api_url,) + subpath)
         headers = {}
         if extra_headers:
@@ -406,7 +418,7 @@ class HCCAPI(object):
             logger.warning("Skip %s request %s, body:\n%s", method, url, body)
             return None
         try:
-            resp = self._session.request(
+            resp = self.session.request(
                 method,
                 url,
                 headers=headers,

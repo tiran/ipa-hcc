@@ -9,9 +9,9 @@ import traceback
 
 from cryptography.x509.oid import NameOID
 import gssapi
-import requests
 
 from ipahcc import hccplatform
+from ipahcc.server import dbus_client
 from ipahcc.server import schema
 
 # pylint: disable=import-error
@@ -27,9 +27,9 @@ os.environ["KRB5CCNAME"] = hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME
 os.environ["GSS_USE_PROXY"] = "1"
 
 # pylint: disable=wrong-import-position,wrong-import-order
-from ipalib import api, errors, x509  # noqa: E402
-
-hccconfig = hccplatform.HCCConfig()
+import ipalib  # noqa: E402
+from ipalib import errors  # noqa: E402
+from ipalib import x509  # noqa: E402
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")
@@ -73,13 +73,11 @@ class HTTPException(Exception):
 
 
 class Application(object):
-    def __init__(self):
+    def __init__(self, api):
+        self.api = api
         # cached org_id from IPA config_show
         self._org_id = None
         self._domain_id = None
-        # requests session for persistent HTTP connection
-        self.session = requests.Session()
-        self.session.headers.update(hccplatform.HTTP_HEADERS)
 
     def parse_cert(self, env, envname):
         cert_pem = env.get(envname)
@@ -105,51 +103,51 @@ class Application(object):
         return int(nas[0].value), nas[1].value
 
     def check_host(self, inventory_id, rhsm_id, fqdn):
-        body = {
-            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-            "domain_name": api.env.domain,
-            "domain_id": self.domain_id,
-            "inventory_id": inventory_id,
-        }
-        api_url = hccconfig.idm_cert_api_url.rstrip("/")
-        url = "/".join((api_url, "check-host", rhsm_id, fqdn))
-        resp = self.session.post(url, json=body)
-        resp.raise_for_status()
-        j = resp.json()
-        return j["inventory_id"]
+        try:
+            result = dbus_client.check_host(
+                self.domain_id, inventory_id, rhsm_id, fqdn
+            )
+        except dbus_client.APIError as e:
+            raise HTTPException.from_error(
+                e.result.status_code, e.result.body
+            )
+        return result.body["inventory_id"]
 
     def kinit_gssproxy(self):
         service = hccplatform.HCC_ENROLLMENT_AGENT
         principal = "{service}/{host}@{realm}".format(
-            service=service, host=api.env.host, realm=api.env.realm
+            service=service, host=self.api.env.host, realm=self.api.env.realm
         )
         name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
         store = {"ccache": hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME}
         return gssapi.Credentials(name=name, store=store, usage="initiate")
 
     def bootstrap_ipa(self):
-        if not api.isdone("bootstrap"):
-            api.bootstrap(in_server=False)
+        if not self.api.isdone("bootstrap"):
+            self.api.bootstrap(in_server=False)
 
     def connect_ipa(self):
         logger.debug("Connecting to IPA")
         self.kinit_gssproxy()
-        if not api.isdone("finalize"):
-            api.finalize()
-        if not api.Backend.rpcclient.isconnected():
-            api.Backend.rpcclient.connect()
+        if not self.api.isdone("finalize"):
+            self.api.finalize()
+        if not self.api.Backend.rpcclient.isconnected():
+            self.api.Backend.rpcclient.connect()
             logger.debug("Connected")
         else:
             logger.debug("IPA rpcclient is already connected.")
 
     def disconnect_ipa(self):
-        if api.isdone("finalize") and api.Backend.rpcclient.isconnected():
-            api.Backend.rpcclient.disconnect()
+        if (
+            self.api.isdone("finalize")
+            and self.api.Backend.rpcclient.isconnected()
+        ):
+            self.api.Backend.rpcclient.disconnect()
 
     def _get_ipa_config(self):
         """Get org_id and domain_id from IPA config"""
         # no need to fetch additional values
-        result = api.Command.config_show(raw=True)["result"]
+        result = self.api.Command.config_show(raw=True)["result"]
         org_ids = result.get("hccorgid")
         if not org_ids or len(org_ids) != 1:
             raise ValueError(
@@ -195,7 +193,7 @@ class Application(object):
         inventory_id = hccplatform.text(inventory_id)
         fqdn = hccplatform.text(fqdn)
         try:
-            api.Command.host_add(
+            self.api.Command.host_add(
                 fqdn,
                 # hccorgid=org_id,
                 hccsubscriptionid=rhsm_id,
@@ -205,7 +203,7 @@ class Application(object):
             logger.info("Added IPA host %s", fqdn)
         except errors.DuplicateEntry:
             try:
-                api.Command.host_mod(
+                self.api.Command.host_mod(
                     fqdn,
                     # hccorgid=org_id,
                     hccsubscriptionid=rhsm_id,
@@ -311,7 +309,7 @@ class Application(object):
             return [e.message]
 
 
-application = Application()
+application = Application(api=ipalib.api)
 
 
 def test(inventory_id, rhsm_id, fqdn):
