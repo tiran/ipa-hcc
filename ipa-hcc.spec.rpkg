@@ -163,22 +163,22 @@ fi
 %post server-plugin
 # ipa-hcc-dbus.service and ipa-hcc-update.timer are started by ipactl
 %systemd_post ipa-hcc-dbus.service
-%systemd_post ipa-hcc.update.service
-%systemd_post ipa-hcc.update.timer
+%systemd_post ipa-hcc-update.service
+%systemd_post ipa-hcc-update.timer
 /bin/systemctl daemon-reload
 
 %preun server-plugin
 %systemd_preun ipa-hcc-dbus.service
-%systemd_preun ipa-hcc.update.service
-%systemd_preun ipa-hcc.update.timer
+%systemd_preun ipa-hcc-update.service
+%systemd_preun ipa-hcc-update.timer
 
 
 %postun server-plugin
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/redhat-candlepin-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
 %systemd_postun_with_restart ipa-hcc-dbus.service
-%systemd_postun ipa-hcc.update.service
-%systemd_postun ipa-hcc.update.timer
+%systemd_postun ipa-hcc-update.service
+%systemd_postun ipa-hcc-update.timer
 
 # server-plugin
 %endif
