@@ -5,6 +5,7 @@ import logging
 import json
 
 from cryptography.hazmat.primitives.serialization import Encoding
+from cryptography.x509.oid import NameOID
 import requests
 import requests.exceptions
 
@@ -37,6 +38,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 10
 _missing = object()
+RFC4514_MAP = {
+    NameOID.EMAIL_ADDRESS: "E",
+}
+
 
 APIResult = collections.namedtuple(
     "APIResult",
@@ -232,7 +237,9 @@ class HCCAPI(object):
     def register_domain(self, domain_id, token):
         config = self._get_ipa_config(all_fields=True)
         info = self._get_ipa_info(config)
-        schema.validate_schema(info, "/schemas/domain/request")
+        schema.validate_schema(
+            info, "/schemas/domain-register-update/request"
+        )
         extra_headers = {
             "X-RH-IDM-Registration-Token": token,
         }
@@ -242,7 +249,9 @@ class HCCAPI(object):
             payload=info,
             extra_headers=extra_headers,
         )
-        schema.validate_schema(resp.json(), "/schemas/domain/response")
+        schema.validate_schema(
+            resp.json(), "/schemas/domain-register-update/response"
+        )
         # update after successful registration
         try:
             self.api.Command.config_mod(
@@ -269,14 +278,18 @@ class HCCAPI(object):
         domain_id = self._get_domain_id(config)
 
         info = self._get_ipa_info(config)
-        schema.validate_schema(info, "/schemas/domain/request")
+        schema.validate_schema(
+            info, "/schemas/domain-register-update/request"
+        )
         resp = self._submit_idm_api(
             method="PUT",
             subpath=("domains", domain_id, "update"),
             payload=info,
             extra_headers=None,
         )
-        schema.validate_schema(resp.json(), "/schemas/domain/response")
+        schema.validate_schema(
+            resp.json(), "/schemas/domain-register-update/response"
+        )
         return info, resp
 
     def _get_domain_id(self, config):
@@ -355,7 +368,19 @@ class HCCAPI(object):
             certinfo = {
                 "nickname": nickname,
                 "pem": cert.public_bytes(Encoding.PEM).decode("ascii"),
+                # JSON number type cannot handle large serial numbers
+                "serial_number": str(cert.serial_number),
+                "not_before": cert.not_valid_before.isoformat(),
+                "not_after": cert.not_valid_after.isoformat(),
             }
+
+            try:
+                certinfo["issuer"] = cert.issuer.rfc4514_string(RFC4514_MAP)
+                certinfo["subject"] = cert.subject.rfc4514_string(RFC4514_MAP)
+            except (AttributeError, TypeError):
+                # old cryptography 1.7.2 on RHEL 7.9
+                pass
+
             cacerts.append(certinfo)
 
         return cacerts

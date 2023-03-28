@@ -357,7 +357,7 @@ class Application(object):
 
     def _handle_domain(self, env, domain_id):
         body = self.get_json(env)
-        validate_schema(body, "/schemas/domain/request")
+        validate_schema(body, "/schemas/domain-register-update/request")
 
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
@@ -369,7 +369,7 @@ class Application(object):
             raise HTTPException.from_error(400, "unsupported domain id")
 
         response = {"status": "ok"}
-        validate_schema(response, "/schemas/domain/response")
+        validate_schema(response, "/schemas/domain-register-update/response")
         return response
 
     def handle(self, env):

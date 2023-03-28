@@ -124,4 +124,6 @@ class TestJSONSchema(conftest.IPABaseTests):
                 ],
             },
         }
-        schema.validate_schema(instance, "/schemas/domain/request")
+        schema.validate_schema(
+            instance, "/schemas/domain-register-update/request"
+        )
