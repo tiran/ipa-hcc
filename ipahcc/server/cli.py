@@ -113,7 +113,9 @@ class IPAHCCCli(admintool.AdminTool):
                     raise ValueError(self.command)
         except APIError as e:
             logger.exception("API call failed")
-            raise admintool.ScriptError(e.error_message, rval=e.exit_code)
+            raise admintool.ScriptError(
+                e.result.exit_message, rval=e.result.exit_code
+            )
         except errors.NetworkError:
             logger.debug("Failed to connect to IPA", exc_info=True)
             raise admintool.ScriptError(

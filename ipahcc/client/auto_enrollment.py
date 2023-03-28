@@ -144,8 +144,8 @@ parser.add_argument(
         "URL of Hybrid Cloud Console API with cert auth "
         "(default: {})".format(DEFAULT_HCC_API_HOST)
     ),
-    default=DEFAULT_HCC_API_HOST,
-    type=str,
+    default=None,
+    type=check_arg_hostname,
 )
 
 group = parser.add_argument_group("domain filter")
@@ -587,6 +587,8 @@ def main(args=None):
         format="%(levelname)s: %(message)s",
     )
 
+    if not args.hcc_api_host:
+        parser.error("--hcc-api-host required\n")
     if os.path.isfile(paths.IPA_DEFAULT_CONF) and not args.upto:
         parser.error(
             "IPA is already installed, '{conf}' exists.\n".format(

@@ -1,3 +1,2 @@
 # --insecure
-# --hcc-api-host cert.console.stage.redhat.com
-AUTO_ENROLLMENT_ARGS=""
+AUTO_ENROLLMENT_ARGS="--hcc-api-host cert.console.stage.redhat.com"
