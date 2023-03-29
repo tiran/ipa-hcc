@@ -1,2 +1,0 @@
-"""IPA hybrid cloud console
-"""

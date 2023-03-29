@@ -89,11 +89,7 @@ class IPAHCCCli(admintool.AdminTool):
         ipalib.api.finalize()
 
         try:
-            with HCCAPI(
-                ipalib.api,
-                timeout=self.options.timeout,
-                dry_run=False,
-            ) as ipahcc:
+            with HCCAPI(ipalib.api, timeout=self.options.timeout) as ipahcc:
                 if self.command == "register":
                     ipahcc.register_domain(
                         domain_id=self.args[1], token=self.args[2]

@@ -13,7 +13,7 @@ SITELIB=$($PYTHON -c 'from sys import version_info as v; print("/usr/lib/python{
 
 ## phase 1, install files
 
-make install_server PYTHON=$PYTHON PYTHON_SITELIB=$SITELIB
+make install_server install_mockapi PYTHON=$PYTHON PYTHON_SITELIB=$SITELIB
 
 ## phase 2, user, change permissions
 

@@ -8,3 +8,6 @@ addFilter('invalid-url Source0')
 
 # gitlab CI workaround
 addFilter('no-changelogname-tag')
+
+# dunno
+addFilter('only-non-binary-in-usr-lib')

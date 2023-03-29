@@ -1,7 +1,7 @@
+%global package_name ipa-hcc
+
 %if 0%{?rhel}
   # RHEL 7, 8, 9
-  %global package_name ipa-hcc
-  %global alt_name freeipa-hcc
   %global ipa_name ipa
 
   # ipa-client-install supports PKINIT options since 4.9.11 (RHEL 8.8)
@@ -10,8 +10,7 @@
   %if 0%{?rhel} >= 9
     # RHEL 9.0 EUS has 4.9.8-8.el9_0
     %global ipa_version 4.9.8
-    %global with_server_plugin 1
-    %global with_registration_service 1
+    %global with_server 1
   %else
   # elif doesn't work here?
   %if 0%{?rhel} == 8
@@ -19,24 +18,19 @@
     # RHEL 8.6 EUS has 4.9.8
     %global ipa_version 4.9.2
     %global with_platform_python 1
-    %global with_server_plugin 1
-    %global with_registration_service 1
+    %global with_server 1
   %else
     # RHEL 7.9 has 4.6.8-5.el7_9
     %global ipa_version 4.6.8
     %global with_python2 1
-    %global with_server_plugin 1
-    %global with_registration_service 1
+    %global with_server 1
   %endif
   %endif
 %else
   # Fedora (for development only)
-  %global package_name ipa-hcc
-  %global alt_name freeipa-hcc
   %global ipa_name freeipa
   %global ipa_version 4.10
-  %global with_server_plugin 1
-  %global with_registration_service 1
+  %global with_server 1
 %endif
 
 # --without mockapi (enabled by default)
@@ -71,7 +65,7 @@ Source:         {{{ git_dir_pack }}}
 
 %if %{with python2}
 BuildRequires: python2-devel
-%if %{with registration_service} || %{with server_plugin}
+%if %{with server}
 BuildRequires: python2-ipaserver >= %{ipa_version}
 %else
 BuildRequires: python2-ipaclient >= %{ipa_version}
@@ -83,7 +77,7 @@ BuildRequires: systemd-python
 BuildRequires: python-sssdconfig
 %else
 BuildRequires: python3-devel
-%if %{with registration_service} || %{with server_plugin}
+%if %{with server}
 BuildRequires: python3-ipaserver >= %{ipa_version}
 %else
 BuildRequires: python3-ipaclient >= %{ipa_version}
@@ -104,137 +98,89 @@ BuildRequires: selinux-policy-devel
 %description
 An extension for IPA integration with Red Hat Hybrid Cloud Console.
 
-
-%package common
-Summary: Common files for IPA Hybrid Cloud Console extension
-BuildArch: noarch
-
-Provides: %{alt_name}-common = %{version}
-Conflicts: %{alt_name}-common
-Obsoletes: %{alt_name}-common < %{version}
-Requires: %{ipa_name}-client >= %{ipa_version}
-
-%description common
-This package contains common files for IPA Hybrid Cloud Console extension.
-
-
-%if %{with server_plugin}
-%package server-plugin
+%if %{with server}
+%package server
 Summary: Server plugin for IPA Hybrid Cloud Console extension
 BuildArch: noarch
 
-Provides: %{alt_name}-server-plugin = %{version}
-Conflicts: %{alt_name}-server-plugin
-Obsoletes: %{alt_name}-server-plugin < %{version}
-Requires: %{package_name}-common = %{version}
+Provides: %{package_name}-common = %{version}
+Conflicts: %{package_name}-common
+Obsoletes: %{package_name}-common < %{version}
+Provides: %{package_name}-server-plugin = %{version}
+Conflicts: %{package_name}-server-plugin
+Obsoletes: %{package_name}-server-plugin < %{version}
+Provides: %{package_name}-registration-service = %{version}
+Conflicts: %{package_name}-registration-service
+Obsoletes: %{package_name}-registration-service < %{version}
 Requires: %{ipa_name}-server >= %{ipa_version}
 Requires(post): %{ipa_name}-server >= %{ipa_version}
+Requires: httpd
 %if 0%{?with_python2}
+Requires: mod_nss
+Requires: mod_wsgi
 Requires: python-dbus
 Requires: python-gobject-base
 Requires: systemd-python
 # not available in RHEL 7
 # Requires: python2-jsonschema
 %else
+Requires: mod_ssl
+Requires: python3-mod_wsgi
 Requires: python3-dbus
 Requires: python3-gobject-base
 Requires: python3-jsonschema
 Requires: python3-systemd
 %endif
-
+Requires: selinux-policy
+Requires(post): selinux-policy
 %{?systemd_requires}
 
-%description server-plugin
+%description server
 This package contains server plugins and WebUI for IPA Hybrid Cloud Console
 extension.
 
-%posttrans server-plugin
+%posttrans server
 %{python} -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
 
 if [ $? -eq 0 ]; then
     /usr/sbin/ipa-ldap-updater --quiet \
         --schema-file=%{_datadir}/ipa/schema.d/85-hcc.ldif \
-        %{_datadir}/ipa/updates/85-hcc.update
+        %{_datadir}/ipa/updates/85-hcc.update \
+        %{_datadir}/ipa/updates/86-hcc-registration-service.update
 
     # restart httpd if running
-    /bin/systemctl try-restart httpd.service >/dev/null 2>&1 || :
+    /bin/systemctl try-restart gssproxy.service httpd.service >/dev/null 2>&1 || :
 fi
 
-%post server-plugin
+%pre server
+# create user account for service
+getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c "IPA Hybrid Cloud Console enrollment service" ipahcc
+
+%post server
+# SELinux context for cache dir
+/usr/sbin/semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
+/usr/sbin/restorecon -R /var/cache/ipa-hcc || :
 # ipa-hcc-dbus.service and ipa-hcc-update.timer are started by ipactl
 %systemd_post ipa-hcc-dbus.service
 %systemd_post ipa-hcc-update.service
 %systemd_post ipa-hcc-update.timer
 /bin/systemctl daemon-reload
 
-%preun server-plugin
+%preun server
 %systemd_preun ipa-hcc-dbus.service
 %systemd_preun ipa-hcc-update.service
 %systemd_preun ipa-hcc-update.timer
 
 
-%postun server-plugin
+%postun server
+/usr/sbin/semanage fcontext -d '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/redhat-candlepin-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
 %systemd_postun_with_restart ipa-hcc-dbus.service
 %systemd_postun ipa-hcc-update.service
 %systemd_postun ipa-hcc-update.timer
 
-# server-plugin
-%endif
-
-%if %{with registration_service}
-%package registration-service
-Summary: Registration service for IPA Hybrid Cloud Console extension
-BuildArch: noarch
-
-Provides:  %{alt_name}-registration-service = %{version}
-Conflicts: %{alt_name}-registration-service
-Obsoletes: %{alt_name}-registration-service < %{version}
-Requires: %{package_name}-common = %{version}
-Requires: %{package_name}-server-plugin = %{version}
-Requires: httpd
-%if 0%{?with_python2}
-Requires: mod_wsgi
-Requires: mod_nss
-%else
-Requires: python3-mod_wsgi
-Requires: mod_ssl
-%endif
-# run transaction after server-plugin IFF the package is installed
-OrderWithRequires: %{package_name}-server-plugin
-Requires: selinux-policy
-Requires(post): selinux-policy
-
-%description registration-service
-This package contains the registration service for
-IPA Hybrid Cloud Console extension
-
-%pre registration-service
-# create user account for service
-getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c "IPA Hybrid Cloud Console enrollment service" ipahcc
-
-%post registration-service
-# SELinux context for cache dir
-/usr/sbin/semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
-/usr/sbin/restorecon -R /var/cache/ipa-hcc || :
-
-%posttrans registration-service
-python3 -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
-
-if [ $? -eq 0 ]; then
-    # update/create HCC enrollment service
-    /usr/sbin/ipa-ldap-updater --quiet \
-        %{_datadir}/ipa/updates/86-hcc-registration-service.update
-
-    # pick up new gssproxy and HTTPD config (restart if running)
-    /bin/systemctl try-restart gssproxy.service httpd.service
-fi
-
-%postun registration-service
-/usr/sbin/semanage fcontext -d '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
-
-# registration-service
+# server
 %endif
 
 %if %{with mockapi}
@@ -242,10 +188,7 @@ fi
 Summary: Automatic IPA client enrollment: Mock API
 BuildArch: noarch
 
-Provides:  %{alt_name}-mockapi = %{version}
-Conflicts: %{alt_name}-mockapi
-Obsoletes: %{alt_name}-mockapi < %{version}
-Requires: %{package_name}-registration-service = %{version}
+Requires: %{package_name}-server = %{version}
 Requires: %{ipa_name}-client >= %{ipa_version}
 %if 0%{?with_python2}
 Requires: python2-requests
@@ -266,14 +209,13 @@ of IPA clients.
 # mockapi
 %endif
 
-%package client-enrollment
+%package client
 Summary: Automatic IPA client enrollment for Hybrid Cloud Console
 BuildArch: noarch
 
-Provides:  %{alt_name}-client-enrollment = %{version}
-Conflicts: %{alt_name}-client-enrollment
-Obsoletes: %{alt_name}-client-enrollment < %{version}
-Requires: %{package_name}-common = %{version}
+Provides:  %{package_name}-client-enrollment = %{version}
+Conflicts: %{package_name}-client-enrollment
+Obsoletes: %{package_name}-client-enrollment < %{version}
 Requires: %{ipa_name}-client >= %{ipa_version}
 # ipa-client RHEL 7.9, 8.7, 9.1, and ealier, do not come with pkinit
 Requires: krb5-pkinit-openssl
@@ -282,17 +224,17 @@ Requires: rhc
 Requires: insights-client
 %{?systemd_requires}
 
-%description client-enrollment
-This package contains the automatic enrollment service of IPA clients.
+%description client
+This package contains the automatic enrollment service for IPA clients.
 
-%post client-enrollment
+%post client
 %systemd_post ipa-hcc-auto-enrollment.service
 /bin/systemctl daemon-reload
 
-%preun client-enrollment
+%preun client
 %systemd_preun ipa-hcc-auto-enrollment.service
 
-%postun client-enrollment
+%postun client
 %systemd_postun_with_restart ipa-hcc-auto-enrollment.service
 
 
@@ -309,7 +251,7 @@ export PYTHONPATH=%{buildroot}%{python_sitelib}
 %{python} -Wignore -m unittest discover  -s tests/
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --help >/dev/null
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --version
-%if %{with server_plugin}
+%if %{with server}
 %{buildroot}%{_sbindir}/ipa-hcc --help >/dev/null
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-dbus --help >/dev/null
 %endif
@@ -317,15 +259,10 @@ export PYTHONPATH=%{buildroot}%{python_sitelib}
 %install
 rm -rf $RPM_BUILD_ROOT
 
-# common
 %__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_client
 
-%if %{with server_plugin}
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_server_plugin
-%endif
-
-%if %{with registration_service}
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_registration_service
+%if %{with server}
+%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_server_plugin install_registration_service
 touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %endif
 
@@ -334,20 +271,11 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %endif
 
 
-%files common
+%if %{with server}
+%files server
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
-%{python_sitelib}/ipahcc/*.py*
-%if %{with pycache}
-%{python_sitelib}/ipahcc/__pycache__/*.pyc
-%endif
-
-
-%if %{with server_plugin}
-%files server-plugin
-%doc README.md CONTRIBUTORS.txt
-%license COPYING
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
 %{_libexecdir}/ipa-hcc/ipa-hcc-dbus
@@ -358,10 +286,12 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{_unitdir}/ipa-hcc-dbus.service
 %{_datadir}/dbus-1/system.d/com.redhat.console.ipahcc.conf
 %{_datadir}/dbus-1/system-services/com.redhat.console.ipahcc.service
+%{python_sitelib}/ipahcc/*.py*
 %{python_sitelib}/ipahcc/server/*.py*
 %{python_sitelib}/ipaserver/plugins/*.py*
 %{python_sitelib}/ipaserver/install/plugins/update_hcc.py*
 %if %{with pycache}
+%{python_sitelib}/ipahcc/__pycache__/*.pyc
 %{python_sitelib}/ipahcc/server/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/plugins/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc.*.pyc
@@ -369,13 +299,8 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{_datadir}/ipa/schema.d/85-hcc.ldif
 %{_datadir}/ipa/updates/85-hcc.update
 %{_datadir}/ipa/ui/js/plugins/*
-%endif
 
-
-%if %{with registration_service}
-%files registration-service
-%doc README.md CONTRIBUTORS.txt
-%license COPYING
+# registration service
 %attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
 %attr(0755,ipahcc,ipaapi) %dir %{_localstatedir}/cache/ipa-hcc
 %{python_sitelib}/ipahcc/registration/*.py*
@@ -405,13 +330,9 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %endif
 
 
-%files client-enrollment
+%files client
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%{python_sitelib}/ipahcc/client/*.py*
-%if %{with pycache}
-%{python_sitelib}/ipahcc/client/__pycache__/*.pyc
-%endif
 %attr(0755,root,root) %dir %{_libexecdir}/ipa-hcc
 %attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service

@@ -10,8 +10,8 @@ import conftest
 from conftest import mock
 
 from ipahcc import hccplatform
-from ipahcc.client import auto_enrollment
 from ipahcc.server import schema
+import ipahcc_auto_enrollment as auto_enrollment
 
 
 HOST_CONF_REQUEST = {
@@ -71,7 +71,7 @@ class TestAutoEnrollmentNoMock(conftest.IPABaseTests):
 class TestAutoEnrollment(conftest.IPABaseTests):
     def setUp(self):
         super(TestAutoEnrollment, self).setUp()
-        modname = "ipahcc.client.auto_enrollment"
+        modname = "ipahcc_auto_enrollment"
         p = mock.patch.multiple(
             modname,
             HAS_KINIT_PKINIT=False,

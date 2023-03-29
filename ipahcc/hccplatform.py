@@ -56,7 +56,7 @@ HTTP_HEADERS = {
     ),
 }
 
-# HCC enrollment agent (ipa-hcc-registration-service)
+# HCC enrollment agent (part pf ipa-hcc-server-plugin)
 # Note: IPA's gssproxy directory comes with correct SELinux rule.
 HCC_ENROLLMENT_AGENT = text("hcc-enrollment")
 HCC_ENROLLMENT_AGENT_USER = "ipahcc"

@@ -6,8 +6,7 @@
     - name: Install ipa-hcc server plugin and registration service
       yum:
         name:
-          - ipa-hcc-registration-service
-          - ipa-hcc-server-plugin
+          - ipa-hcc-server
           - ipa-hcc-mockapi
         state: latest
         update_cache: true
@@ -19,7 +18,7 @@
     - name: Install ipa-hcc client auto-enrollment service
       yum:
         name:
-          - ipa-hcc-client-enrollment
+          - ipa-hcc-client
         state: latest
         update_cache: true
 
@@ -35,7 +34,6 @@
       debug:
         msg: "{{ ansible_facts.packages[item] }}"
       with_items:
-        - ipa-hcc-registration-service
-        - ipa-hcc-server-plugin
-        - ipa-hcc-client-enrollment
+        - ipa-hcc-server
+        - ipa-hcc-client
       when: item in ansible_facts.packages
