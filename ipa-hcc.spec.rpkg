@@ -120,6 +120,7 @@ Requires: mod_nss
 Requires: mod_wsgi
 Requires: python-dbus
 Requires: python-gobject-base
+Requires: python2-requests
 Requires: systemd-python
 # not available in RHEL 7
 # Requires: python2-jsonschema
@@ -129,6 +130,7 @@ Requires: python3-mod_wsgi
 Requires: python3-dbus
 Requires: python3-gobject-base
 Requires: python3-jsonschema
+Requires: python3-requests
 Requires: python3-systemd
 %endif
 Requires: selinux-policy
@@ -189,12 +191,6 @@ Summary: Automatic IPA client enrollment: Mock API
 BuildArch: noarch
 
 Requires: %{package_name}-server = %{version}
-Requires: %{ipa_name}-client >= %{ipa_version}
-%if 0%{?with_python2}
-Requires: python2-requests
-%else
-Requires: python3-requests
-%endif
 %{?systemd_requires}
 
 
@@ -278,7 +274,7 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
-%{_libexecdir}/ipa-hcc/ipa-hcc-dbus
+%attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-dbus
 %dir %{_datadir}/ipa-hcc/
 %{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-hcc/cacerts
@@ -333,7 +329,6 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %files client
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%attr(0755,root,root) %dir %{_libexecdir}/ipa-hcc
 %attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/ipa-hcc-auto-enrollment

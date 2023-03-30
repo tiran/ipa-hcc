@@ -43,6 +43,8 @@ KDC_CA_CRT = os.path.join(
     BASEDIR, "install", "server", "redhat-candlepin-bundle.pem"
 )
 HOST_DETAILS = os.path.join(TESTDATA, "autoenrollment", "host-details.json")
+MACHINE_ID = os.path.join(TESTDATA, "autoenrollment", "machine-id")
+NO_FILE = os.path.join(TESTDATA, "autoenrollment", "file-does-not-exist")
 
 # patch
 paths.IPA_CA_CRT = IPA_CA_CRT
@@ -222,6 +224,7 @@ def capture_output():
     finally:
         sys.stdout = orig_stdout
         sys.stderr = orig_stderr
+        out.seek(0)
 
 
 def _fixup_ipaserver_import(name):

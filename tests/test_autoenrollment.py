@@ -77,7 +77,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             HAS_KINIT_PKINIT=False,
             RHSM_CERT=conftest.RHSM_CERT,
             RHSM_KEY=conftest.RHSM_KEY,
+            RHSM_CONF=conftest.NO_FILE,
             INSIGHTS_HOST_DETAILS=conftest.HOST_DETAILS,
+            INSIGHTS_MACHINE_ID=conftest.MACHINE_ID,
+            IPA_DEFAULT_CONF=conftest.NO_FILE,
         )
         p.start()
         self.addCleanup(p.stop)
@@ -102,8 +105,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         ]
         self.addCleanup(p.stop)
 
-    def parse_args(self, *args):
-        return auto_enrollment.parser.parse_args(args=args)
+        p = mock.patch("time.sleep")
+        p.start()
+        self.addCleanup(p.stop)
 
     @conftest.requires_jsonschema
     def test_schema(self):
@@ -120,10 +124,16 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             REGISTER_RESPONSE, "/schemas/hcc-host-register/response"
         )
 
-    def assert_args_error(self, *args):
+    def parse_args(self, *args):
+        return auto_enrollment.parser.parse_args(args=args)
+
+    def assert_args_error(self, args, expected=None):
         with self.assertRaises(SystemExit):
-            with conftest.capture_output():
-                self.parse_args(*args)
+            with conftest.capture_output() as out:
+                auto_enrollment.main(args)
+        if expected is not None:
+            self.assertIn(expected, out.read())
+        return out
 
     def test_args(self):
         args = self.parse_args(
@@ -140,10 +150,34 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         )
         self.assertEqual(args.timeout, 20)
         self.assertEqual(args.hcc_api_host, conftest.SERVER_FQDN)
-        self.assert_args_error("--hostname", "invalid_hostname")
-        self.assert_args_error("--domain-name", "invalid_domain")
-        self.assert_args_error("--domain-id", "invalid_domain")
-        self.assert_args_error("--location", "invalid.location")
+        self.assert_args_error(("--hostname", "invalid_hostname"))
+        self.assert_args_error(("--domain-name", "invalid_domain"))
+        self.assert_args_error(("--domain-id", "invalid_domain"))
+        self.assert_args_error(("--location", "invalid.location"))
+
+    def test_system_state_error(self):
+        args = (
+            "--hcc-api-host",
+            conftest.SERVER_FQDN,
+            "--hostname",
+            conftest.CLIENT_FQDN,
+        )
+
+        # module vars are already mocked
+        auto_enrollment.IPA_DEFAULT_CONF = conftest.RHSM_CERT  # any file
+        self.assert_args_error(
+            args, expected="Host is already an IPA client."
+        )
+        auto_enrollment.IPA_DEFAULT_CONF = conftest.NO_FILE
+        auto_enrollment.INSIGHTS_MACHINE_ID = conftest.NO_FILE
+        self.assert_args_error(
+            args, expected="Host is not registered with Insights."
+        )
+        auto_enrollment.RHSM_CERT = conftest.NO_FILE
+        self.assert_args_error(
+            args,
+            expected="Host is not registered with subscription-manager.",
+        )
 
     def test_sort_servers(self):
         p = mock.patch("random.random", return_value=0.5)
@@ -187,13 +221,35 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertEqual(ae.tmpdir, None)
         self.assertFalse(os.path.isdir(tmpdir))
 
-    def test_wait_for_inventor(self):
+    def test_inventory_from_host_details(self):
         args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             self.assertEqual(ae.inventory_id, None)
-            ae.wait_for_inventory_host()
+            ae.get_host_details()
             self.assertEqual(ae.inventory_id, conftest.CLIENT_INVENTORY_ID)
+
+    def test_inventory_from_api(self):
+        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        auto_enrollment.INSIGHTS_HOST_DETAILS = conftest.NO_FILE
+        # first call to urlopen gets host details from API
+        with io.open(conftest.HOST_DETAILS, "r", encoding="utf-8") as f:
+            host_details = json.load(f)
+        self.m_urlopen.side_effect = [jsonio(host_details), Exception]
+        ae = auto_enrollment.AutoEnrollment(args)
+        with ae:
+            self.assertEqual(ae.inventory_id, None)
+            ae.get_host_details()
+            self.assertEqual(ae.inventory_id, conftest.CLIENT_INVENTORY_ID)
+
+        self.assertEqual(self.m_urlopen.call_count, 1)
+        req = self.m_urlopen.call_args[0][0]
+        self.assertEqual(
+            req.get_full_url(),
+            "https://cert-api.access.redhat.com/r/insights"
+            "/inventory/v1/hosts?insights_id=96aac268-e7b8-429a-8c86-f498b96fe1f9",
+        )
+        self.assertEqual(req.get_method(), "GET")
 
     def test_hcc_host_conf(self):
         args = self.parse_args(
@@ -204,7 +260,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         )
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
-            ae.wait_for_inventory_host()
+            ae.get_host_details()
 
             urlopen = self.m_urlopen
             ae.hcc_host_conf()
@@ -237,7 +293,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
-            ae.wait_for_inventory_host()
+            ae.get_host_details()
             urlopen = self.m_urlopen
             ae.hcc_host_conf()
             self.assertEqual(urlopen.call_count, 1)

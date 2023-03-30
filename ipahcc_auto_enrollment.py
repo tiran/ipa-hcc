@@ -9,6 +9,7 @@ Installation with older clients that lack PKINIT:
 - ipa-getkeytab for host principal 'host/$FQDN' using the first
   IPA server from remote configuration
 """
+from __future__ import print_function
 
 import argparse
 import collections
@@ -50,7 +51,10 @@ VERSION = "0.7"
 # copied from ipahcc.hccplatform
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
 RHSM_KEY = "/etc/pki/consumer/key.pem"
+RHSM_CONF = "/etc/rhsm/rhsm.conf"
+INSIGHTS_MACHINE_ID = "/etc/insights-client/machine-id"
 INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
+IPA_DEFAULT_CONF = paths.IPA_DEFAULT_CONF
 HCC_DOMAIN_TYPE = "rhel-idm"
 HTTP_HEADERS = {
     "User-Agent": "IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})".format(
@@ -78,7 +82,9 @@ def check_arg_hostname(arg):
     try:
         util.validate_hostname(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, str(e))
+        raise argparse.ArgumentError(
+            None, "Invalid hostname {arg}: {e}".format(arg=arg, e=e)
+        )
     return arg.lower()
 
 
@@ -86,7 +92,9 @@ def check_arg_domain_name(arg):
     try:
         util.validate_domain_name(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, str(e))
+        raise argparse.ArgumentError(
+            None, "Invalid domain name {arg}: {e}".format(arg=arg, e=e)
+        )
     return arg.lower()
 
 
@@ -94,7 +102,9 @@ def check_arg_location(arg):
     try:
         util.validate_dns_label(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, str(e))
+        raise argparse.ArgumentError(
+            None, "Invalid location {arg}: {e}".format(arg=arg, e=e)
+        )
     return arg.lower()
 
 
@@ -102,11 +112,16 @@ def check_arg_uuid(arg):
     try:
         uuid.UUID(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, str(e))
+        raise argparse.ArgumentError(
+            None, "Invalid UUID value {arg}: {e}".format(arg=arg, e=e)
+        )
     return arg.lower()
 
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(
+    prog="ipa-hcc-auto-enrollment",
+    description="Auto-enrollment of IPA clients with Hybrid Cloud Console",
+)
 
 parser.add_argument(
     "--verbose",
@@ -154,7 +169,6 @@ parser.add_argument(
         "(default: {})".format(DEFAULT_HCC_API_HOST)
     ),
     default=None,
-    type=check_arg_hostname,
 )
 
 group = parser.add_argument_group("domain filter")
@@ -224,6 +238,14 @@ KRB5_CONF = """\
 """
 
 
+class SystemStateError(Exception):
+    def __init__(self, msg, remediation, filename):
+        super(SystemStateError, self).__init__(msg, remediation, filename)
+        self.msg = msg
+        self.remediation = remediation
+        self.filename = filename
+
+
 class AutoEnrollment(object):
     def __init__(self, args):
         self.args = args
@@ -233,6 +255,7 @@ class AutoEnrollment(object):
         self.domain = None
         self.realm = None
         self.domain_id = None
+        self.insights_machine_id = None
         self.inventory_id = None
         # internals
         self.tmpdir = None
@@ -248,17 +271,25 @@ class AutoEnrollment(object):
             shutil.rmtree(self.tmpdir)
             self.tmpdir = None
 
-    def _do_post(self, url, body, verify, cafile=None):
+    def _do_json_request(self, url, body=None, verify=True, cafile=None):
         headers = {
+            "Accept": "application/json",
             "Content-Type": "application/json",
         }
         headers.update(HTTP_HEADERS)
-        logger.debug("POST request %s: %s", url, body)
-        data = json.dumps(body)
-        if not PY2:
-            data = data.encode("utf-8")
-        # Requests with data are always POST requests.
-        req = Request(url, data=data, headers=headers)
+        if body is None:
+            logger.debug("GET request %s: %s", url, body)
+            req = Request(url, headers=headers)
+            assert req.get_method() == "GET"
+        else:
+            logger.debug("POST request %s: %s", url, body)
+            data = json.dumps(body)
+            if not PY2:
+                data = data.encode("utf-8")
+            # Requests with data are always POST requests.
+            req = Request(url, data=data, headers=headers)
+            assert req.get_method() == "POST"
+
         context = ssl.create_default_context(cafile=cafile)
         context.load_cert_chain(RHSM_CERT, RHSM_KEY)
         if getattr(context, "post_handshake_auth", None) is not None:
@@ -319,10 +350,42 @@ class AutoEnrollment(object):
     def krb_name(self):
         return os.path.join(self.tmpdir, "krb5.conf")
 
+    def check_system_state(self):
+        for fname in (RHSM_CERT, RHSM_KEY):
+            if not os.path.isfile(fname):
+                raise SystemStateError(
+                    "Host is not registered with subscription-manager.",
+                    "subscription-manager register",
+                    fname,
+                )
+        if not os.path.isfile(INSIGHTS_MACHINE_ID):
+            raise SystemStateError(
+                "Host is not registered with Insights.",
+                "insights-client --register",
+                INSIGHTS_MACHINE_ID,
+            )
+        # if INSIGHTS_HOST_DETAILS is missing, fall back to HTTP API call
+        if os.path.isfile(IPA_DEFAULT_CONF) and not self.args.upto:
+            raise SystemStateError(
+                "Host is already an IPA client.", None, IPA_DEFAULT_CONF
+            )
+
     def enroll_host(self):
-        # wait until this host appears in ConsoleDot host inventory and
-        # insights-client has stored a local copy of the inventory data.
-        self.wait_for_inventory_host()
+        try:
+            self.check_system_state()
+        except SystemStateError as e:
+            print(
+                "ERROR: {e.msg} (file: {e.filename})".format(e=e),
+                file=sys.stderr,
+            )
+            if e.remediation:
+                print(
+                    "Remediation: run '{e.remediation}'".format(e=e),
+                    file=sys.stderr,
+                )
+            sys.exit(2)
+
+        self.get_host_details()
 
         # set local_cacert, servers, domain name, domain_id, realm
         self.hcc_host_conf()
@@ -353,35 +416,88 @@ class AutoEnrollment(object):
             logger.info("Stopping at phase %s", phase)
             parser.exit(0)
 
-    def wait_for_inventory_host(self):
-        """Wait until this host is available in Insights inventory
+    def get_host_details(self):
+        """Get inventory id from Insights' host details file or API call.
 
         insights-client stores the result of Insights API query in a local file
         once the host is registered.
         """
-        sleep_dur = 10
-        for _ in range(5):
+        with io.open(INSIGHTS_MACHINE_ID, "r", encoding="utf-8") as f:
+            self.insights_machine_id = f.read().strip()
+        result = self._read_host_details_file()
+        if result is None:
+            result = self._get_host_details_api()
+        self.inventory_id = result["results"][0]["id"]
+        logger.info(
+            "Host '%s' has inventory id '%s', insights id '%s'.",
+            self.args.hostname,
+            self.inventory_id,
+            self.insights_machine_id,
+        )
+        return result
+
+    def _read_host_details_file(self):
+        """Attempt to read host-details.json file
+
+        The file is created and updated by insights-clients. On some older
+        versions, the file is not created during the initial
+        'insights-client --register' execution.
+        """
+        try:
+            with io.open(INSIGHTS_HOST_DETAILS, encoding="utf-8") as f:
+                j = json.load(f)
+        except (OSError, IOError, ValueError) as e:
+            logger.debug(
+                "Failed to read JSON file %s: %s", INSIGHTS_HOST_DETAILS, e
+            )
+            return None
+        else:
+            if j["total"] != 1:
+                return None
+            return j
+
+    def _get_host_details_api(self):
+        """Fetch host details from Insights API"""
+        mid = self.insights_machine_id
+        url = self._get_inventory_url(mid)
+        time.sleep(3)  # short initial sleep
+        sleep_dur = 10  # sleep for 10, 20, 40, ...
+        for _i in range(5):
             try:
-                with io.open(INSIGHTS_HOST_DETAILS, encoding="utf-8") as f:
-                    j = json.load(f)
-            except (OSError, IOError, ValueError):
+                j = self._do_json_request(url)
+            except (HTTPError, ValueError) as e:
                 logger.exception(
-                    "Cannot read JSON file %s, try again in %i",
-                    INSIGHTS_HOST_DETAILS,
-                    sleep_dur,
+                    "Failed to request host details from %s: %s", url, e
                 )
-                time.sleep(sleep_dur)
             else:
-                assert len(j["results"]) == 1
-                result = j["results"][0]
-                self.inventory_id = result["id"]
-                logger.info(
-                    "Host '%s' has inventory id '%s'.",
-                    self.args.hostname,
-                    self.inventory_id,
-                )
-                return result
-        raise ValueError("Failed to read {}".format(INSIGHTS_HOST_DETAILS))
+                if j["total"] == 1 and j["results"][0]["insights_id"] == mid:
+                    return j
+                else:
+                    logger.error("%s not in result", mid)
+                logger.info("Waiting for %i seconds", sleep_dur)
+                time.sleep(sleep_dur)
+                sleep_dur *= 2
+        # TODO: error message
+        raise RuntimeError("Unable to find machine in host inventory")
+
+    def _get_inventory_url(self, insights_id):
+        """Get Insights API url (prod or stage)
+
+        Base on https://github.com/RedHatInsights/insights-core
+        /blob/insights-core-3.1.16/insights/client/auto_config.py
+        """
+        try:
+            with io.open(RHSM_CONF, "r", encoding="utf-8") as f:
+                conf = f.read()
+        except (OSError, IOError):
+            conf = ""
+        if "subscription.rhsm.stage.redhat.com" in conf:
+            base = "https://cert.cloud.stage.redhat.com/api"
+        else:
+            base = "https://cert-api.access.redhat.com/r/insights"
+        return "{base}/inventory/v1/hosts?insights_id={insights_id}".format(
+            base=base, insights_id=insights_id
+        )
 
     def _lookup_dns_srv(self):
         """Lookup IPA servers via LDAP SRV records
@@ -454,7 +570,7 @@ class AutoEnrollment(object):
             "Getting host configuration from %s (secure: %s).", url, verify
         )
         try:
-            j = self._do_post(url, body=body, verify=verify)
+            j = self._do_json_request(url, body=body, verify=verify)
         except HTTPError as e:
             logger.error(
                 "Request to %s failed: %s: %s", url, type(e).__name__, e
@@ -499,7 +615,9 @@ class AutoEnrollment(object):
             "inventory_id": self.inventory_id,
         }
         logger.info("Registering host at %s", url)
-        j = self._do_post(url, body=body, verify=True, cafile=self.ipa_cacert)
+        j = self._do_json_request(
+            url, body=body, verify=True, cafile=self.ipa_cacert
+        )
         if j["status"] != "ok":
             raise SystemExit(3)
         with io.open(self.kdc_cacert, "w", encoding="utf-8") as f:
@@ -598,12 +716,6 @@ def main(args=None):
 
     if not args.hcc_api_host:
         parser.error("--hcc-api-host required\n")
-    if os.path.isfile(paths.IPA_DEFAULT_CONF) and not args.upto:
-        parser.error(
-            "IPA is already installed, '{conf}' exists.\n".format(
-                conf=paths.IPA_DEFAULT_CONF
-            )
-        )
 
     with AutoEnrollment(args) as autoenrollment:
         autoenrollment.enroll_host()
