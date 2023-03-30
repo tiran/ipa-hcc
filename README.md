@@ -199,21 +199,6 @@ curl -o /etc/yum.repos.d/copr-cheimes-ipa-hcc.repo https://copr.devel.redhat.com
 yum install ipa-client ipa-hcc-client
 ```
 
-2) Current RHEL releases of `ipa-client` are missing PKINIT option.
-
-RHEL 9.1 hack:
-
-```
-curl -o /usr/lib/python3.9/site-packages/ipaclient/install/client.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-10-1/ipaclient/install/client.py
-curl -o /usr/lib/python3.9/site-packages/ipalib/install/kinit.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-10-1/ipalib/install/kinit.py
-```
-
-RHEL 8.7 hack:
-```
-curl -o /usr/lib/python3.6/site-packages/ipaclient/install/client.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-9-11/ipaclient/install/client.py
-curl -o /usr/lib/python3.6/site-packages/ipalib/install/kinit.py https://raw.githubusercontent.com/freeipa/freeipa/release-4-9-11/ipalib/install/kinit.py
-```
-
 3) Configure DNS and hostname. The client must be able to discover its
 IPA domain and IPA servers with DNS SRV discovery.
 
@@ -225,7 +210,17 @@ systemctl enable ipa-hcc-auto-enrollment.service
 
 5) Register system with RHSM and Insights
 
+RHEL >= 8:
+
 ```
+rhc connect
+```
+
+RHEL 7:
+
+```
+subscription-manager register ...
+insights-client --register
 rhc connect
 ```
 

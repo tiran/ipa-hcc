@@ -48,16 +48,31 @@
             create: false
           when: hmsidm_config.rhc_env == 'stage'
 
-        - name: Register host with RHC and subscription manager
-          shell: "rhc connect -o {{ hmsidm_config.rhc_org }} -a {{ hmsidm_config.rhc_key }}"
-          args:
-            creates: /etc/pki/consumer/cert.pem
+        - name: Register host with RHC and subscription manager (RHEL 8+)
+          when: ansible_distribution == 'RedHat' and ansible_distribution_major_version >= '8'
+          block:
+            - name: Run rhc connect (RHEL 8+)
+              shell: "rhc connect -o {{ hmsidm_config.rhc_org }} -a {{ hmsidm_config.rhc_key }}"
+              args:
+                # also creates /etc/pki/consumer/cert.pem
+                creates: /var/lib/insights/host-details.json
 
-        # --register for RHEL 7
-        - name: Ensure insights' host-details is available
-          shell: "insights-client --register"
-          args:
-            creates: /var/lib/insights/host-details.json
+        - name: Register host with RHC and subscription manager (RHEL 7)
+          when: ansible_distribution == 'RedHat' and ansible_distribution_major_version == '7'
+          block:
+            # "rhc connect" on RHEL 7 does not register and run insights-client
+            - name: Run subscription-manager register (RHEL 7)
+              shell: "subscription-manager register --org {{ hmsidm_config.rhc_org }} --activationkey {{ hmsidm_config.rhc_key }}"
+              args:
+                creates: /etc/pki/consumer/cert.pem
+
+            - name: Run insights-client --register (RHEL 7)
+              shell: "insights-client --register"
+              args:
+                creates: /var/lib/insights/host-details.json
+
+            - name: Connect rhc (RHEL 7)
+              shell: "rhc connect"
 
         - name: Get subject of RHSM cert
           shell: "openssl x509 -subject -noout -in /etc/pki/consumer/cert.pem"
