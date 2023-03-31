@@ -7,18 +7,16 @@
 """
 import logging
 
-from cryptography.x509.oid import NameOID
-
 from ipalib import errors
 from ipalib import Registry
 from ipalib import Updater
-from ipalib import x509
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
 
 from augeas import Augeas  # pylint: disable=import-error
 
 from ipahcc import hccplatform
+from ipahcc.server.util import parse_rhsm_cert
 
 logger = logging.getLogger(__name__)
 
@@ -93,24 +91,6 @@ class update_hcc(Updater):
 
         return modified
 
-    def parse_rhsm_cert(self):
-        """Parse RHSM certificate, return org_id and rhsm_id (CN UUID)"""
-        with open(hccplatform.RHSM_CERT, "rb") as f:
-            cert = x509.load_pem_x509_certificate(f.read())
-
-        nas = list(cert.subject)
-        if len(nas) != 2 or nas[0].oid != NameOID.ORGANIZATION_NAME:
-            raise ValueError(
-                "Invalid cert subject {subject}.".format(subject=cert.subject)
-            )
-        try:
-            org_id = int(nas[0].value)
-        except (ValueError, TypeError):
-            raise ValueError(
-                "Invalid cert subject {subject}.".format(subject=cert.subject)
-            )
-        return org_id, nas[1].value
-
     def configure_global_hcc_orgid(self, org_id):
         """Auto-configure global HCC org id"""
         # check if org_id is already set, so we don't configure a different
@@ -154,7 +134,8 @@ class update_hcc(Updater):
     def execute(self, **options):
         self.modify_krb5kdc_conf()
         try:
-            org_id, rhsm_id = self.parse_rhsm_cert()
+            with open(hccplatform.RHSM_CERT, "rb") as f:
+                org_id, rhsm_id = parse_rhsm_cert(f.read())
         except (OSError, IOError):  # Python 2
             logger.exception("Unable to read %s", hccplatform.RHSM_CERT)
         except Exception:  # pylint: disable=broad-except

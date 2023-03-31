@@ -15,15 +15,13 @@ import io
 import json
 import re
 
-from cryptography.x509.oid import NameOID
 import requests
 
-from ipalib import api
-from ipalib import x509
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform
 from ipahcc.server import schema
+from ipahcc.server.util import parse_rhsm_cert
 from ipahcc.registration.wsgi import HTTPException
 
 if hccplatform.PY2:
@@ -50,10 +48,11 @@ def validate_schema(instance, schema_id):
 
 
 class Application(object):
-    def __init__(self):
+    def __init__(self, api):
         # inventory bearer token + validity timestamp
         self.access_token = None
         self.valid_until = 0
+        self.api = api
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
@@ -93,22 +92,10 @@ class Application(object):
             raise HTTPException(
                 412, "{envname} is missing or empty.".format(envname=envname)
             )
-        return x509.load_pem_x509_certificate(cert_pem.encode("ascii"))
-
-    def parse_subject(self, subject):
-        nas = list(subject)
-        if len(nas) != 2:
-            raise HTTPException.from_error(
-                400, "Invalid cert subject {subject}.".format(subject=subject)
-            )
-        if (
-            nas[0].oid != NameOID.ORGANIZATION_NAME
-            or nas[1].oid != NameOID.COMMON_NAME
-        ):
-            raise HTTPException.from_error(
-                400, "Invalid cert subject {subject}.".format(subject=subject)
-            )
-        return int(nas[0].value), nas[1].value
+        try:
+            return parse_rhsm_cert(cert_pem)
+        except ValueError as e:
+            raise HTTPException.from_error(400, str(e))
 
     def get_access_token(self):  # pragma: no cover
         """Get a bearer access token from an offline token
@@ -204,8 +191,8 @@ class Application(object):
         return fqdn, inventoryid
 
     def bootstrap_ipa(self):
-        if not api.isdone("bootstrap"):
-            api.bootstrap(in_server=False)
+        if not self.api.isdone("bootstrap"):
+            self.api.bootstrap(in_server=False)
 
     def get_ca_crt(self):
         with io.open(paths.IPA_CA_CRT, "r", encoding="utf-8") as f:
@@ -238,8 +225,7 @@ class Application(object):
         return {}
 
     def handle_host_conf(self, env, fqdn):
-        cert = self.parse_cert(env, "SSL_CLIENT_CERT")
-        org_id, rhsm_id = self.parse_subject(cert.subject)
+        org_id, rhsm_id = self.parse_cert(env, "SSL_CLIENT_CERT")
         logger.warning(
             "Received host configuration request for org O=%s, CN=%s, FQDN %s",
             org_id,
@@ -252,7 +238,7 @@ class Application(object):
         body = self.get_json(env)
         validate_schema(body, "/schemas/host-conf/request")
 
-        if not fqdn.endswith(api.env.domain):
+        if not fqdn.endswith(self.api.env.domain):
             raise HTTPException.from_error(404, "hostname not recognized")
 
         access_token = self.get_access_token()
@@ -271,18 +257,18 @@ class Application(object):
             "host-conf for %s (%s) is domain %s.",
             fqdn,
             rhsm_id,
-            api.env.domain,
+            self.api.env.domain,
         )
         response = {
-            "domain_name": api.env.domain,
+            "domain_name": self.api.env.domain,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_id": hccplatform.TEST_DOMAIN_ID,
             "auto_enrollment_enabled": True,
             hccplatform.HCC_DOMAIN_TYPE: {
-                "realm_name": api.env.realm,
+                "realm_name": self.api.env.realm,
                 "cabundle": ca,
                 "enrollment_servers": [
-                    {"fqdn": api.env.host, "location": None},
+                    {"fqdn": self.api.env.host, "location": None},
                 ],
             },
             "inventory_id": inventory_id,
@@ -300,11 +286,11 @@ class Application(object):
         domain_id = body["domain_id"]
         inventory_id = body["inventory_id"]
 
-        if domain_name != api.env.domain:
+        if domain_name != self.api.env.domain:
             raise HTTPException.from_error(
                 400,
                 "unsupported domain name: {domain} != {expected_domain}".format(
-                    domain=domain_name, expected_domain=api.env.domain
+                    domain=domain_name, expected_domain=self.api.env.domain
                 ),
             )
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
@@ -361,7 +347,7 @@ class Application(object):
 
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
-        if domain_name != api.env.domain:
+        if domain_name != self.api.env.domain:
             raise HTTPException.from_error(400, "unsupported domain name")
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException.from_error(400, "unsupported domain type")
@@ -409,6 +395,3 @@ class Application(object):
             )
             start_response(str(e), e.headers)
             return [e.message]
-
-
-application = Application()

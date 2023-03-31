@@ -40,13 +40,11 @@ domain_request = {
 class TestMockAPIWSGI(conftest.IPABaseTests):
     def setUp(self):
         super(TestMockAPIWSGI, self).setUp()
-        self.app = wsgi.application
-
-        p = mock.patch.object(wsgi, "api")
-        self.m_api = p.start()
-        self.addCleanup(p.stop)
+        self.m_api = mock.Mock()
         self.m_api.isdone.return_value = True
         self.m_api.env = self.get_mock_env()
+
+        self.app = wsgi.Application(self.m_api)
 
         p = mock.patch.object(self.app, "session")
         self.m_session = p.start()

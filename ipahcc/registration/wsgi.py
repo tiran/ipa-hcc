@@ -1,18 +1,19 @@
+#
+# IPA plugin for Red Hat Hybrid Cloud Console
+# Copyright (C) 2023  Christian Heimes <cheimes@redhat.com>
+# See COPYING for license
+#
 from __future__ import print_function
 
 import io
 import json
 import logging
 import os
-import sys
 import traceback
 
-from cryptography.x509.oid import NameOID
 import gssapi
 
 from ipahcc import hccplatform
-from ipahcc.server import dbus_client
-from ipahcc.server import schema
 
 # pylint: disable=import-error
 if hccplatform.PY2:
@@ -26,10 +27,12 @@ os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR
 os.environ["KRB5CCNAME"] = hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME
 os.environ["GSS_USE_PROXY"] = "1"
 
-# pylint: disable=wrong-import-position,wrong-import-order
-import ipalib  # noqa: E402
+# pylint: disable=wrong-import-position,wrong-import-order,ungrouped-imports
 from ipalib import errors  # noqa: E402
-from ipalib import x509  # noqa: E402
+from ipahcc.server import dbus_client  # noqa: E402
+from ipahcc.server import schema  # noqa: E402
+from ipahcc.server.util import parse_rhsm_cert  # noqa: E402
+
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")
@@ -82,25 +85,13 @@ class Application(object):
     def parse_cert(self, env, envname):
         cert_pem = env.get(envname)
         if not cert_pem:
-            raise HTTPException.from_error(
+            raise HTTPException(
                 412, "{envname} is missing or empty.".format(envname=envname)
             )
-        return x509.load_pem_x509_certificate(cert_pem.encode("ascii"))
-
-    def parse_subject(self, subject):
-        nas = list(subject)
-        if len(nas) != 2:
-            raise HTTPException.from_error(
-                400, "Invalid cert subject {subject}.".format(subject=subject)
-            )
-        if (
-            nas[0].oid != NameOID.ORGANIZATION_NAME
-            or nas[1].oid != NameOID.COMMON_NAME
-        ):
-            raise HTTPException.from_error(
-                400, "Invalid cert subject {subject}.".format(subject=subject)
-            )
-        return int(nas[0].value), nas[1].value
+        try:
+            return parse_rhsm_cert(cert_pem)
+        except ValueError as e:
+            raise HTTPException.from_error(400, str(e))
 
     def check_host(self, inventory_id, rhsm_id, fqdn):
         try:
@@ -261,8 +252,7 @@ class Application(object):
 
         self.bootstrap_ipa()
 
-        cert = self.parse_cert(env, "SSL_CLIENT_CERT")
-        org_id, rhsm_id = self.parse_subject(cert.subject)
+        org_id, rhsm_id = self.parse_cert(env, "SSL_CLIENT_CERT")
         logger.warning(
             "Received self-enrollment request for org O=%s, CN=%s",
             org_id,
@@ -307,36 +297,3 @@ class Application(object):
             )
             start_response(str(e), e.headers)
             return [e.message]
-
-
-application = Application(api=ipalib.api)
-
-
-def test(inventory_id, rhsm_id, fqdn):
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="[%(asctime)s %(name)s] <%(levelname)s>: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%SZ",
-        force=True,
-    )
-    # Internal testing VM has issues with IPv6 connections:
-    # import urllib3.util.connection
-    # urllib3.util.connection.HAS_IPV6 = False
-
-    # switch effective UID for gssproxy
-    if os.geteuid() == 0:
-        import pwd  # pylint: disable=import-outside-toplevel
-
-        user = pwd.getpwnam(hccplatform.HCC_ENROLLMENT_AGENT_USER)
-        os.setreuid(user.pw_uid, user.pw_uid)
-        os.environ["HOME"] = user.pw_dir
-        os.environ["USER"] = user.pw_name
-
-    application.connect_ipa()
-    print(application.check_host(inventory_id, rhsm_id, fqdn))
-    print(application.get_ipa_org_id())
-    application.disconnect_ipa()
-
-
-if __name__ == "__main__" and len(sys.argv) == 4:
-    test(sys.argv[1], sys.argv[2], sys.argv[4])

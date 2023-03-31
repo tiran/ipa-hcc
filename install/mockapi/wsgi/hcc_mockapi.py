@@ -1,3 +1,7 @@
 __all__ = ("application",)
 
-from ipahcc.mockapi.wsgi import application
+# import WSGI app before api
+from ipahcc.mockapi.wsgi import Application
+from ipalib import api
+
+application = Application(api=api)
