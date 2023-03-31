@@ -152,6 +152,20 @@ class IPABaseTests(unittest.TestCase):
             basedn="dc=ipa-hcc,dc=test",
         )
 
+    def mock_hccplatform(self):
+        p = mock.patch.multiple(
+            "ipahcc.hccplatform",
+            RHSM_CERT=RHSM_CERT,
+            RHSM_KEY=RHSM_KEY,
+            INSIGHTS_HOST_DETAILS=HOST_DETAILS,
+            HMSIDM_CA_BUNDLE_PEM=KDC_CA_CRT,
+            HCC_API_HOST="invalid.test",
+            TOKEN_URL="http://invalid.test",
+            INVENTORY_URL="http://invalid.test",
+        )
+        p.start()
+        self.addCleanup(p.stop)
+
     def mkresponse(self, status_code, body):
         j = json.dumps(body).encode("utf-8")
         resp = Response()
@@ -207,6 +221,10 @@ class IPABaseTests(unittest.TestCase):
             self.assertEqual(e.code, 0)
         else:  # pragma: no cover
             self.fail("SystemExit expected")
+
+    def assert_log_entry(self, msg):
+        msgs = [r.getMessage() for r in self.log_capture.records]
+        self.assertIn(msg, msgs)
 
 
 @contextlib.contextmanager
