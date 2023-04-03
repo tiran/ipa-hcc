@@ -152,6 +152,12 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertEqual(args.timeout, 20)
         self.assertEqual(args.hcc_api_host, conftest.SERVER_FQDN)
         self.assert_args_error(("--hostname", "invalid_hostname"))
+        self.assert_args_error(
+            ("--hostname", "localhost"), "FQDN is not configured"
+        )
+        self.assert_args_error(
+            ("--hostname", "localhost.localdomain"), "FQDN is not configured"
+        )
         self.assert_args_error(("--domain-name", "invalid_domain"))
         self.assert_args_error(("--domain-id", "invalid_domain"))
         self.assert_args_error(("--location", "invalid.location"))
