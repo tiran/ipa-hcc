@@ -1,3 +1,5 @@
+import json
+
 from requests import Response
 from ipapython.dnsutil import DNSName
 from ipalib import x509
@@ -5,15 +7,20 @@ from ipalib import x509
 import conftest
 from conftest import mock
 
+from ipahcc import hccplatform
 from ipahcc.server import hccapi
+from ipahcc.server.dbus_service import IPAHCCDbus
 
 CACERT = x509.load_certificate_from_file(conftest.IPA_CA_CRT)
 
 
 @conftest.requires_mock
-class TestHCCAPI(conftest.IPABaseTests):
+class TestHCCAPICommon(conftest.IPABaseTests):
     def setUp(self):
-        super(TestHCCAPI, self).setUp()
+        super(TestHCCAPICommon, self).setUp()
+
+        self.mock_hccplatform()
+
         self.m_api = mock.Mock()
         self.m_api.isdone.return_value = True
         self.m_api.env = self.get_mock_env()
@@ -80,13 +87,16 @@ class TestHCCAPI(conftest.IPABaseTests):
         self.addCleanup(p.stop)
 
         self.m_session = mock.Mock()
-        self.hccapi = hccapi.HCCAPI(self.m_api)
-        self.hccapi.session = self.m_session
+        self.m_hccapi = hccapi.HCCAPI(self.m_api)
+        self.m_hccapi.session = self.m_session
 
+
+@conftest.requires_mock
+class TestHCCAPI(TestHCCAPICommon):
     def test_check_host(self):
         body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
         self.m_session.request.return_value = self.mkresponse(200, body)
-        info, resp = self.hccapi.check_host(
+        info, resp = self.m_hccapi.check_host(
             conftest.DOMAIN_ID,
             conftest.CLIENT_INVENTORY_ID,
             conftest.CLIENT_RHSM_ID,
@@ -98,7 +108,7 @@ class TestHCCAPI(conftest.IPABaseTests):
     def test_register_domain(self):
         body = {"status": "ok"}
         self.m_session.request.return_value = self.mkresponse(200, body)
-        info, resp = self.hccapi.register_domain(
+        info, resp = self.m_hccapi.register_domain(
             conftest.DOMAIN_ID, "mockapi"
         )
         self.assertIsInstance(info, dict)
@@ -107,6 +117,101 @@ class TestHCCAPI(conftest.IPABaseTests):
     def test_update_domain(self):
         body = {"status": "ok"}
         self.m_session.request.return_value = self.mkresponse(200, body)
-        info, resp = self.hccapi.update_domain()
+        info, resp = self.m_hccapi.update_domain()
         self.assertIsInstance(info, dict)
         self.assertIsInstance(resp, Response)
+
+
+@conftest.requires_mock
+class TestIPAHCCDbus(TestHCCAPICommon):
+    def setUp(self):
+        super(TestIPAHCCDbus, self).setUp()
+        bus = mock.Mock()
+        bus_name = mock.Mock()
+        self.m_mainloop = mock.Mock()
+        self.dbus = IPAHCCDbus(
+            bus,
+            hccplatform.HCC_DBUS_OBJ_PATH,
+            bus_name=bus_name,
+            loop=self.m_mainloop,
+            hccapi=self.m_hccapi,
+        )
+        self.addCleanup(self.dbus.stop)
+
+    def dbus_call(self, method, *args):
+        # pylint: disable=protected-access
+        self.assertTrue(self.dbus._lq_thread.is_alive())
+        ok_cb = mock.Mock()
+        err_cb = mock.Mock()
+        args += (ok_cb, err_cb)
+        method(*args)
+        # wait for queue to process task
+        self.dbus._lq._queue.join()
+        return ok_cb, err_cb
+
+    def test_dbus_livecycle(self):
+        # pylint: disable=protected-access
+        self.assertTrue(self.dbus._lq_thread.is_alive())
+        self.dbus.stop()
+        self.assertFalse(self.dbus._lq_thread.is_alive())
+        self.assert_log_entry("Stopping lookup queue")
+        self.m_mainloop.quit.assert_called_once()
+
+    def test_check_host(self):
+        body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
+        self.m_session.request.return_value = self.mkresponse(200, body)
+        ok_cb, err_cb = self.dbus_call(
+            self.dbus.check_host,
+            conftest.DOMAIN_ID,
+            conftest.CLIENT_INVENTORY_ID,
+            conftest.CLIENT_RHSM_ID,
+            conftest.CLIENT_FQDN,
+        )
+
+        err_cb.assert_not_called()
+        ok_cb.assert_called_once_with(
+            200,
+            "OK",
+            None,
+            {"content-type": "application/json", "content-length": 56},
+            json.dumps(body),
+            0,
+            "OK",
+        )
+
+    def test_register_domain(self):
+        body = {"status": "ok"}
+        self.m_session.request.return_value = self.mkresponse(200, body)
+        ok_cb, err_cb = self.dbus_call(
+            self.dbus.register_domain, conftest.DOMAIN_ID, "mockapi"
+        )
+
+        err_cb.assert_not_called()
+        ok_cb.assert_called_once_with(
+            200,
+            "OK",
+            None,
+            {"content-type": "application/json", "content-length": 16},
+            json.dumps(body),
+            0,
+            "OK",
+        )
+
+    def test_update_domain(self):
+        body = {"status": "ok"}
+        self.m_session.request.return_value = self.mkresponse(200, body)
+        ok_cb, err_cb = self.dbus_call(
+            self.dbus.update_domain,
+            False,
+        )
+
+        err_cb.assert_not_called()
+        ok_cb.assert_called_once_with(
+            200,
+            "OK",
+            None,
+            {"content-type": "application/json", "content-length": 16},
+            json.dumps(body),
+            0,
+            "OK",
+        )

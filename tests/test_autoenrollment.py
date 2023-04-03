@@ -2,6 +2,7 @@ import io
 import json
 import os
 import ssl
+import unittest
 
 from dns.rdtypes.IN.SRV import SRV
 from ipaplatform.paths import paths
@@ -51,7 +52,7 @@ def jsonio(body):
     return out
 
 
-class TestAutoEnrollmentNoMock(conftest.IPABaseTests):
+class TestAutoEnrollmentNoMock(unittest.TestCase):
     def test_module_attributes(self):
         self.assertEqual(hccplatform.RHSM_CERT, auto_enrollment.RHSM_CERT)
         self.assertEqual(hccplatform.RHSM_KEY, auto_enrollment.RHSM_KEY)

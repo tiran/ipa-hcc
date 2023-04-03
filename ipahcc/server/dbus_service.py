@@ -79,11 +79,9 @@ class LookupQueue(object):
         "check_host": 100,
     }
 
-    def __init__(self, timeout=DEFAULT_TIMEOUT, maxsize=0):
+    def __init__(self, hccapi, maxsize=0):
         self._queue = PriorityQueue(maxsize=maxsize)
-        ipalib.api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
-        ipalib.api.finalize()
-        self._hccapi = HCCAPI(ipalib.api, timeout=timeout)
+        self._hccapi = hccapi
 
     def _response_to_dbus(self, response, exit_code=0, exit_message="OK"):
         """Convert requests.Response to D-Bus return value"""
@@ -131,8 +129,8 @@ class LookupQueue(object):
             except BaseException as e:  # pylint: disable=broad-except
                 logger.exception("Unexpected error: %s %r", method, args)
                 err_cb(e)
-
-            self._queue.task_done()
+            finally:
+                self._queue.task_done()
 
 
 class IPAHCCDbus(dbus.service.Object):
@@ -148,12 +146,10 @@ class IPAHCCDbus(dbus.service.Object):
         str: exit message
     """
 
-    def __init__(
-        self, conn, object_path, bus_name, loop, timeout=DEFAULT_TIMEOUT
-    ):
+    def __init__(self, conn, object_path, bus_name, loop, hccapi):
         super(IPAHCCDbus, self).__init__(conn, object_path, bus_name)
         self.loop = loop
-        self._lq = LookupQueue(timeout)
+        self._lq = LookupQueue(hccapi)
         self._lq_thread = threading.Thread(target=self._lq.run)
         self._lq_thread.start()
 
@@ -207,7 +203,7 @@ class IPAHCCDbus(dbus.service.Object):
         self.loop.quit()
 
 
-def main(args=None):
+def main(args=None):  # pragma: no cover
     args = parser.parse_args(args)
 
     logging.basicConfig(
@@ -217,6 +213,10 @@ def main(args=None):
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     dbus.mainloop.glib.threads_init()
 
+    ipalib.api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
+    ipalib.api.finalize()
+    hccapi = HCCAPI(ipalib.api, args.timeout)
+
     bus = dbus.SystemBus()
     bus_name = dbus.service.BusName(hccplatform.HCC_DBUS_NAME, bus)
     mainloop = GLib.MainLoop()
@@ -224,8 +224,8 @@ def main(args=None):
         bus,
         hccplatform.HCC_DBUS_OBJ_PATH,
         bus_name,
-        mainloop,
-        timeout=args.timeout,
+        loop=mainloop,
+        hccapi=hccapi,
     )
     signal.signal(signal.SIGINT, obj.signal_handler)
     signal.signal(signal.SIGTERM, obj.signal_handler)

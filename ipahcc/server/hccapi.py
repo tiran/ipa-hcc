@@ -447,8 +447,11 @@ class HCCAPI(object):
                 cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
                 json=payload,
             )
+        except Exception as e:
+            # TODO: better error handling
+            raise APIError.from_other(500, 2, str(e))
+        try:
             resp.raise_for_status()
-            return resp
         except requests.exceptions.RequestException as e:
             logger.error(
                 "Request to %s failed: %s: %s", url, type(e).__name__, e
@@ -456,3 +459,5 @@ class HCCAPI(object):
             raise APIError.from_response(
                 resp, 4, "{method} request failed".format(method=method)
             )
+        else:
+            return resp
