@@ -213,14 +213,15 @@ class IPABaseTests(unittest.TestCase):
             response = json.loads(b"".join(response).decode("utf-8"))
         return status_code, status_msg, headers, response
 
-    def assert_cli_run(self, mainfunc, *args):
+    def assert_cli_run(self, mainfunc, *args, **kwargs):
         try:
-            with capture_output():
+            with capture_output() as out:
                 mainfunc(list(args))
         except SystemExit as e:
-            self.assertEqual(e.code, 0)
+            self.assertEqual(e.code, kwargs.get("exitcode", 0))
         else:  # pragma: no cover
             self.fail("SystemExit expected")
+        return out.read()
 
     def assert_log_entry(self, msg):
         msgs = [r.getMessage() for r in self.log_capture.records]

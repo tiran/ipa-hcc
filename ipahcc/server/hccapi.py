@@ -16,7 +16,7 @@ try:
     from ipalib.install.certstore import (
         get_ca_certs,
     )  # pylint: disable=import-error
-except ImportError:
+except ImportError:  # pragma: no cover
 
     def get_ca_certs(
         ldap2, basedn, realm, ca_enabled
@@ -214,9 +214,6 @@ class HCCAPI(object):
         self.api.Backend.ldap2.disconnect()
 
     def check_host(self, domain_id, inventory_id, rhsm_id, fqdn):
-        if not domain_id:
-            config = self._get_ipa_config(all_fields=False)
-            domain_id = self._get_domain_id(config)
         info = {
             "domain_name": self.api.env.domain,
             "domain_id": domain_id,

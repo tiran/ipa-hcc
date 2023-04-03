@@ -1,6 +1,7 @@
 import json
 
 from requests import Response
+from ipapython import admintool
 from ipapython.dnsutil import DNSName
 from ipalib import x509
 
@@ -215,3 +216,64 @@ class TestIPAHCCDbus(TestHCCAPICommon):
             0,
             "OK",
         )
+
+
+@conftest.requires_mock
+class TestDBUSCli(conftest.IPABaseTests):
+    def setUp(self):
+        super(TestDBUSCli, self).setUp()
+        p = mock.patch("ipahcc.hccplatform.is_ipa_configured")
+        self.m_is_ipa_configured = p.start()
+        self.addCleanup(p.stop)
+        self.m_is_ipa_configured.return_value = False
+
+        p = mock.patch.multiple(
+            "ipahcc.server.dbus_client",
+            check_host=mock.Mock(),
+            register_domain=mock.Mock(),
+            update_domain=mock.Mock(),
+        )
+        self.m_dbus_client = p.start()
+        self.addCleanup(p.stop)
+
+    def test_cli(self):
+        # pylint: disable=import-outside-toplevel
+        from ipahcc.server.dbus_cli import main
+
+        out = self.assert_cli_run(main, exitcode=2)
+        self.assertIn("usage:", out)
+
+        out = self.assert_cli_run(
+            main,
+            "register",
+            conftest.DOMAIN_ID,
+            "mockapi",
+            exitcode=admintool.SERVER_NOT_CONFIGURED,
+        )
+        self.assertEqual(out.strip(), "IPA is not configured on this system.")
+
+        self.m_is_ipa_configured.return_value = True
+
+        with mock.patch("ipahcc.server.dbus_client.register_domain") as m:
+            m.return_value = {"status": "ok"}
+            out = self.assert_cli_run(
+                main, "register", conftest.DOMAIN_ID, "mockapi"
+            )
+        self.assertIn("ok", out)
+
+        with mock.patch("ipahcc.server.dbus_client.update_domain") as m:
+            m.return_value = {"status": "ok"}
+            out = self.assert_cli_run(main, "update")
+        self.assertIn("ok", out)
+
+        with mock.patch("ipahcc.server.dbus_client.check_host") as m:
+            m.return_value = {"status": "ok"}
+            out = self.assert_cli_run(
+                main,
+                "check-host",
+                conftest.DOMAIN_ID,
+                conftest.CLIENT_INVENTORY_ID,
+                conftest.CLIENT_RHSM_ID,
+                conftest.CLIENT_FQDN,
+            )
+        self.assertIn("ok", out)
