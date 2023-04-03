@@ -5,7 +5,7 @@
 #
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
-__all__ = ("is_ipa_configured", "is_ipa_client_configured")
+__all__ = ("is_ipa_configured",)
 
 import json
 import os
@@ -16,17 +16,14 @@ from ipaplatform.constants import constants
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 try:
-    from ipalib.facts import is_ipa_configured, is_ipa_client_configured
-except ImportError:
+    from ipalib.facts import is_ipa_configured
+except ImportError:  # pragma: no cover
     # IPA 4.6
-
-    def is_ipa_client_configured():
-        return os.path.isfile(paths.IPA_DEFAULT_CONF)
 
     def is_ipa_configured(on_master=False):
         index = os.path.join(paths.SYSRESTORE, "sysrestore.index")
         return os.path.isfile(index) and (
-            on_master or is_ipa_client_configured()
+            on_master or os.path.isfile(paths.IPA_DEFAULT_CONF)
         )
 
 

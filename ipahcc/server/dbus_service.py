@@ -102,7 +102,7 @@ class LookupQueue(object):
         prio = self.priorities[name]
         method = getattr(self._hccapi, name)
         argcount = method.__func__.__code__.co_argcount
-        if len(args) != argcount - 1:
+        if len(args) != argcount - 1:  # pragma: no cover
             raise ValueError(args, argcount)
         logger.info("Queue %s%s", name, args)
         self._queue.put((prio, name, args, ok_cb, err_cb))

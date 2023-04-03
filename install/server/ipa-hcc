@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
-from ipahcc.server.cli import IPAHCCCli
+from ipahcc.server.dbus_cli import main
 
-IPAHCCCli.run_cli()
+main()

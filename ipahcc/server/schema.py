@@ -10,7 +10,7 @@ if hccplatform.PY2:
     try:
         import jsonschema
         from jsonschema import ValidationError
-    except ImportError:
+    except ImportError:  # pragma: no cover
         jsonschema = None
         ValidationError = Exception
 
@@ -376,9 +376,10 @@ SCHEMATA = {
 
 def validate_schema(instance, schema_id):
     schema = SCHEMATA[schema_id]
-    if jsonschema is not None:
-        try:
-            jsonschema.validate(instance, schema)
-        except ValidationError:
-            logger.exception("Schema %r validation error", schema_id)
-            raise
+    if jsonschema is None:  # pragma: no cover
+        return False
+    try:
+        return jsonschema.validate(instance, schema)
+    except ValidationError:
+        logger.exception("Schema %r validation error", schema_id)
+        raise
