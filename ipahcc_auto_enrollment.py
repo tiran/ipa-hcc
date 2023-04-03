@@ -79,6 +79,13 @@ else:
 
 
 def check_arg_hostname(arg):
+    if arg.lower() in {"localhost", "localhost.localdomain"}:
+        raise argparse.ArgumentError(
+            None,
+            "Invalid hostname {arg}, host's FQDN is not configured.".format(
+                arg=arg
+            ),
+        )
     try:
         util.validate_hostname(arg)
     except ValueError as e:
