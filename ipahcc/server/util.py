@@ -3,6 +3,9 @@
 # Copyright (C) 2023  Christian Heimes <cheimes@redhat.com>
 # See COPYING for license
 #
+import io
+import os
+
 from cryptography.x509.oid import NameOID
 
 from ipalib import x509
@@ -32,3 +35,17 @@ def parse_rhsm_cert(data):
             "Invalid cert subject {subject}.".format(subject=cert.subject)
         )
     return org_id, nas[1].value
+
+
+def read_cert_dir(path):
+    """Read certs from DIR and return a PEM bundle"""
+    data = []
+    for filename in os.listdir(path):
+        if not filename.endswith(".pem"):
+            continue
+        absname = os.path.join(path, filename)
+        with io.open(absname, "r", encoding="utf-8") as f:
+            data.append(f.read())
+    # trust anchor last
+    data.sort(reverse=True)
+    return "\n".join(data)

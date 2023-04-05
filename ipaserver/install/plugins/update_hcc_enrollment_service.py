@@ -38,21 +38,6 @@ from ipahcc import hccplatform
 logger = logging.getLogger(__name__)
 
 
-CANDLEPIN_CHAIN = [
-    (
-        "redhat-entitlement-master",
-        "/usr/share/ipa-hcc/cacerts/redhat-entitlement-master-ca.pem",
-    ),
-    (
-        "redhat-entitlement-authority",
-        "/usr/share/ipa-hcc/cacerts/redhat-entitlement-authority-2022.pem",
-    ),
-    (
-        "redhat-candlepin",
-        "/usr/share/ipa-hcc/cacerts/candlepin-redhat-ca-sha256.pem",
-    ),
-]
-
 register = Registry()
 
 
@@ -183,7 +168,15 @@ class update_hcc_enrollment_service(Updater):
         trustflags = parse_trust_flags("T,,")
         modified = False
 
-        for nick, certpath in CANDLEPIN_CHAIN:
+        chain = []
+        for filename in os.listdir(hccplatform.HMSIDM_CACERTS_DIR):
+            if not filename.endswith(".pem"):
+                continue
+            absname = os.path.join(hccplatform.HMSIDM_CACERTS_DIR, filename)
+            nickname = filename[:-4].lstrip("0123456789-")
+            chain.append((nickname, absname))
+
+        for nick, certpath in chain:
             if nick not in nicknames:
                 logger.debug(
                     "Adding %s (%s) to %s", nick, certpath, db.secdir

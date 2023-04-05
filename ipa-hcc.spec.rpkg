@@ -177,7 +177,7 @@ getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c
 %postun server
 /usr/sbin/semanage fcontext -d '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
 # remove pkinit_anchors line from KRB5 KDC config
-sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/redhat-candlepin-bundle.pem/d' /var/kerberos/krb5kdc/kdc.conf || :
+sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/cacerts/d' /var/kerberos/krb5kdc/kdc.conf || :
 %systemd_postun_with_restart ipa-hcc-dbus.service
 %systemd_postun ipa-hcc-update.service
 %systemd_postun ipa-hcc-update.timer
@@ -276,7 +276,6 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{_mandir}/man1/ipa-hcc.1*
 %attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-dbus
 %dir %{_datadir}/ipa-hcc/
-%{_datadir}/ipa-hcc/redhat-candlepin-bundle.pem
 %{_datadir}/ipa-hcc/cacerts
 %{_unitdir}/ipa-hcc-update.*
 %{_unitdir}/ipa-hcc-dbus.service

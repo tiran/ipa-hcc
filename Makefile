@@ -79,7 +79,6 @@ rpkg:
 
 .PHONY: test
 test:
-	openssl verify -purpose sslclient -CAfile $(srcdir)/install/server/redhat-candlepin-bundle.pem $(CERT)
 	openssl verify -purpose sslclient -CApath $(srcdir)/install/server/cacerts/ $(CERT)
 
 .PHONY: run-idm-ci
@@ -126,9 +125,7 @@ install_server_plugin:
 	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(SBINDIR)/ipa-hcc
 	chmod 755 $(DEST)$(SBINDIR)/ipa-hcc
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc/cacerts
-	$(CP_PD) $(srcdir)/install/server/redhat-candlepin-bundle.pem $(DEST)$(DATADIR)/ipa-hcc/
-	$(CP_PD) $(srcdir)/install/server/cacerts/*.pem $(DEST)$(DATADIR)/ipa-hcc/cacerts/
-	openssl rehash $(DEST)$(DATADIR)/ipa-hcc/cacerts || true
+	$(CP_PD) $(srcdir)/install/server/cacerts/* $(DEST)$(DATADIR)/ipa-hcc/cacerts/
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/server/systemd/ipa-hcc-update.* $(DEST)$(UNITDIR)/
 	$(CP_PD) $(srcdir)/install/server/systemd/ipa-hcc-dbus.service $(DEST)$(UNITDIR)/

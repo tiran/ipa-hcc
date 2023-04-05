@@ -14,6 +14,7 @@ from ipaplatform.paths import paths
 from requests import Response
 
 from ipahcc import hccplatform
+from ipahcc.server.util import read_cert_dir
 from ipahcc.server import schema
 
 # pylint: disable=import-error
@@ -39,23 +40,22 @@ ORG_ID = "16765486"
 RHSM_CERT = os.path.join(TESTDATA, "autoenrollment", "cert.pem")
 RHSM_KEY = os.path.join(TESTDATA, "autoenrollment", "key.pem")
 IPA_CA_CRT = os.path.join(TESTDATA, "autoenrollment", "ipa_ca.crt")
-KDC_CA_CRT = os.path.join(
-    BASEDIR, "install", "server", "redhat-candlepin-bundle.pem"
-)
+KDC_CA_DIR = os.path.join(BASEDIR, "install", "server", "cacerts")
 HOST_DETAILS = os.path.join(TESTDATA, "autoenrollment", "host-details.json")
 MACHINE_ID = os.path.join(TESTDATA, "autoenrollment", "machine-id")
 NO_FILE = os.path.join(TESTDATA, "autoenrollment", "file-does-not-exist")
 
+KDC_CONF = os.path.join(TESTDATA, "kdc.conf")
+
 # patch
 paths.IPA_CA_CRT = IPA_CA_CRT
-hccplatform.HMSIDM_CA_BUNDLE_PEM = KDC_CA_CRT
+hccplatform.HMSIDM_CACERTS_DIR = KDC_CA_DIR
 
 with io.open(RHSM_CERT, encoding="utf-8") as f:
     RHSM_CERT_DATA = f.read()
 with io.open(IPA_CA_CRT, encoding="utf-8") as f:
     IPA_CA_DATA = f.read()
-with io.open(KDC_CA_CRT, encoding="utf-8") as f:
-    KDC_CA_DATA = f.read()
+KDC_CA_DATA = read_cert_dir(KDC_CA_DIR)
 
 # initialize first step of IPA API so server imports work
 if not api.isdone("bootstrap"):
@@ -158,10 +158,11 @@ class IPABaseTests(unittest.TestCase):
             RHSM_CERT=RHSM_CERT,
             RHSM_KEY=RHSM_KEY,
             INSIGHTS_HOST_DETAILS=HOST_DETAILS,
-            HMSIDM_CA_BUNDLE_PEM=KDC_CA_CRT,
+            HMSIDM_CACERTS_DIR=KDC_CA_DIR,
             HCC_API_HOST="invalid.test",
             TOKEN_URL="http://invalid.test",
             INVENTORY_URL="http://invalid.test",
+            HCC_ENROLLMENT_AGENT_KEYTAB=NO_FILE,
         )
         p.start()
         self.addCleanup(p.stop)

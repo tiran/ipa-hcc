@@ -64,8 +64,6 @@ HCC_ENROLLMENT_AGENT_KRB5CCNAME = "/var/cache/ipa-hcc/krb5ccname"
 
 HCC_ENROLLMENT_ROLE = text("HCC Enrollment Administrators")
 
-HMSIDM_CA_BUNDLE_PEM = "/usr/share/ipa-hcc/redhat-candlepin-bundle.pem"
-
 HMSIDM_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"
 
 RHSM_CERT = "/etc/pki/consumer/cert.pem"

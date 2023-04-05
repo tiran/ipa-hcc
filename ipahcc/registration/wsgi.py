@@ -5,7 +5,6 @@
 #
 from __future__ import print_function
 
-import io
 import json
 import logging
 import os
@@ -31,7 +30,7 @@ os.environ["GSS_USE_PROXY"] = "1"
 from ipalib import errors  # noqa: E402
 from ipahcc.server import dbus_client  # noqa: E402
 from ipahcc.server import schema  # noqa: E402
-from ipahcc.server.util import parse_rhsm_cert  # noqa: E402
+from ipahcc.server.util import parse_rhsm_cert, read_cert_dir  # noqa: E402
 
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
@@ -81,6 +80,8 @@ class Application(object):
         # cached org_id from IPA config_show
         self._org_id = None
         self._domain_id = None
+        # cached PEM bundle
+        self._kdc_cabundle = read_cert_dir(hccplatform.HMSIDM_CACERTS_DIR)
 
     def parse_cert(self, env, envname):
         cert_pem = env.get(envname)
@@ -226,12 +227,6 @@ class Application(object):
             raise HTTPException.from_error(413, "Request entity too large.")
         return json.load(env["wsgi.input"])
 
-    def get_kdc_cadata(self):
-        with io.open(
-            hccplatform.HMSIDM_CA_BUNDLE_PEM, "r", encoding="utf-8"
-        ) as f:
-            return f.read()
-
     def handle(self, env):
         method = env["REQUEST_METHOD"]
         if method != "POST":
@@ -272,7 +267,7 @@ class Application(object):
             rhsm_id,
         )
         # TODO: return value?
-        response = {"status": "ok", "kdc_cabundle": self.get_kdc_cadata()}
+        response = {"status": "ok", "kdc_cabundle": self._kdc_cabundle}
         schema.validate_schema(
             response, "/schemas/hcc-host-register/response"
         )
