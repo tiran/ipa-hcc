@@ -33,7 +33,7 @@ class update_hcc(Updater):
 
     def modify_krb5kdc_conf(self):
         """Add RHSM cert chain to KDC"""
-        anchor = "FILE:{}".format(hccplatform.HMSIDM_CA_BUNDLE_PEM)
+        anchor = "DIR:{}".format(hccplatform.HMSIDM_CACERTS_DIR)
         logger.debug(
             "Checking for 'pkinit_anchors=%s' in '%s'",
             anchor,

@@ -20,8 +20,7 @@ from ipaserver.plugins.hccserverroles import hcc_enrollment_server_role
 
 hcc_config_class = "hccconfig"
 
-if hcc_config_class not in config.possible_objectclasses:
-    config.possible_objectclasses.append(hcc_config_class)
+config.possible_objectclasses.append(hcc_config_class)
 
 hcc_config_attributes = {
     "hccorgid",

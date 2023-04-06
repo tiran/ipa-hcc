@@ -23,8 +23,7 @@ UUID_ERRMSG = "must be an UUID"
 
 hcc_host_class = "hcchost"
 
-if hcc_host_class not in host.possible_objectclasses:
-    host.possible_objectclasses.append(hcc_host_class)
+host.possible_objectclasses.append(hcc_host_class)
 
 hcc_host_attributes = {
     "hccorgid",
