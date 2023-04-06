@@ -43,8 +43,8 @@ RFC4514_MAP = {
 }
 
 
-APIResult = collections.namedtuple(
-    "APIResult",
+_APIResult = collections.namedtuple(
+    "_APIResult",
     [
         "status_code",  # HTTP status code or IPA errno (>= 900)
         "reason",  # HTTP reason or IPA exception name
@@ -55,6 +55,56 @@ APIResult = collections.namedtuple(
         "exit_message",  # human readable error message for CLI
     ],
 )
+
+
+class APIResult(_APIResult):
+    __slots__ = ()
+
+    @classmethod
+    def from_response(cls, response, exit_code, exit_message):
+        return cls(
+            response.status_code,
+            response.reason,
+            response.url,
+            response.headers,
+            response.text,
+            exit_code,
+            exit_message,
+        )
+
+    @classmethod
+    def from_dict(cls, dct, status_code, exit_code, exit_message):
+        assert isinstance(dct, dict)
+        text = json.dumps(dct, sort_keys=True)
+        return cls(
+            status_code,
+            http_responses[status_code],
+            None,
+            {"content-type": "application/json", "content-length": len(text)},
+            text,
+            exit_code,
+            exit_message,
+        )
+
+    def to_dbus(self):
+        """Convert to D-Bus format"""
+        headers = self.headers or {}
+        url = self.url or ""
+        body = self.body
+        if isinstance(body, dict):
+            body = json.dumps(body, sort_keys=True)
+        return type(self)(
+            self.status_code,
+            self.reason,
+            url,
+            headers,
+            body,
+            self.exit_code,
+            self.exit_message,
+        )
+
+    def json(self):
+        return json.loads(self.body)
 
 
 def _get_one(dct, key, default=_missing):
@@ -82,39 +132,14 @@ class APIError(Exception):
     __repr__ = __str__
 
     def to_dbus(self):
-        """Convert to D-Bus format"""
-        r = self.result
-        headers = r.headers or {}
-        url = r.url or ""
-        body = r.body
-        if isinstance(body, dict):
-            body = json.dumps(body)
-        return (
-            r.status_code,
-            r.reason,
-            url,
-            headers,
-            body,
-            r.exit_code,
-            r.exit_message,
-        )
+        return self.result.to_dbus()
 
     @classmethod
     def from_response(
         cls, response, exit_code=2, exit_message="Request failed"
     ):
         """Construct exception for failed request response"""
-        return cls(
-            APIResult(
-                response.status_code,
-                response.reason,
-                response.url,
-                response.headers,
-                response.text,
-                exit_code,
-                exit_message,
-            )
-        )
+        return cls(APIResult.from_response(response, exit_code, exit_message))
 
     @classmethod
     def not_found(
@@ -228,7 +253,8 @@ class HCCAPI(object):
             extra_headers=None,
         )
         schema.validate_schema(resp.json(), "/schemas/check-host/response")
-        return info, resp
+        result = APIResult.from_response(resp, 0, "OK")
+        return info, result
 
     def register_domain(self, domain_id, token):
         config = self._get_ipa_config(all_fields=True)
@@ -257,7 +283,8 @@ class HCCAPI(object):
             logger.debug("hccdomainid=%s already configured", domain_id)
         else:
             logger.debug("hccdomainid=%s set", domain_id)
-        return info, resp
+        result = APIResult.from_response(resp, 0, "OK")
+        return info, result
 
     def update_domain(self, update_server_only=False):
         config = self._get_ipa_config(all_fields=True)
@@ -286,7 +313,20 @@ class HCCAPI(object):
         schema.validate_schema(
             resp.json(), "/schemas/domain-register-update/response"
         )
-        return info, resp
+        result = APIResult.from_response(resp, 0, "OK")
+        return info, result
+
+    def status_check(self):
+        config = self._get_ipa_config(all_fields=True)
+        info = self._get_ipa_info(config)
+        # remove CA certs, add domain and org id
+        info[hccplatform.HCC_DOMAIN_TYPE].pop("cacerts", None)
+        info.update(
+            domain_id=_get_one(config, "hccdomainid", None),
+            org_id=_get_one(config, "hccorgid", default=None),
+        )
+        result = APIResult.from_dict(info, 200, 0, "OK")
+        return {}, result
 
     def _get_domain_id(self, config):
         domain_id = _get_one(config, "hccdomainid", None)

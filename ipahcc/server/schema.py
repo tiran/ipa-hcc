@@ -64,7 +64,10 @@ DEFS = {
     },
     "uuid": {
         "title": "Universal unique identifier (UUID)",
-        "description": "UUID of a resource (e.g. domain, inventory, subscription manager)",
+        "description": (
+            "UUID of a resource "
+            "(e.g. domain, inventory, subscription manager)"
+        ),
         "type": "string",
         "minLength": 36,
         "maxLength": 36,
@@ -154,7 +157,10 @@ HOST_CONF_RESPONSE = {
                     "type": "string",
                 },
                 "enrollment_servers": {
-                    "title": "An array of RHEL IdM servers with activate HCC enrollment agents",
+                    "title": (
+                        "An array of RHEL IdM servers with activate "
+                        "HCC enrollment agents"
+                    ),
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -181,7 +187,10 @@ HOST_CONF_RESPONSE = {
 CHECK_HOST_REQUEST = {
     "$id": "/schemas/check-host/request",
     "title": "Host verification request",
-    "description": "Request from a RHEL IdM server to HCC API to verify a host enrollment request",
+    "description": (
+        "Request from a RHEL IdM server to HCC API to verify a "
+        "host enrollment request"
+    ),
     "type": "object",
     # subscription_manager_id and fqdn are passed via PATH variables
     "required": ["domain_type", "domain_name", "domain_id", "inventory_id"],
@@ -215,7 +224,10 @@ CHECK_HOST_RESPONSE = {
 DOMAIN_REQUEST = {
     "$id": "/schemas/domain-register-update/request",
     "title": "Domain registration or update request",
-    "description": "Request from an RHEL IdM server to HCC API to register or update a domain",
+    "description": (
+        "Request from an RHEL IdM server to HCC API to "
+        "register or update a domain"
+    ),
     "type": "object",
     "required": [
         "domain_type",

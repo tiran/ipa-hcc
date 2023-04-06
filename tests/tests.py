@@ -78,7 +78,9 @@ class TestJSONSchema(conftest.IPABaseTests):
                     },
                     {
                         "fqdn": "ipareplica1.ipahcc.test",
-                        "subscription_manager_id": "fdebb5ad-f8d7-4234-a1ff-2b9ef074089b",
+                        "subscription_manager_id": (
+                            "fdebb5ad-f8d7-4234-a1ff-2b9ef074089b"
+                        ),
                         "location": "tau",
                         "ca_server": True,
                         "hcc_enrollment_server": True,

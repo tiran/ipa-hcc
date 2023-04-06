@@ -313,7 +313,8 @@ class Application(object):
         if inventory_id != expected_inventory_id:
             raise HTTPException.from_error(
                 400,
-                "unexpected inventory id: {inventory_id} != {expected_inventory_id}".format(
+                "unexpected inventory id: "
+                "{inventory_id} != {expected_inventory_id}".format(
                     inventory_id=inventory_id,
                     expected_inventory_id=expected_inventory_id,
                 ),

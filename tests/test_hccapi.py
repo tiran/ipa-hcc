@@ -1,9 +1,9 @@
 import json
+import textwrap
 
-from requests import Response
+from ipalib import x509
 from ipapython import admintool
 from ipapython.dnsutil import DNSName
-from ipalib import x509
 
 import conftest
 from conftest import mock
@@ -13,6 +13,45 @@ from ipahcc.server import hccapi
 from ipahcc.server.dbus_service import IPAHCCDbus
 
 CACERT = x509.load_certificate_from_file(conftest.IPA_CA_CRT)
+
+STATUS_CHECK_RESULT = {
+    "domain_id": conftest.DOMAIN_ID,
+    "domain_name": conftest.DOMAIN,
+    "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+    "rhel-idm": {
+        "realm_name": conftest.REALM,
+        "servers": [
+            {
+                "fqdn": conftest.SERVER_FQDN,
+                "ca_server": True,
+                "hcc_enrollment_server": True,
+                "hcc_update_server": True,
+                "pkinit_server": True,
+                "subscription_manager_id": conftest.SERVER_RHSM_ID,
+                "location": "sigma",
+            }
+        ],
+        "locations": [
+            {"name": "kappa", "description": None},
+            {"name": "sigma", "description": None},
+            {"name": "tau", "description": "location tau"},
+        ],
+        "realm_domains": [conftest.DOMAIN],
+    },
+    "org_id": conftest.ORG_ID,
+}
+
+
+def mkresult(dct, status_code=200, exit_code=0, exit_message=0):
+    return hccapi.APIResult(
+        status_code,
+        "",
+        "",
+        {"content-type": "application/json"},
+        dct,
+        exit_code,
+        exit_message,
+    )
 
 
 @conftest.requires_mock
@@ -104,7 +143,7 @@ class TestHCCAPI(TestHCCAPICommon):
             conftest.CLIENT_FQDN,
         )
         self.assertIsInstance(info, dict)
-        self.assertIsInstance(resp, Response)
+        self.assertIsInstance(resp, hccapi.APIResult)
 
     def test_register_domain(self):
         body = {"status": "ok"}
@@ -113,14 +152,20 @@ class TestHCCAPI(TestHCCAPICommon):
             conftest.DOMAIN_ID, "mockapi"
         )
         self.assertIsInstance(info, dict)
-        self.assertIsInstance(resp, Response)
+        self.assertIsInstance(resp, hccapi.APIResult)
 
     def test_update_domain(self):
         body = {"status": "ok"}
         self.m_session.request.return_value = self.mkresponse(200, body)
         info, resp = self.m_hccapi.update_domain()
         self.assertIsInstance(info, dict)
-        self.assertIsInstance(resp, Response)
+        self.assertIsInstance(resp, hccapi.APIResult)
+
+    def test_status_check(self):
+        info, resp = self.m_hccapi.status_check()
+        self.m_session.request.assert_not_called()
+        self.assertIsInstance(info, dict)
+        self.assertIsInstance(resp, hccapi.APIResult)
 
 
 @conftest.requires_mock
@@ -173,7 +218,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         ok_cb.assert_called_once_with(
             200,
             "OK",
-            None,
+            "",
             {"content-type": "application/json", "content-length": 56},
             json.dumps(body),
             0,
@@ -191,7 +236,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         ok_cb.assert_called_once_with(
             200,
             "OK",
-            None,
+            "",
             {"content-type": "application/json", "content-length": 16},
             json.dumps(body),
             0,
@@ -210,9 +255,29 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         ok_cb.assert_called_once_with(
             200,
             "OK",
-            None,
+            "",
             {"content-type": "application/json", "content-length": 16},
             json.dumps(body),
+            0,
+            "OK",
+        )
+
+    def test_status_check(self):
+        ok_cb, err_cb = self.dbus_call(
+            self.dbus.status_check,
+        )
+        expected = json.dumps(STATUS_CHECK_RESULT, sort_keys=True)
+
+        err_cb.assert_not_called()
+        ok_cb.assert_called_once_with(
+            200,
+            "OK",
+            "",
+            {
+                "content-type": "application/json",
+                "content-length": len(expected),
+            },
+            expected,
             0,
             "OK",
         )
@@ -225,7 +290,7 @@ class TestDBUSCli(conftest.IPABaseTests):
         p = mock.patch("ipahcc.hccplatform.is_ipa_configured")
         self.m_is_ipa_configured = p.start()
         self.addCleanup(p.stop)
-        self.m_is_ipa_configured.return_value = False
+        self.m_is_ipa_configured.return_value = True
 
         p = mock.patch.multiple(
             "ipahcc.server.dbus_client",
@@ -236,15 +301,20 @@ class TestDBUSCli(conftest.IPABaseTests):
         self.m_dbus_client = p.start()
         self.addCleanup(p.stop)
 
-    def test_cli(self):
+    def assert_dbus_cli_run(self, *args, **kwargs):
         # pylint: disable=import-outside-toplevel
         from ipahcc.server.dbus_cli import main
 
-        out = self.assert_cli_run(main, exitcode=2)
+        return self.assert_cli_run(main, *args, **kwargs)
+
+    def test_cli_noaction(self):
+        out = self.assert_dbus_cli_run(exitcode=2)
         self.assertIn("usage:", out)
 
-        out = self.assert_cli_run(
-            main,
+    def test_cli_not_configured(self):
+        self.m_is_ipa_configured.return_value = False
+
+        out = self.assert_dbus_cli_run(
             "register",
             conftest.DOMAIN_ID,
             "mockapi",
@@ -252,24 +322,24 @@ class TestDBUSCli(conftest.IPABaseTests):
         )
         self.assertEqual(out.strip(), "IPA is not configured on this system.")
 
-        self.m_is_ipa_configured.return_value = True
-
+    def test_cli_register(self):
         with mock.patch("ipahcc.server.dbus_client.register_domain") as m:
-            m.return_value = {"status": "ok"}
-            out = self.assert_cli_run(
-                main, "register", conftest.DOMAIN_ID, "mockapi"
+            m.return_value = mkresult({"status": "ok"})
+            out = self.assert_dbus_cli_run(
+                "register", conftest.DOMAIN_ID, "mockapi"
             )
         self.assertIn("ok", out)
 
+    def test_cli_update(self):
         with mock.patch("ipahcc.server.dbus_client.update_domain") as m:
-            m.return_value = {"status": "ok"}
-            out = self.assert_cli_run(main, "update")
+            m.return_value = mkresult({"status": "ok"})
+            out = self.assert_dbus_cli_run("update")
         self.assertIn("ok", out)
 
+    def test_cli_check_host(self):
         with mock.patch("ipahcc.server.dbus_client.check_host") as m:
-            m.return_value = {"status": "ok"}
-            out = self.assert_cli_run(
-                main,
+            m.return_value = mkresult({"status": "ok"})
+            out = self.assert_dbus_cli_run(
                 "check-host",
                 conftest.DOMAIN_ID,
                 conftest.CLIENT_INVENTORY_ID,
@@ -277,3 +347,23 @@ class TestDBUSCli(conftest.IPABaseTests):
                 conftest.CLIENT_FQDN,
             )
         self.assertIn("ok", out)
+
+    def test_cli_status(self):
+        with mock.patch("ipahcc.server.dbus_client.status_check") as m:
+            m.return_value = mkresult(STATUS_CHECK_RESULT)
+            out = self.assert_dbus_cli_run("status")
+
+        self.assertEqual(
+            out,
+            textwrap.dedent(
+                """\
+            domain name: {conftest.DOMAIN}
+            domain id: {conftest.DOMAIN_ID}
+            org id: {conftest.ORG_ID}
+            servers:
+            \t{conftest.SERVER_FQDN} (HCC plugin: yes)
+            """.format(
+                    conftest=conftest
+                )
+            ),
+        )
