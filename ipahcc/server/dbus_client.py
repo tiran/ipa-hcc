@@ -69,3 +69,7 @@ def register_domain(domain_id, token, bus=None):
 
 def update_domain(update_server_only=False, bus=None):
     return _dbus_call("update_domain", update_server_only, bus=bus)
+
+
+def status_check(bus=None):
+    return _dbus_call("status_check", bus=bus)

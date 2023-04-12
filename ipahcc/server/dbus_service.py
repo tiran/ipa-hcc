@@ -24,11 +24,13 @@ try:
 except ImportError:
     sd = None
 
+# pylint: disable=import-error
 if hccplatform.PY2:
-    # pylint: disable=import-error
     from Queue import PriorityQueue
 else:
-    from queue import PriorityQueue  # pylint: disable=import-error
+    from queue import PriorityQueue
+# pylint: enable=import-error
+
 
 logger = logging.getLogger("ipa-hcc-dbus")
 
@@ -76,24 +78,13 @@ class LookupQueue(object):
         "stop": -1,
         "register_domain": 30,
         "update_domain": 50,
+        "status_check": 60,
         "check_host": 100,
     }
 
     def __init__(self, hccapi, maxsize=0):
         self._queue = PriorityQueue(maxsize=maxsize)
         self._hccapi = hccapi
-
-    def _response_to_dbus(self, response, exit_code=0, exit_message="OK"):
-        """Convert requests.Response to D-Bus return value"""
-        return (
-            response.status_code,
-            response.reason,
-            response.url,
-            response.headers,
-            response.text,
-            exit_code,
-            exit_message,
-        )
 
     def stop(self):
         self._queue.put((self.priorities["stop"], None, None, None, None))
@@ -117,10 +108,9 @@ class LookupQueue(object):
                 logger.info("API call %s%s", name, args)
                 with self._hccapi as hccapi:
                     method = getattr(hccapi, name)
-                    _info, response = method(*args)
-                result = self._response_to_dbus(response)
+                    _info, result = method(*args)
                 logger.info("Result: %r", result)
-                ok_cb(*result)
+                ok_cb(*result.to_dbus())
             except APIError as e:
                 logger.exception("API call failed: %s %r", method, args)
                 # err_cb can only return exception name + string, use ok_cb()
@@ -192,6 +182,17 @@ class IPAHCCDbus(dbus.service.Object):
         """Register a new domain"""
         args = (bool(update_server_only),)
         self._lq.add_task("update_domain", args, ok_cb, err_cb)
+
+    @dbus.service.method(
+        hccplatform.HCC_DBUS_IFACE_NAME,
+        "",
+        DBUS_RETURN,
+        async_callbacks=("ok_cb", "err_cb"),
+    )
+    def status_check(self, ok_cb, err_cb):
+        """Get status information"""
+        args = ()
+        self._lq.add_task("status_check", args, ok_cb, err_cb)
 
     @dbus.service.signal(hccplatform.HCC_DBUS_IFACE_NAME)
     def stop(self):
