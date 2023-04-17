@@ -93,13 +93,20 @@ class Application(JSONWSGIApp):
         self.valid_until = monotonic_time() + j["expires_in"] - 10
         return self.access_token
 
-    def lookup_inventory(self, rhsm_id, access_token):
-        """Lookup host by subscription manager id
+    def lookup_inventory(self, inventory_id, rhsm_id, access_token):
+        """Lookup host by its inventory_id
 
-        Returns FQDN, inventory_id
+        Returns fqdn, inventory_id, rhsm_id
         """
-        url = hccplatform.INVENTORY_URL.rstrip("/") + "/hosts"
-        logger.debug("Looking up %s in console inventory %s", rhsm_id, url)
+        # cannot lookup from .../hosts/{inventory_id}, RHEL 7 does not include
+        # subscription_manager_id in return value.
+        url = "/".join((hccplatform.INVENTORY_URL.rstrip("/"), "hosts"))
+        logger.debug(
+            "Looking up inventory id %s / rhsm %s in console inventory %s",
+            inventory_id,
+            rhsm_id,
+            url,
+        )
         headers = {
             "Authorization": "Bearer {access_token}".format(
                 access_token=access_token
@@ -120,19 +127,54 @@ class Application(JSONWSGIApp):
         j = resp.json()
         if j["total"] != 1:
             raise HTTPException(
-                404, "Unknown host {rhsm_id}.".format(rhsm_id=rhsm_id)
+                404,
+                "Unknown host {inventory_id}.".format(
+                    inventory_id=inventory_id
+                ),
             )
         result = j["results"][0]
         fqdn = result["fqdn"]
-        inventoryid = result["id"]
+        rhsm_id = result["subscription_manager_id"]
+        inventory_id = result["id"]
         logger.debug(
-            "Resolved %s to fqdn %s / inventory %s in %0.3fs",
-            rhsm_id,
+            "Got result for %s (%s, %s) in %0.3fs",
             fqdn,
-            inventoryid,
+            inventory_id,
+            rhsm_id,
             dur,
         )
-        return fqdn, inventoryid
+        return fqdn, inventory_id, rhsm_id
+
+    def check_inventory(self, inventory_id, fqdn, rhsm_id):
+        if not fqdn.endswith(self.api.env.domain):
+            raise HTTPException.from_error(404, "hostname not recognized")
+
+        access_token = self.get_access_token()
+        exp_fqdn, exp_id, exp_rhsm_id = self.lookup_inventory(
+            inventory_id, rhsm_id, access_token=access_token
+        )
+        if fqdn != exp_fqdn:
+            raise HTTPException.from_error(
+                400,
+                "unexpected fqdn: {fqdn} != {expected_fqdn}".format(
+                    fqdn=fqdn, expected_fqdn=exp_fqdn
+                ),
+            )
+        if inventory_id != exp_id:
+            raise HTTPException.from_error(
+                400,
+                "unexpected inventory_id: {inventory_id} != {exp_id}".format(
+                    inventory_id=inventory_id, exp_id=exp_id
+                ),
+            )
+        # RHEL 7.9 clients have subscription_manager_id == None
+        if exp_rhsm_id is not None and rhsm_id != exp_rhsm_id:
+            raise HTTPException.from_error(
+                400,
+                "unexpected RHSM id: {rhsm_id} != {expected_rhsm_id}".format(
+                    rhsm_id=rhsm_id, expected_rhsm_id=exp_rhsm_id
+                ),
+            )
 
     def get_ca_crt(self):
         with io.open(paths.IPA_CA_CRT, "r", encoding="utf-8") as f:
@@ -145,38 +187,29 @@ class Application(JSONWSGIApp):
 
     @route(
         "POST",
-        "^/host-conf/(?P<fqdn>[^/]+)$",
+        "^/host-conf/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
         schema="host-conf",
     )
     def handle_host_conf(
-        self, env, body, fqdn
+        self, env, body, inventory_id, fqdn
     ):  # pylint: disable=unused-argument
         org_id, rhsm_id = self.parse_cert(env)
         logger.warning(
-            "Received host configuration request for org O=%s, CN=%s, FQDN %s",
+            "Received host configuration request for "
+            "org O=%s, CN=%s, FQDN %s, inventory %s",
             org_id,
             rhsm_id,
             fqdn,
+            inventory_id,
         )
 
-        if not fqdn.endswith(self.api.env.domain):
-            raise HTTPException(404, "hostname not recognized")
+        self.check_inventory(inventory_id, fqdn, rhsm_id)
 
-        access_token = self.get_access_token()
-        expected_fqdn, inventory_id = self.lookup_inventory(
-            rhsm_id, access_token=access_token
-        )
-        if fqdn != expected_fqdn:
-            raise HTTPException(
-                400,
-                "unexpected fqdn: {fqdn} != {expected_fqdn}".format(
-                    fqdn=fqdn, expected_fqdn=expected_fqdn
-                ),
-            )
         ca = self.get_ca_crt()
         logger.info(
-            "host-conf for %s (%s) is domain %s.",
+            "host-conf for %s (%s, %s) is domain %s.",
             fqdn,
+            inventory_id,
             rhsm_id,
             self.api.env.domain,
         )
@@ -198,18 +231,18 @@ class Application(JSONWSGIApp):
 
     @route(
         "POST",
-        "^/check-host/(?P<rhsm_id>[^/]+)/(?P<fqdn>[^/]+)$",
+        "^/check-host/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
         schema="check-host",
     )
     def handle_check_host(
-        self, env, body, rhsm_id, fqdn
+        self, env, body, inventory_id, fqdn
     ):  # pylint: disable=unused-argument
-        logger.info("Checking host %s (%s)", fqdn, rhsm_id)
+        logger.info("Checking host %s (%s)", fqdn, inventory_id)
 
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
         domain_id = body["domain_id"]
-        inventory_id = body["inventory_id"]
+        rhsm_id = body["subscription_manager_id"]
 
         if domain_name != self.api.env.domain:
             raise HTTPException(
@@ -224,28 +257,9 @@ class Application(JSONWSGIApp):
         # TODO validate domain id
         assert domain_id
 
-        access_token = self.get_access_token()
-        expected_fqdn, expected_inventory_id = self.lookup_inventory(
-            rhsm_id, access_token=access_token
-        )
-        if fqdn != expected_fqdn:
-            raise HTTPException(
-                400,
-                "unexpected fqdn: {fqdn} != {expected_fqdn}".format(
-                    fqdn=fqdn, expected_fqdn=expected_fqdn
-                ),
-            )
-        if inventory_id != expected_inventory_id:
-            raise HTTPException(
-                400,
-                "unexpected inventory id: "
-                "{inventory_id} != {expected_inventory_id}".format(
-                    inventory_id=inventory_id,
-                    expected_inventory_id=expected_inventory_id,
-                ),
-            )
+        self.check_inventory(inventory_id, fqdn, rhsm_id)
 
-        logger.info("Approving host %s (%s, %s)", fqdn, rhsm_id, inventory_id)
+        logger.info("Approving host %s (%s, %s)", fqdn, inventory_id, rhsm_id)
         response = {"inventory_id": inventory_id}
         return response
 

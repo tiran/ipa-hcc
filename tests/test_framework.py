@@ -20,11 +20,11 @@ class Application(JSONWSGIApp):
 
     @route(
         "POST",
-        "^/host-conf/(?P<fqdn>[^/]+)$",
+        "^/host-conf/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
         schema="host-conf",
     )
     def handle_host_conf(
-        self, env, body, fqdn
+        self, env, body, inventory_id, fqdn
     ):  # pylint: disable=unused-argument
         return {}
 
@@ -71,13 +71,19 @@ class TestWSGIFramework(conftest.IPABaseTests):
         )
         self.assertEqual(status_code, 404)
 
-        path = "/".join(("", "host-conf", conftest.CLIENT_FQDN))
+        path = "/".join(
+            (
+                "",
+                "host-conf",
+                conftest.CLIENT_INVENTORY_ID,
+                conftest.CLIENT_FQDN,
+            )
+        )
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path, body=None
         )
         self.assertEqual(status_code, 411)
 
-        path = "/".join(("", "host-conf", conftest.CLIENT_FQDN))
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path,
             body={},
@@ -117,8 +123,15 @@ class TestWSGIFramework(conftest.IPABaseTests):
         self.assertEqual(status_code, 400)
 
     def test_schema_violations(self):
-        path = "/".join(("", "host-conf", conftest.CLIENT_FQDN))
-        body = {}
+        path = "/".join(
+            (
+                "",
+                "host-conf",
+                conftest.CLIENT_INVENTORY_ID,
+                conftest.CLIENT_FQDN,
+            )
+        )
+        body = {"error": "error"}
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path, body=body
         )
@@ -134,7 +147,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
             },
         )
 
-        body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
+        body = {}
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path, body=body
         )

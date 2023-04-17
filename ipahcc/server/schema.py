@@ -74,18 +74,19 @@ DEFS = {
     },
 }
 
+# POST /hcc/{inventory_id}/{hostname}
+# "subscription_manager_id" is in mTLS client cert
 HCC_REQUEST = {
     "$id": "/schemas/hcc-host-register/request",
     "title": "Host registration request",
     "description": "Request from a host to an IPA server",
     "type": "object",
-    "required": ["domain_type", "domain_name", "domain_id", "inventory_id"],
+    "required": ["domain_type", "domain_name", "domain_id"],
     "additionalProperties": False,
     "properties": {
         "domain_type": {"$ref": "#/$defs/domain_type"},
         "domain_name": {"$ref": "#/$defs/domain_name"},
         "domain_id": {"$ref": "#/$defs/uuid"},
-        "inventory_id": {"$ref": "#/$defs/uuid"},
     },
     "$defs": DEFS,
 }
@@ -107,15 +108,16 @@ HCC_RESPONSE = {
     },
 }
 
+# POST /api/idm/v1/host-conf/{inventory_id}/{hostname}
+# "subscription_manager_id" is in mTLS client cert
 HOST_CONF_REQUEST = {
     "$id": "/schemas/host-conf/request",
     "title": "Host configuration request",
     "description": "Request from a client to HCC API to request configuration data",
     "type": "object",
-    "required": ["inventory_id"],
+    # "required": [],
     "additionalProperties": False,
     "properties": {
-        "inventory_id": {"$ref": "#/$defs/uuid"},
         # additional selectors / filters
         "domain_type": {"$ref": "#/$defs/domain_type"},
         "domain_name": {"$ref": "#/$defs/domain_name"},
@@ -184,6 +186,7 @@ HOST_CONF_RESPONSE = {
     "$defs": DEFS,
 }
 
+# POST /api/idm/v1/check-host/{inventory_id}/{fqdn}
 CHECK_HOST_REQUEST = {
     "$id": "/schemas/check-host/request",
     "title": "Host verification request",
@@ -193,13 +196,18 @@ CHECK_HOST_REQUEST = {
     ),
     "type": "object",
     # subscription_manager_id and fqdn are passed via PATH variables
-    "required": ["domain_type", "domain_name", "domain_id", "inventory_id"],
+    "required": [
+        "domain_type",
+        "domain_name",
+        "domain_id",
+        "subscription_manager_id",
+    ],
     "additionalProperties": False,
     "properties": {
         "domain_type": {"$ref": "#/$defs/domain_type"},
         "domain_name": {"$ref": "#/$defs/domain_name"},
         "domain_id": {"$ref": "#/$defs/uuid"},
-        "inventory_id": {"$ref": "#/$defs/uuid"},
+        "subscription_manager_id": {"$ref": "#/$defs/uuid"},
     },
     "$defs": DEFS,
 }
@@ -220,7 +228,8 @@ CHECK_HOST_RESPONSE = {
     "$defs": DEFS,
 }
 
-
+# PUT /api/idm/v1/domains/{domain_id}/register
+# PUT /api/idm/v1/domains/{domain_id}/update
 DOMAIN_REQUEST = {
     "$id": "/schemas/domain-register-update/request",
     "title": "Domain registration or update request",

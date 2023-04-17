@@ -243,12 +243,12 @@ class HCCAPI(object):
             "domain_name": self.api.env.domain,
             "domain_id": domain_id,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-            "inventory_id": inventory_id,
+            "subscription_manager_id": rhsm_id,
         }
         schema.validate_schema(info, "/schemas/check-host/request")
         resp = self._submit_idm_api(
             method="POST",
-            subpath=("check-host", rhsm_id, fqdn),
+            subpath=("check-host", inventory_id, fqdn),
             payload=info,
             extra_headers=None,
         )

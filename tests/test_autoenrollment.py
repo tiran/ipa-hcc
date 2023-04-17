@@ -17,7 +17,6 @@ import ipahcc_auto_enrollment as auto_enrollment
 
 HOST_CONF_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-    "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
 
 HOST_CONF_RESPONSE = {
@@ -39,7 +38,6 @@ REGISTER_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     "domain_name": conftest.DOMAIN,
     "domain_id": conftest.DOMAIN_ID,
-    "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
 
 REGISTER_RESPONSE = {"status": "ok", "kdc_cabundle": conftest.KDC_CA_DATA}
@@ -275,8 +273,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             req = urlopen.call_args[0][0]
             self.assertEqual(
                 req.get_full_url(),
-                "https://{}/api/idm/v1/host-conf/{}".format(
-                    conftest.SERVER_FQDN, conftest.CLIENT_FQDN
+                "https://{}/api/idm/v1/host-conf/{}/{}".format(
+                    conftest.SERVER_FQDN,
+                    conftest.CLIENT_INVENTORY_ID,
+                    conftest.CLIENT_FQDN,
                 ),
             )
             self.assertEqual(
@@ -310,8 +310,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             req = urlopen.call_args[0][0]
             self.assertEqual(
                 req.get_full_url(),
-                "https://{}/hcc/{}".format(
-                    conftest.SERVER_FQDN, conftest.CLIENT_FQDN
+                "https://{}/hcc/{}/{}".format(
+                    conftest.SERVER_FQDN,
+                    conftest.CLIENT_INVENTORY_ID,
+                    conftest.CLIENT_FQDN,
                 ),
             )
             self.assertTrue(os.path.isfile(ae.ipa_cacert))

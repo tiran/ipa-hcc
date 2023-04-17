@@ -150,13 +150,14 @@ class Application(JSONWSGIApp):
                     fqdn,
                 )
 
-    @route("POST", "^/(?P<fqdn>[^/]+)$", schema="hcc-host-register")
-    def handle(self, env, body, fqdn):
-        if not fqdn or "/" in fqdn:
-            raise HTTPException(404, "host not found")
-
-        inventory_id = body["inventory_id"]
-
+    @route(
+        "POST",
+        "^/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
+        schema="hcc-host-register",
+    )
+    def handle(
+        self, env, body, inventory_id, fqdn
+    ):  # pylint: disable=unused-argument
         org_id, rhsm_id = self.parse_cert(env)
         logger.warning(
             "Received self-enrollment request for org O=%s, CN=%s",
