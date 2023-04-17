@@ -187,19 +187,26 @@ class IPABaseTests(unittest.TestCase):
         content_type="application/json",
         method="POST",
         extra_headers=None,
+        client_cert=RHSM_CERT_DATA,
     ):
-        dump = json.dumps(body).encode("utf-8")
-        wsgi_input = io.BytesIO()
-        wsgi_input.write(dump)
-        wsgi_input.seek(0)
         env = {
             "REQUEST_METHOD": method,
             "PATH_INFO": path,
-            "CONTENT_TYPE": content_type,
-            "CONTENT_LENGTH": len(dump),
-            "SSL_CLIENT_CERT": RHSM_CERT_DATA,
-            "wsgi.input": wsgi_input,
         }
+        if client_cert is not None:
+            env["SSL_CLIENT_CERT"] = client_cert
+        if body is not None:
+            dump = json.dumps(body).encode("utf-8")
+            wsgi_input = io.BytesIO()
+            wsgi_input.write(dump)
+            wsgi_input.seek(0)
+            env.update(
+                {
+                    "CONTENT_TYPE": content_type,
+                    "CONTENT_LENGTH": len(dump),
+                    "wsgi.input": wsgi_input,
+                }
+            )
         if extra_headers:
             for key, value in extra_headers.items():
                 key = "HTTP_" + key.upper().replace("-", "_")
@@ -209,6 +216,7 @@ class IPABaseTests(unittest.TestCase):
         status = start_response.call_args[0][0]
         status_code, status_msg = status.split(" ", 1)
         status_code = int(status_code)
+        self.assertIsInstance(start_response.call_args[0][1], list)
         headers = dict(start_response.call_args[0][1])
         if headers["Content-Type"] == "application/json":
             response = json.loads(b"".join(response).decode("utf-8"))
