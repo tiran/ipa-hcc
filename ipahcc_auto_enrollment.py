@@ -34,6 +34,16 @@ from ipapython.ipautil import run
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 try:
+    # pylint: disable=ungrouped-imports
+    from ipaplatform.osinfo import osinfo
+except ImportError:
+    OS_RELEASE_ID = None
+    OS_RELEASE_VERSION_ID = None
+else:
+    OS_RELEASE_ID = osinfo["ID"]
+    OS_RELEASE_VERSION_ID = osinfo["VERSION_ID"]
+
+try:
     # pylint: disable=unused-import,ungrouped-imports
     from ipalib.install.kinit import kinit_pkinit  # noqa: F401
 except ImportError:
@@ -64,6 +74,8 @@ HTTP_HEADERS = {
         {
             "ipa-hcc": VERSION,
             "ipa": IPA_VERSION,
+            "os-release-id": OS_RELEASE_ID,
+            "os-release-version-id": OS_RELEASE_VERSION_ID,
         }
     ),
 }
