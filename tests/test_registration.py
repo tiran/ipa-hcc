@@ -37,18 +37,16 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
     def test_ipaapi(self):
         app = self.app
         api = self.m_api
-        app.bootstrap_ipa()
-        api.bootstrap.assert_called()
 
         api.Backend.rpcclient.isconnected.return_value = False
-        app.connect_ipa()
+        app.before_call()
         self.m_gss_credentials.assert_called_once()
         api.finalize.assert_called()
         api.Backend.rpcclient.connect.assert_called_once()
 
         self.m_api.isdone.return_value = True
         api.Backend.rpcclient.isconnected.return_value = True
-        app.disconnect_ipa()
+        app.after_call()
         api.Backend.rpcclient.disconnect.assert_called_once()
 
     def test_register(self):
