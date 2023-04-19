@@ -14,13 +14,6 @@
       register: insights_host
       when: rhsm_cert.stat.exists == true
 
-    - name: Unregister host from Insights Inventory
-      shell: "insights-client --unregister"
-      when: >
-        rhsm_cert.stat.exists == true
-        and insights_host.stat.exists
-        and ansible_distribution_major_version == '7'
-
     - name: Disconnect host from RHSM and RHC
       shell: "rhc disconnect"
       when: rhsm_cert.stat.exists == true

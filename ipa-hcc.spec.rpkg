@@ -1,7 +1,7 @@
 %global package_name ipa-hcc
 
 %if 0%{?rhel}
-  # RHEL 7, 8, 9
+  # RHEL 8, 9
   %global ipa_name ipa
 
   # ipa-client-install supports PKINIT options since 4.9.11 (RHEL 8.8)
@@ -12,19 +12,10 @@
     %global ipa_version 4.9.8
     %global with_server 1
   %else
-  # elif doesn't work here?
-  %if 0%{?rhel} == 8
-    # RHEL 8.4 EUS has 4.9.2
     # RHEL 8.6 EUS has 4.9.8
-    %global ipa_version 4.9.2
+    %global ipa_version 4.9.8
     %global with_platform_python 1
     %global with_server 1
-  %else
-    # RHEL 7.9 has 4.6.8-5.el7_9
-    %global ipa_version 4.6.8
-    %global with_python2 1
-    %global with_server 1
-  %endif
   %endif
 %else
   # Fedora (for development only)
@@ -36,20 +27,12 @@
 # --without mockapi (enabled by default)
 %bcond_without mockapi
 
-%if %{with python2}
-  %global python %{__python2}
-  %global python_sitelib %{python2_sitelib}
-  #global with_pycache 0
+%if %{with platform_python}
+  %global python /usr/libexec/platform-python
 %else
-  %if %{with platform_python}
-    %global python /usr/libexec/platform-python
-  %else
-    %global python %{__python3}
-  %endif
-  %global python_sitelib %{python3_sitelib}
-  %global with_pycache 1
+  %global python %{__python3}
 %endif
-
+%global python_sitelib %{python3_sitelib}
 
 Name:           %{package_name}
 Version:        {{{ git_dir_version }}}
@@ -63,19 +46,6 @@ URL:            https://gitlab.cee.redhat.com/identity-management/idmocp/ipa-con
 VCS:            {{{ git_dir_vcs }}}
 Source:         {{{ git_dir_pack }}}
 
-%if %{with python2}
-BuildRequires: python2-devel
-%if %{with server}
-BuildRequires: python2-ipaserver >= %{ipa_version}
-%else
-BuildRequires: python2-ipaclient >= %{ipa_version}
-%endif
-BuildRequires: python-dbus
-BuildRequires: python-gobject-base
-BuildRequires: python2-requests
-BuildRequires: systemd-python
-BuildRequires: python-sssdconfig
-%else
 BuildRequires: python3-devel
 %if %{with server}
 BuildRequires: python3-ipaserver >= %{ipa_version}
@@ -88,7 +58,6 @@ BuildRequires: python3-requests
 BuildRequires: python3-systemd
 BuildRequires: python3-sssdconfig
 BuildRequires: python3-jsonschema
-%endif
 BuildRequires: make
 BuildRequires: openssl
 BuildRequires: systemd-devel
@@ -115,16 +84,6 @@ Obsoletes: %{package_name}-registration-service < %{version}
 Requires: %{ipa_name}-server >= %{ipa_version}
 Requires(post): %{ipa_name}-server >= %{ipa_version}
 Requires: httpd
-%if 0%{?with_python2}
-Requires: mod_nss
-Requires: mod_wsgi
-Requires: python-dbus
-Requires: python-gobject-base
-Requires: python2-requests
-Requires: systemd-python
-# not available in RHEL 7
-# Requires: python2-jsonschema
-%else
 Requires: mod_ssl
 Requires: python3-mod_wsgi
 Requires: python3-dbus
@@ -132,7 +91,6 @@ Requires: python3-gobject-base
 Requires: python3-jsonschema
 Requires: python3-requests
 Requires: python3-systemd
-%endif
 Requires: selinux-policy
 Requires(post): selinux-policy
 %{?systemd_requires}
@@ -213,11 +171,10 @@ Provides:  %{package_name}-client-enrollment = %{version}
 Conflicts: %{package_name}-client-enrollment
 Obsoletes: %{package_name}-client-enrollment < %{version}
 Requires: %{ipa_name}-client >= %{ipa_version}
-# ipa-client RHEL 7.9, 8.7, 9.1, and ealier, do not come with pkinit
+# ipa-client RHEL 8.7, 9.1, and ealier, do not come with pkinit
 Requires: krb5-pkinit-openssl
-# RHEL 7 has no weak dependency "Recommends"
-Requires: rhc
-Requires: insights-client
+Recommends: rhc
+Recommends: insights-client
 %{?systemd_requires}
 
 %description client
@@ -281,16 +238,14 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{_unitdir}/ipa-hcc-dbus.service
 %{_datadir}/dbus-1/system.d/com.redhat.console.ipahcc.conf
 %{_datadir}/dbus-1/system-services/com.redhat.console.ipahcc.service
-%{python_sitelib}/ipahcc/*.py*
-%{python_sitelib}/ipahcc/server/*.py*
-%{python_sitelib}/ipaserver/plugins/*.py*
-%{python_sitelib}/ipaserver/install/plugins/update_hcc.py*
-%if %{with pycache}
+%{python_sitelib}/ipahcc/*.py
+%{python_sitelib}/ipahcc/server/*.py
+%{python_sitelib}/ipaserver/plugins/*.py
+%{python_sitelib}/ipaserver/install/plugins/update_hcc.py
 %{python_sitelib}/ipahcc/__pycache__/*.pyc
 %{python_sitelib}/ipahcc/server/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/plugins/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc.*.pyc
-%endif
 %{_datadir}/ipa/schema.d/85-hcc.ldif
 %{_datadir}/ipa/updates/85-hcc.update
 %{_datadir}/ipa/ui/js/plugins/*
@@ -298,13 +253,11 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 # registration service
 %attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
 %attr(0755,ipahcc,ipaapi) %dir %{_localstatedir}/cache/ipa-hcc
-%{python_sitelib}/ipahcc/registration/*.py*
-%{python_sitelib}/ipaserver/install/plugins/update_hcc_enrollment_service.py*
-%if %{with pycache}
+%{python_sitelib}/ipahcc/registration/*.py
+%{python_sitelib}/ipaserver/install/plugins/update_hcc_enrollment_service.py
 %{python_sitelib}/ipahcc/registration/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_enrollment_service.*.pyc
-%endif
-%{_datadir}/ipa-hcc/hcc_registration_service.py*
+%{_datadir}/ipa-hcc/hcc_registration_service.py
 %{_datadir}/ipa/updates/86-hcc-registration-service.update
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-ipa-hcc.conf
@@ -316,11 +269,9 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %files mockapi
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%{python_sitelib}/ipahcc/mockapi/*.py*
-%if %{with pycache}
+%{python_sitelib}/ipahcc/mockapi/*.py
 %{python_sitelib}/ipahcc/mockapi/__pycache__/*.pyc
-%endif
-%{_datadir}/ipa-hcc/hcc_mockapi.py*
+%{_datadir}/ipa-hcc/hcc_mockapi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
 %endif
 
