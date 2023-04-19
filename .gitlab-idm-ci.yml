@@ -1,21 +1,14 @@
 ---
 # current RHEL versions
-srv87_c79_87_91:
+srv87_c87_91:
   extends: .mr_template
   needs: ["rpms", "tox_check"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel87.yaml
 
 # RHEL versions under development
-srv92_c79_88_92:
+srv92_c88_92:
   extends: .mr_template
   needs: ["rpms", "tox_check"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92.yaml
-
-# RHEL 7.9 server with 9.2 client
-srv79_c92:
-  extends: .mr_template
-  needs: ["rpms", "tox_check"]
-  variables:
-    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel79.yaml

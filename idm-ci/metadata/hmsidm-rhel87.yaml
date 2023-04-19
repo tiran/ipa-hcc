@@ -8,10 +8,6 @@ domains:
         group: ipaserver
         os: rhel-8.7
 
-      - name: client79.rhel87.hmsidm.test
-        role: client
-        group: ipaclient
-        os: rhel-7.9
       - name: client87.rhel87.hmsidm.test
         role: client
         group: ipaclient

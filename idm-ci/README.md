@@ -2,11 +2,8 @@
 
 ## Supported OS
 
-- rhel-7.9 (latest z-stream)
-- rhel-8.6 (*)
 - rhel-8.7
 - rhel-8.8 (dev)
-- rhel-9.0
 - rhel-9.1
 - rhel-9.2 (dev)
 

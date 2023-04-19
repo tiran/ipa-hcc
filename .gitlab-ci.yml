@@ -14,9 +14,9 @@ tox_check:
   parallel:
     matrix:
       - TOXENV:
-          - py,py27,py36,cov
-          - lint,format,bandit,pylint2
-          - jslint,yamllint,pylint3,maketest
+          - py,py36,cov
+          - lint,format,bandit
+          - jslint,yamllint,pylint,maketest
   script:
     - tox -e $TOXENV
   only:
@@ -53,7 +53,6 @@ rpms:
   parallel:
     matrix:
       - VERSION:
-          - 7
           - 8
           - 9
   image: quay.io/tiran/ipa-hcc-ci:$VERSION
