@@ -81,13 +81,18 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
 
     def test_check_host(self):
         path = "/".join(
-            ("", "check-host", conftest.CLIENT_RHSM_ID, conftest.CLIENT_FQDN)
+            (
+                "",
+                "check-host",
+                conftest.CLIENT_INVENTORY_ID,
+                conftest.CLIENT_FQDN,
+            )
         )
         body = {
             "domain_name": conftest.DOMAIN,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_id": conftest.DOMAIN_ID,
-            "inventory_id": conftest.CLIENT_INVENTORY_ID,
+            "subscription_manager_id": conftest.CLIENT_RHSM_ID,
         }
         status_code, status_msg, headers, response = self.call_wsgi(
             path, body, method="POST"
@@ -100,8 +105,15 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
         )
 
     def test_host_conf(self):
-        path = "/".join(("", "host-conf", conftest.CLIENT_FQDN))
-        body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
+        path = "/".join(
+            (
+                "",
+                "host-conf",
+                conftest.CLIENT_INVENTORY_ID,
+                conftest.CLIENT_FQDN,
+            )
+        )
+        body = {}
         status_code, status_msg, headers, response = self.call_wsgi(
             path, body, method="POST"
         )

@@ -46,10 +46,9 @@ class IPAHCCServerTests(conftest.IPABaseTests):
 class TestJSONSchema(conftest.IPABaseTests):
     def test_hcc_request(self):
         instance = {
-            "domain_name": "domain.example",
-            "domain_type": "rhel-idm",
-            "domain_id": "71c0bf27-37e7-41ae-b51b-1a8599025e1a",
-            "inventory_id": "91e3fa59-4de2-4a28-90b2-01965b201ade",
+            "domain_name": conftest.DOMAIN,
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+            "domain_id": conftest.DOMAIN_ID,
         }
         schema.validate_schema(instance, "/schemas/hcc-host-register/request")
 

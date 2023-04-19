@@ -77,7 +77,9 @@ class JSONWSGIApp(object):
             self.api = api
         if not self.api.isdone("bootstrap"):
             self.api.bootstrap(in_server=False)
-        self._routes = self._get_routes()
+        self.routes = (
+            self._get_routes()
+        )  # type: dict[re.compile, tuple[str, callable]]
 
     def _get_routes(self):
         """Inspect class and get a list of routes"""
@@ -133,7 +135,7 @@ class JSONWSGIApp(object):
         else:
             body = None
 
-        for pathre, methmap in self._routes:
+        for pathre, methmap in self.routes:
             mo = pathre.match(pathinfo)
             if mo is None:
                 continue

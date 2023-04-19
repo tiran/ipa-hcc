@@ -65,9 +65,10 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": conftest.DOMAIN,
             "domain_id": conftest.DOMAIN_ID,
-            "inventory_id": conftest.CLIENT_INVENTORY_ID,
         }
-        path = "/{}".format(conftest.CLIENT_FQDN)
+        path = "/".join(
+            ("", conftest.CLIENT_INVENTORY_ID, conftest.CLIENT_FQDN)
+        )
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path, body=body
         )

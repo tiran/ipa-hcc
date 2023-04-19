@@ -574,15 +574,16 @@ class AutoEnrollment(object):
     def hcc_host_conf(self):
         body = {
             "domain_type": HCC_DOMAIN_TYPE,
-            "inventory_id": self.inventory_id,
         }
         for key in ["domain_name", "domain_id", "location"]:
             value = getattr(self.args, key)
             if value is not None:
                 body[key] = value
 
-        url = "https://{api_host}/api/idm/v1/host-conf/{hostname}".format(
-            api_host=self.args.hcc_api_host, hostname=self.args.hostname
+        url = "https://{api_host}/api/idm/v1/host-conf/{inventory_id}/{hostname}".format(
+            api_host=self.args.hcc_api_host,
+            inventory_id=self.inventory_id,
+            hostname=self.args.hostname,
         )
         verify = not self.args.insecure
         logger.info(
@@ -624,14 +625,15 @@ class AutoEnrollment(object):
 
         TODO: On 404 try next server
         """
-        url = "https://{server}/hcc/{hostname}".format(
-            server=self.server, hostname=self.args.hostname
+        url = "https://{server}/hcc/{inventory_id}/{hostname}".format(
+            server=self.server,
+            inventory_id=self.inventory_id,
+            hostname=self.args.hostname,
         )
         body = {
             "domain_type": HCC_DOMAIN_TYPE,
             "domain_name": self.domain,
             "domain_id": self.domain_id,
-            "inventory_id": self.inventory_id,
         }
         logger.info("Registering host at %s", url)
         j = self._do_json_request(
