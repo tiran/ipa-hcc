@@ -1,5 +1,6 @@
+from unittest import mock
+
 import conftest
-from conftest import mock
 
 from ipahcc import hccplatform
 from ipahcc.mockapi import wsgi
@@ -36,10 +37,9 @@ domain_request = {
 }
 
 
-@conftest.requires_mock
 class TestMockAPIWSGI(conftest.IPABaseTests):
     def setUp(self):
-        super(TestMockAPIWSGI, self).setUp()
+        super().setUp()
         self.m_api = mock.Mock()
         self.m_api.isdone.return_value = True
         self.m_api.env = self.get_mock_env()

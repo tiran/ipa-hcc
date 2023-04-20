@@ -4,19 +4,10 @@ __all__ = (
 )
 import logging
 
+import jsonschema
+from jsonschema import ValidationError
+
 from ipahcc import hccplatform
-
-if hccplatform.PY2:
-    try:
-        import jsonschema
-        from jsonschema import ValidationError
-    except ImportError:  # pragma: no cover
-        jsonschema = None
-        ValidationError = Exception
-
-else:
-    import jsonschema
-    from jsonschema import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +15,7 @@ logger = logging.getLogger(__name__)
 DEFS = {
     "domain_type": {
         "title": "Domain Type",
-        "description": "Type of domain (currently only {})".format(
-            hccplatform.HCC_DOMAIN_TYPE
-        ),
+        "description": f"Type of domain (currently only {hccplatform.HCC_DOMAIN_TYPE})",
         "type": "string",
         "enum": [hccplatform.HCC_DOMAIN_TYPE],
     },
@@ -397,8 +386,6 @@ SCHEMATA = {
 
 def validate_schema(instance, schema_id):
     schema = SCHEMATA[schema_id]
-    if jsonschema is None:  # pragma: no cover
-        return False
     try:
         return jsonschema.validate(instance, schema)
     except ValidationError:

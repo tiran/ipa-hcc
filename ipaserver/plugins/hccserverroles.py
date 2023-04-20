@@ -21,31 +21,27 @@ from ipaserver.plugins.serverrole import server_role
 
 # pylint: enable=import-error
 
-from ipahcc.hccplatform import text
-
 # service definitions, used by ipactl to start systemd services and for
 # service-based server role.
 # dbus API, cn=IPAHCCDBus,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
 ipa_hcc_dbus = masters.service_definition(
-    systemd_name=text("ipa-hcc-dbus"),
+    systemd_name="ipa-hcc-dbus",
     startorder=45,  # start after HTTPD
-    service_entry=text("IPAHCCDBus"),
+    service_entry="IPAHCCDBus",
 )
 # timer service, cn=IPAHCCUpdate,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
 ipa_hcc_update = masters.service_definition(
-    systemd_name=text("ipa-hcc-update"),
+    systemd_name="ipa-hcc-update",
     startorder=46,
-    service_entry=text("IPAHCCUpdate"),
+    service_entry="IPAHCCUpdate",
 )
 
 ipa_hcc_services = [ipa_hcc_dbus, ipa_hcc_update]
 ipa_hcc_systemd_names = [s.systemd_name for s in ipa_hcc_services]
 ipa_hcc_service_entries = {s.service_entry: s for s in ipa_hcc_services}
 ipa_hcc_units = {
-    ipa_hcc_dbus.systemd_name: "{}.service".format(ipa_hcc_dbus.systemd_name),
-    ipa_hcc_update.systemd_name: "{}.timer".format(
-        ipa_hcc_update.systemd_name
-    ),
+    ipa_hcc_dbus.systemd_name: f"{ipa_hcc_dbus.systemd_name}.service",
+    ipa_hcc_update.systemd_name: f"{ipa_hcc_update.systemd_name}.timer",
 }
 ipa_hcc_knownservices = {
     name: rh_services.RedHatService(srv, api=api)
@@ -66,8 +62,8 @@ fed_services.knownservices._KnownServices__d.update(ipa_hcc_knownservices)
 # pylint: enable=protected-access
 
 hcc_enrollment_server_role = servroles.ServiceBasedRole(
-    text("hcc_enrollment_server_server"),
-    text("HCC Enrollment server"),
+    "hcc_enrollment_server_server",
+    "HCC Enrollment server",
     component_services=sorted(ipa_hcc_service_entries),
 )
 
@@ -75,21 +71,21 @@ hcc_enrollment_server_role = servroles.ServiceBasedRole(
 # attributes with 'ipaConfigString=hccEnrollmentAgentEnabled; in
 # cn=IPAHCCDBus,cn=$FQDN.test,cn=masters,cn=ipa,cn=etc,$SUFFIX
 hcc_enrollment_agent_attribute = servroles.ServerAttribute(
-    text("hcc_enrollment_agent_server"),
-    text("HCC enrollment agent server"),
+    "hcc_enrollment_agent_server",
+    "HCC enrollment agent server",
     hcc_enrollment_server_role.attr_name,
     ipa_hcc_dbus.service_entry,
-    text("hccEnrollmentAgentEnabled"),
+    "hccEnrollmentAgentEnabled",
 )
 
 # only one server in a topology runs the update service
 # cn=IPAHCCUpdate,cn=$FQDN.test,cn=masters,cn=ipa,cn=etc,$SUFFIX
 hcc_update_server_attribute = servroles.SingleValuedServerAttribute(
-    text("hcc_update_server_server"),
-    text("HCC prime update server"),
+    "hcc_update_server_server",
+    "HCC prime update server",
     hcc_enrollment_server_role.attr_name,
     ipa_hcc_update.service_entry,
-    text("hccUpdateServer"),
+    "hccUpdateServer",
 )
 
 # patch ipaserver.servroles

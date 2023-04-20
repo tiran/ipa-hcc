@@ -11,7 +11,7 @@ testing, though.
 """
 
 import logging
-import io
+from time import monotonic as monotonic_time
 
 import requests
 
@@ -19,11 +19,6 @@ from ipaplatform.paths import paths
 
 from ipahcc import hccplatform
 from ipahcc.server.framework import JSONWSGIApp, HTTPException, route
-
-if hccplatform.PY2:
-    from time import time as monotonic_time
-else:
-    from time import monotonic as monotonic_time
 
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
@@ -33,7 +28,7 @@ logger.setLevel(logging.DEBUG)
 
 class Application(JSONWSGIApp):
     def __init__(self, api=None):
-        super(Application, self).__init__(api=api)
+        super().__init__(api=api)
         # inventory bearer token + validity timestamp
         self.access_token = None
         self.valid_until = 0
@@ -55,9 +50,9 @@ class Application(JSONWSGIApp):
 
         refresh_token_file = hccplatform.REFRESH_TOKEN_FILE
         try:
-            with io.open(refresh_token_file, "r", encoding="utf-8") as f:
+            with open(refresh_token_file, encoding="utf-8") as f:
                 refresh_token = f.read().strip()
-        except IOError as e:
+        except OSError as e:
             logger.error(
                 "Unable to read refresh token from '%s': %s",
                 refresh_token_file,
@@ -77,11 +72,7 @@ class Application(JSONWSGIApp):
         if resp.status_code >= 400:
             raise HTTPException(
                 resp.status_code,
-                "get_access_token() failed: {resp} {content} ({url})".format(
-                    resp=resp.reason,
-                    content=resp.content,
-                    url=url,
-                ),
+                f"get_access_token() failed: {resp} {resp.content} ({url})",
             )
         logger.debug(
             "Got access token from refresh token in %0.3fs.",
@@ -107,11 +98,7 @@ class Application(JSONWSGIApp):
             rhsm_id,
             url,
         )
-        headers = {
-            "Authorization": "Bearer {access_token}".format(
-                access_token=access_token
-            )
-        }
+        headers = {"Authorization": f"Bearer {access_token}"}
         params = {"filter[system_profile][owner_id]": rhsm_id}
         start = monotonic_time()
         resp = self.session.get(url, params=params, headers=headers)
@@ -121,16 +108,14 @@ class Application(JSONWSGIApp):
             self.access_token = None
             raise HTTPException(
                 resp.status_code,
-                "lookup_inventory() failed: {resp}".format(resp=resp.reason),
+                f"lookup_inventory() failed: {resp.reason}",
             )
 
         j = resp.json()
         if j["total"] != 1:
             raise HTTPException(
                 404,
-                "Unknown host {inventory_id}.".format(
-                    inventory_id=inventory_id
-                ),
+                f"Unknown host {inventory_id}.",
             )
         result = j["results"][0]
         fqdn = result["fqdn"]
@@ -156,28 +141,22 @@ class Application(JSONWSGIApp):
         if fqdn != exp_fqdn:
             raise HTTPException.from_error(
                 400,
-                "unexpected fqdn: {fqdn} != {expected_fqdn}".format(
-                    fqdn=fqdn, expected_fqdn=exp_fqdn
-                ),
+                f"unexpected fqdn: {fqdn} != {exp_fqdn}",
             )
         if inventory_id != exp_id:
             raise HTTPException.from_error(
                 400,
-                "unexpected inventory_id: {inventory_id} != {exp_id}".format(
-                    inventory_id=inventory_id, exp_id=exp_id
-                ),
+                f"unexpected inventory_id: {inventory_id} != {exp_id}",
             )
         # RHEL 7.9 clients have subscription_manager_id == None
         if exp_rhsm_id is not None and rhsm_id != exp_rhsm_id:
             raise HTTPException.from_error(
                 400,
-                "unexpected RHSM id: {rhsm_id} != {expected_rhsm_id}".format(
-                    rhsm_id=rhsm_id, expected_rhsm_id=exp_rhsm_id
-                ),
+                f"unexpected RHSM id: {rhsm_id} != {exp_rhsm_id}",
             )
 
     def get_ca_crt(self):
-        with io.open(paths.IPA_CA_CRT, "r", encoding="utf-8") as f:
+        with open(paths.IPA_CA_CRT, encoding="utf-8") as f:
             ipa_ca_pem = f.read()
         return ipa_ca_pem
 
@@ -247,9 +226,7 @@ class Application(JSONWSGIApp):
         if domain_name != self.api.env.domain:
             raise HTTPException(
                 400,
-                "unsupported domain name: {domain} != {expected_domain}".format(
-                    domain=domain_name, expected_domain=self.api.env.domain
-                ),
+                f"unsupported domain name: {domain_name} != {self.api.env.domain}",
             )
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException(400, "unsupported domain type")

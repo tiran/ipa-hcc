@@ -1,7 +1,6 @@
-from __future__ import absolute_import
-
 import argparse
 import logging
+import queue
 import signal
 import threading
 
@@ -24,13 +23,6 @@ try:
 except ImportError:
     sd = None
 
-# pylint: disable=import-error
-if hccplatform.PY2:
-    from Queue import PriorityQueue
-else:
-    from queue import PriorityQueue
-# pylint: enable=import-error
-
 
 logger = logging.getLogger("ipa-hcc-dbus")
 
@@ -51,9 +43,7 @@ parser.add_argument(
     "-V",
     help="Show version number and exit",
     action="version",
-    version="ipa-hcc {} (IPA {})".format(
-        hccplatform.VERSION, hccplatform.IPA_VERSION
-    ),
+    version=f"ipa-hcc {hccplatform.VERSION} (IPA {hccplatform.IPA_VERSION})",
 )
 parser.add_argument(
     "--timeout",
@@ -73,7 +63,7 @@ parser.add_argument(
 DBUS_RETURN = "qssa{ss}sqs"
 
 
-class LookupQueue(object):
+class LookupQueue:
     priorities = {
         "stop": -1,
         "register_domain": 30,
@@ -83,7 +73,7 @@ class LookupQueue(object):
     }
 
     def __init__(self, hccapi, maxsize=0):
-        self._queue = PriorityQueue(maxsize=maxsize)
+        self._queue = queue.PriorityQueue(maxsize=maxsize)
         self._hccapi = hccapi
 
     def stop(self):
@@ -137,7 +127,7 @@ class IPAHCCDbus(dbus.service.Object):
     """
 
     def __init__(self, conn, object_path, bus_name, loop, hccapi):
-        super(IPAHCCDbus, self).__init__(conn, object_path, bus_name)
+        super().__init__(conn, object_path, bus_name)
         self.loop = loop
         self._lq = LookupQueue(hccapi)
         self._lq_thread = threading.Thread(target=self._lq.run)

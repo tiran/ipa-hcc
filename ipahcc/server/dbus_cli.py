@@ -1,5 +1,3 @@
-from __future__ import absolute_import, print_function
-
 import argparse
 import logging
 import sys
@@ -40,9 +38,7 @@ parser.add_argument(
     "-V",
     help="Show version number and exit",
     action="version",
-    version="ipa-hcc {} (IPA {})".format(
-        hccplatform.VERSION, hccplatform.IPA_VERSION
-    ),
+    version=f"ipa-hcc {hccplatform.VERSION} (IPA {hccplatform.IPA_VERSION})",
 )
 subparsers = parser.add_subparsers(dest="action")
 
@@ -80,11 +76,7 @@ def status_callback(result):
     for server in j[hccplatform.HCC_DOMAIN_TYPE]["servers"]:
         fqdn = server["fqdn"]
         has_hcc = "yes" if server["hcc_update_server"] else "no"
-        print(
-            "\t{fqdn} (HCC plugin: {has_hcc})".format(
-                fqdn=fqdn, has_hcc=has_hcc
-            )
-        )
+        print(f"\t{fqdn} (HCC plugin: {has_hcc})")
 
 
 parser_status = subparsers.add_parser("status", help="Check status")
@@ -131,7 +123,7 @@ def main(args=None):
             raise ValueError(args.action)
     except dbus.exceptions.DBusException as e:
         logger.exception("D-Bus call failed")
-        print("D-Bus error: {e}".format(e=e), file=sys.stderr)
+        print(f"D-Bus error: {e}", file=sys.stderr)
         parser.exit(255)
     except APIError as e:
         logger.error("API error: %s", e)

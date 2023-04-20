@@ -71,9 +71,7 @@ config.managed_permissions.update(
             "replaces_global_anonymous_aci": True,
             "ipapermbindruletype": "all",
             "ipapermright": {"read", "search", "compare"},
-            "ipapermtargetfilter": [
-                "(objectclass={})".format(hcc_config_class)
-            ],
+            "ipapermtargetfilter": [f"(objectclass={hcc_config_class})"],
             "ipapermdefaultattr": hcc_config_attributes,
         },
     },
@@ -111,7 +109,9 @@ def config_mod_hcc_precb(self, ldap, dn, entry, attrs_list, *keys, **options):
         try:
             self.api.Object.server.get_dn_if_exists(new_update)
         except errors.NotFound:
-            raise self.api.Object.server.handle_not_found(new_update)
+            raise self.api.Object.server.handle_not_found(
+                new_update
+            ) from None
         config_updates["hcc_update_server_server"] = new_update
 
     if "hcc_enrollment_agent_server" in options:
@@ -120,7 +120,7 @@ def config_mod_hcc_precb(self, ldap, dn, entry, attrs_list, *keys, **options):
             try:
                 self.api.Object.server.get_dn_if_exists(agent)
             except errors.NotFound:
-                raise self.api.Object.server.handle_not_found(agent)
+                raise self.api.Object.server.handle_not_found(agent) from None
             config_updates["hcc_enrollment_agent_server"] = new_agents
 
     if config_updates:

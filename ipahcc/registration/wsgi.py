@@ -3,7 +3,6 @@
 # Copyright (C) 2023  Christian Heimes <cheimes@redhat.com>
 # See COPYING for license
 #
-from __future__ import print_function
 
 import logging
 import os
@@ -35,7 +34,7 @@ logger.setLevel(logging.DEBUG)
 
 class Application(JSONWSGIApp):
     def __init__(self, api=None):
-        super(Application, self).__init__(api=api)
+        super().__init__(api=api)
         # cached org_id from IPA config_show
         self._org_id = None
         self._domain_id = None
@@ -44,9 +43,7 @@ class Application(JSONWSGIApp):
 
     def kinit_gssproxy(self):
         service = hccplatform.HCC_ENROLLMENT_AGENT
-        principal = "{service}/{host}@{realm}".format(
-            service=service, host=self.api.env.host, realm=self.api.env.realm
-        )
+        principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
         name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
         store = {"ccache": hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME}
         return gssapi.Credentials(name=name, store=store, usage="initiate")
@@ -104,7 +101,7 @@ class Application(JSONWSGIApp):
                 self.domain_id, inventory_id, rhsm_id, fqdn
             )
         except dbus_client.APIError as e:
-            raise HTTPException(e.result.status_code, e.result.body)
+            raise HTTPException(e.result.status_code, e.result.body) from None
         return result.body["inventory_id"]
 
     def update_ipa(
@@ -118,14 +115,11 @@ class Application(JSONWSGIApp):
         if org_id != ipa_org_id:
             raise HTTPException(
                 400,
-                "Invalid org_id: {org_id} != {ipa_org_id}".format(
-                    org_id=org_id,
-                    ipa_org_id=ipa_org_id,
-                ),
+                f"Invalid org_id: {org_id} != {ipa_org_id}",
             )
-        rhsm_id = hccplatform.text(rhsm_id)
-        inventory_id = hccplatform.text(inventory_id)
-        fqdn = hccplatform.text(fqdn)
+        rhsm_id = str(rhsm_id)
+        inventory_id = str(inventory_id)
+        fqdn = str(fqdn)
         try:
             self.api.Command.host_add(
                 fqdn,

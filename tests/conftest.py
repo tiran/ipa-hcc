@@ -8,6 +8,8 @@ import json
 import os
 import sys
 import unittest
+from unittest import mock
+from http.client import responses as http_responses
 
 from ipalib import api
 from ipaplatform.paths import paths
@@ -15,13 +17,7 @@ from requests import Response
 
 from ipahcc import hccplatform
 from ipahcc.server.util import read_cert_dir
-from ipahcc.server import schema
 
-# pylint: disable=import-error
-if hccplatform.PY2:
-    from httplib import responses as http_responses
-else:
-    from http.client import responses as http_responses
 
 BASEDIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 TESTDATA = os.path.join(BASEDIR, "tests", "data")
@@ -51,9 +47,9 @@ KDC_CONF = os.path.join(TESTDATA, "kdc.conf")
 paths.IPA_CA_CRT = IPA_CA_CRT
 hccplatform.HMSIDM_CACERTS_DIR = KDC_CA_DIR
 
-with io.open(RHSM_CERT, encoding="utf-8") as f:
+with open(RHSM_CERT, encoding="utf-8") as f:
     RHSM_CERT_DATA = f.read()
-with io.open(IPA_CA_CRT, encoding="utf-8") as f:
+with open(IPA_CA_CRT, encoding="utf-8") as f:
     IPA_CA_DATA = f.read()
 KDC_CA_DATA = read_cert_dir(KDC_CA_DIR)
 
@@ -86,32 +82,17 @@ except ImportError:
 else:
     HAS_IPASERVER = True
 
-try:
-    # pylint: disable=unused-import
-    from unittest import mock
-except ImportError:
-    try:
-        import mock
-    except ImportError:  # pragma: no cover
-        mock = None
-
 requires_ipa_install = unittest.skipUnless(
     HAS_IPA_INSTALL, "requires 'ipaclient.install' or 'ipalib.install'"
 )
 requires_ipaserver = unittest.skipUnless(
     HAS_IPASERVER, "requires 'ipaserver'"
 )
-requires_jsonschema = unittest.skipUnless(
-    schema.jsonschema, "requires 'jsonschema'"
-)
-requires_mock = unittest.skipUnless(
-    mock is not None, "requires 'unittest.mock' or 'mock'"
-)
 
 
 class CaptureHandler(logging.Handler):
     def __init__(self):
-        super(CaptureHandler, self).__init__()
+        super().__init__()
         self.records = []
 
     def emit(self, record):
@@ -140,7 +121,7 @@ class IPABaseTests(unittest.TestCase):
         root_logger.setLevel(self._old_level)
 
     def setUp(self):
-        super(IPABaseTests, self).setUp()
+        super().setUp()
         self.log_capture_start()
 
     def get_mock_env(self):
@@ -239,10 +220,7 @@ class IPABaseTests(unittest.TestCase):
 
 @contextlib.contextmanager
 def capture_output():
-    if hccplatform.PY2:
-        out = io.BytesIO()
-    else:
-        out = io.StringIO()
+    out = io.StringIO()
     orig_stdout = sys.stdout
     orig_stderr = sys.stderr
     sys.stdout = out

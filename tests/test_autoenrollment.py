@@ -3,12 +3,12 @@ import json
 import os
 import ssl
 import unittest
+from unittest import mock
 
 from dns.rdtypes.IN.SRV import SRV
 from ipaplatform.paths import paths
 
 import conftest
-from conftest import mock
 
 from ipahcc import hccplatform
 from ipahcc.server import schema
@@ -66,10 +66,9 @@ class TestAutoEnrollmentNoMock(unittest.TestCase):
         )
 
 
-@conftest.requires_mock
 class TestAutoEnrollment(conftest.IPABaseTests):
     def setUp(self):
-        super(TestAutoEnrollment, self).setUp()
+        super().setUp()
         modname = "ipahcc_auto_enrollment"
         p = mock.patch.multiple(
             modname,
@@ -108,7 +107,6 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         p.start()
         self.addCleanup(p.stop)
 
-    @conftest.requires_jsonschema
     def test_schema(self):
         schema.validate_schema(
             HOST_CONF_REQUEST, "/schemas/host-conf/request"
@@ -238,7 +236,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
         auto_enrollment.INSIGHTS_HOST_DETAILS = conftest.NO_FILE
         # first call to urlopen gets host details from API
-        with io.open(conftest.HOST_DETAILS, "r", encoding="utf-8") as f:
+        with open(conftest.HOST_DETAILS, encoding="utf-8") as f:
             host_details = json.load(f)
         self.m_urlopen.side_effect = [jsonio(host_details), Exception]
         ae = auto_enrollment.AutoEnrollment(args)
@@ -319,10 +317,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertTrue(os.path.isfile(ae.ipa_cacert))
             self.assertTrue(os.path.isfile(ae.kdc_cacert))
 
-            with io.open(ae.ipa_cacert, "r", encoding="utf-8") as f:
+            with open(ae.ipa_cacert, encoding="utf-8") as f:
                 data = f.read()
             self.assertEqual(data, conftest.IPA_CA_DATA)
-            with io.open(ae.kdc_cacert, "r", encoding="utf-8") as f:
+            with open(ae.kdc_cacert, encoding="utf-8") as f:
                 data = f.read()
             self.assertEqual(data, conftest.KDC_CA_DATA)
 
@@ -346,7 +344,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             [
                 paths.IPA_CLIENT_INSTALL,
                 "--ca-cert-file",
-                "{}/ipa_ca.crt".format(tmpdir),
+                f"{tmpdir}/ipa_ca.crt",
                 "--hostname",
                 conftest.CLIENT_FQDN,
                 "--domain",
@@ -355,13 +353,11 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 conftest.REALM,
                 "--unattended",
                 "--pkinit-identity",
-                "FILE:{},{}".format(
-                    auto_enrollment.RHSM_CERT, auto_enrollment.RHSM_KEY
-                ),
+                f"FILE:{auto_enrollment.RHSM_CERT},{auto_enrollment.RHSM_KEY}",
                 "--pkinit-anchor",
-                "FILE:{}/kdc_ca.crt".format(tmpdir),
+                f"FILE:{tmpdir}/kdc_ca.crt",
                 "--pkinit-anchor",
-                "FILE:{}/ipa_ca.crt".format(tmpdir),
+                f"FILE:{tmpdir}/ipa_ca.crt",
             ],
         )
         self.assertEqual(
@@ -380,9 +376,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertEqual(self.m_urlopen.call_count, 2)
         self.assertEqual(self.m_run.call_count, 3)
 
-        principal = "host/{}@{}".format(conftest.CLIENT_FQDN, conftest.REALM)
-        keytab = "{}/host.keytab".format(tmpdir)
-        cacert = "{}/ipa_ca.crt".format(tmpdir)
+        principal = f"host/{conftest.CLIENT_FQDN}@{conftest.REALM}"
+        keytab = f"{tmpdir}/host.keytab"
+        cacert = f"{tmpdir}/ipa_ca.crt"
         # kinit
         args, kwargs = self.m_run.call_args_list[0]
         self.assertEqual(
@@ -390,13 +386,11 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             [
                 paths.KINIT,
                 "-X",
-                "X509_anchors=FILE:{}/kdc_ca.crt".format(tmpdir),
+                f"X509_anchors=FILE:{tmpdir}/kdc_ca.crt",
                 "-X",
-                "X509_anchors=FILE:{}/ipa_ca.crt".format(tmpdir),
+                f"X509_anchors=FILE:{tmpdir}/ipa_ca.crt",
                 "-X",
-                "X509_user_identity=FILE:{},{}".format(
-                    auto_enrollment.RHSM_CERT, auto_enrollment.RHSM_KEY
-                ),
+                f"X509_user_identity=FILE:{auto_enrollment.RHSM_CERT},{auto_enrollment.RHSM_KEY}",
                 principal,
             ],
         )

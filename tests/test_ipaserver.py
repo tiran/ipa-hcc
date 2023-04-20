@@ -1,8 +1,7 @@
-import io
 import os
 import shutil
 import tempfile
-
+from unittest import mock
 
 from ipalib import errors
 from ipapython.certdb import NSSDatabase, parse_trust_flags
@@ -12,14 +11,12 @@ from ipaplatform.services import knownservices
 from ipahcc import hccplatform
 
 import conftest
-from conftest import mock
 
 
 @conftest.requires_ipaserver
-@conftest.requires_mock
 class TestIPAServerUpdates(conftest.IPABaseTests):
     def setUp(self):
-        super(TestIPAServerUpdates, self).setUp()
+        super().setUp()
         self.mock_hccplatform()
 
         self.m_api = mock.Mock()
@@ -66,7 +63,7 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
         self.addCleanup(p.stop)
 
     def test_update_hcc(self):
-        with io.open(self.kdc_conf, "r", encoding="utf-8") as f:
+        with open(self.kdc_conf, encoding="utf-8") as f:
             content = f.read()
         self.assertEqual(content.count("pkinit_anchors = "), 2)
 
@@ -77,10 +74,10 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
         updater.execute()
 
         knownservices.krb5kdc.try_restart.assert_called_once()
-        with io.open(self.kdc_conf, "r", encoding="utf-8") as f:
+        with open(self.kdc_conf, encoding="utf-8") as f:
             content = f.read()
         self.assertIn(
-            "pkinit_anchors = DIR:{}".format(hccplatform.HMSIDM_CACERTS_DIR),
+            f"pkinit_anchors = DIR:{hccplatform.HMSIDM_CACERTS_DIR}",
             content,
         )
         self.assertEqual(content.count("pkinit_anchors = "), 3)
@@ -108,16 +105,14 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
         updater.add_hcc_enrollment_service()
 
         principal = Principal(
-            "hcc-enrollment/{}@{}".format(
-                conftest.SERVER_FQDN, conftest.REALM
-            )
+            f"hcc-enrollment/{conftest.SERVER_FQDN}@{conftest.REALM}"
         )
         self.m_api.Command.service_add.assert_called_once_with(
             principal, force=True
         )
         self.m_api.Command.role_add_member.assert_called_once_with(
             hccplatform.HCC_ENROLLMENT_ROLE,
-            service=hccplatform.text(principal),
+            service=str(principal),
         )
 
     def test_add_ca_to_httpd_nssdb(self):
