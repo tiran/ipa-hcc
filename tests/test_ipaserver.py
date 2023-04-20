@@ -4,7 +4,6 @@ import tempfile
 from unittest import mock
 
 from ipalib import errors
-from ipapython.certdb import NSSDatabase, parse_trust_flags
 from ipapython.kerberos import Principal
 from ipaplatform.services import knownservices
 
@@ -114,29 +113,3 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
             hccplatform.HCC_ENROLLMENT_ROLE,
             service=str(principal),
         )
-
-    def test_add_ca_to_httpd_nssdb(self):
-        from ipaserver.install.plugins.update_hcc_enrollment_service import (
-            update_hcc_enrollment_service,
-        )
-
-        nssdb = NSSDatabase(self.alias_dir)
-        nssdb.create_db()
-        self.assertEqual(nssdb.list_certs(), ())
-
-        knownservices.httpd.is_running.return_value = True
-
-        updater = update_hcc_enrollment_service(self.m_api)
-        updater.add_ca_to_httpd_nssdb()
-
-        trustflags = parse_trust_flags("T,,")
-        self.assertEqual(
-            nssdb.list_certs(),
-            (
-                ("candlepin-redhat-ca-sha256", trustflags),
-                ("redhat-entitlement-authority-2022", trustflags),
-                ("redhat-entitlement-master-ca", trustflags),
-            ),
-        )
-
-        knownservices.httpd.restart.assert_called_once()

@@ -13,21 +13,13 @@ from ipalib import Registry
 from ipalib import Updater
 from ipalib.install.kinit import kinit_keytab  # pylint: disable=import-error
 
-from ipapython.certdb import NSSDatabase, parse_trust_flags
 from ipapython.kerberos import Principal
 from ipapython import ipautil
-from ipapython.version import VERSION
+from ipapython.ipaldap import realm_to_ldapi_uri
+from ipapython.ipautil import remove_file
 
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
-
-try:
-    # pylint: disable=ungrouped-imports
-    from ipapython.ipaldap import realm_to_ldapi_uri
-    from ipapython.ipautil import remove_file
-except ImportError:
-    # IPA 4.6
-    from ipaserver.install.installutils import realm_to_ldapi_uri, remove_file
 
 from ipaserver.plugins.hccserverroles import (  # pylint:disable=import-error
     hcc_enrollment_agent_attribute,
@@ -157,41 +149,7 @@ class update_hcc_enrollment_service(Updater):
 
         return True
 
-    def add_ca_to_httpd_nssdb(self):
-        db = NSSDatabase(paths.HTTPD_ALIAS_DIR)
-        if not os.path.isfile(db.certdb):
-            logger.debug("Cert DB %s does not exist.", db.certdb)
-            return False
-
-        nicknames = {nick for nick, _trust in db.list_certs()}
-        # CA valid for client cert auth
-        trustflags = parse_trust_flags("T,,")
-        modified = False
-
-        chain = []
-        for filename in os.listdir(hccplatform.HMSIDM_CACERTS_DIR):
-            if not filename.endswith(".pem"):
-                continue
-            absname = os.path.join(hccplatform.HMSIDM_CACERTS_DIR, filename)
-            nickname = filename[:-4].lstrip("0123456789-")
-            chain.append((nickname, absname))
-
-        for nick, certpath in chain:
-            if nick not in nicknames:
-                logger.debug(
-                    "Adding %s (%s) to %s", nick, certpath, db.secdir
-                )
-                db.import_pem_cert(nick, trustflags, certpath)
-                modified = True
-
-        if modified and knownservices.httpd.is_running():
-            logger.debug("Restarting httpd")
-            knownservices.httpd.restart()
-        return modified
-
     def execute(self, **options):
         self.add_hcc_enrollment_service()
         self.add_hcc_enrollment_service_keytab()
-        if VERSION.startswith("4.6"):
-            self.add_ca_to_httpd_nssdb()
         return False, []
