@@ -30,9 +30,12 @@ phases:
       - playbook: provision/wait.yaml
   - name: prep
     steps:
+      - playbook: prep/redhat-base.yaml
+      # PKINIT on 9.2 is currently broken in FIPS mode
+      # see https://bugzilla.redhat.com/show_bug.cgi?id=2187722
+      #- playbook: prep/enable-fips.yaml
       - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-local-rpms.yaml
       - playbook: prep/prefer-ipv4.yaml
-      - playbook: prep/redhat-base.yaml
       - playbook: prep/repos.yaml
       - playbook: prep/install-ipa-packages.yaml
       - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
