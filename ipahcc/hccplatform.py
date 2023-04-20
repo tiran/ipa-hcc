@@ -8,74 +8,39 @@
 __all__ = ("is_ipa_configured",)
 
 import json
-import os
-import sys
+from configparser import ConfigParser
 
-from ipaplatform.paths import paths
+from ipalib.facts import is_ipa_configured
+from ipaplatform.osinfo import osinfo
 from ipaplatform.constants import constants
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
-try:
-    # pylint: disable=ungrouped-imports
-    from ipaplatform.osinfo import osinfo
-except ImportError:
-    OS_RELEASE_ID = None
-    OS_RELEASE_VERSION_ID = None
-else:
-    OS_RELEASE_ID = osinfo["ID"]
-    OS_RELEASE_VERSION_ID = osinfo["VERSION_ID"]
-
-try:
-    # pylint: disable=ungrouped-imports
-    from ipalib.facts import is_ipa_configured
-except ImportError:  # pragma: no cover
-    # IPA 4.6
-
-    def is_ipa_configured(on_master=False):
-        index = os.path.join(paths.SYSRESTORE, "sysrestore.index")
-        return os.path.isfile(index) and (
-            on_master or os.path.isfile(paths.IPA_DEFAULT_CONF)
-        )
-
-
-PY2 = sys.version_info.major == 2
-
-if PY2:
-    # pylint: disable=undefined-variable,import-error
-    text = unicode  # noqa: F821
-    from ConfigParser import SafeConfigParser as ConfigParser  # noqa: F821
-else:
-    text = str
-    from configparser import ConfigParser
-
 # version is updated by Makefile
-VERSION = "0.7"
+VERSION = "0.9"
 
 # common HTTP request headers
 HTTP_HEADERS = {
-    "User-Agent": "IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})".format(
-        VERSION=VERSION, IPA_VERSION=IPA_VERSION
-    ),
+    "User-Agent": f"IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})",
     "X-RH-IDM-Version": json.dumps(
         {
             "ipa-hcc": VERSION,
             "ipa": IPA_VERSION,
-            "os-release-id": OS_RELEASE_ID,
-            "os-release-version-id": OS_RELEASE_VERSION_ID,
+            "os-release-id": osinfo["ID"],
+            "os-release-version-id": osinfo["VERSION_ID"],
         }
     ),
 }
 
 # HCC enrollment agent (part pf ipa-hcc-server-plugin)
 # Note: IPA's gssproxy directory comes with correct SELinux rule.
-HCC_ENROLLMENT_AGENT = text("hcc-enrollment")
+HCC_ENROLLMENT_AGENT = "hcc-enrollment"
 HCC_ENROLLMENT_AGENT_USER = "ipahcc"
 HCC_ENROLLMENT_AGENT_GROUP = getattr(constants, "IPAAPI_GROUP", "ipaapi")
 HCC_ENROLLMENT_AGENT_CACHE_DIR = "/var/cache/ipa-hcc"
 HCC_ENROLLMENT_AGENT_KEYTAB = "/var/lib/ipa/gssproxy/hcc-enrollment.keytab"
 HCC_ENROLLMENT_AGENT_KRB5CCNAME = "/var/cache/ipa-hcc/krb5ccname"
 
-HCC_ENROLLMENT_ROLE = text("HCC Enrollment Administrators")
+HCC_ENROLLMENT_ROLE = "HCC Enrollment Administrators"
 
 HMSIDM_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"
 
@@ -102,7 +67,7 @@ HCC_DOMAIN_TYPE = "rhel-idm"
 TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
 
 
-class _HCCConfig(object):
+class _HCCConfig:
     _defaults = {
         "hcc_api_host": "cert.console.redhat.com",
         "token_url": (

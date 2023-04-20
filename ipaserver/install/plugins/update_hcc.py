@@ -33,7 +33,7 @@ class update_hcc(Updater):
 
     def modify_krb5kdc_conf(self):
         """Add RHSM cert chain to KDC"""
-        anchor = "DIR:{}".format(hccplatform.HMSIDM_CACERTS_DIR)
+        anchor = f"DIR:{hccplatform.HMSIDM_CACERTS_DIR}"
         logger.debug(
             "Checking for 'pkinit_anchors=%s' in '%s'",
             anchor,
@@ -47,19 +47,15 @@ class update_hcc(Updater):
         modified = False
 
         realm = self.api.env.realm
-        path = "/files{conf}/realms/{realm}".format(
-            conf=paths.KRB5KDC_KDC_CONF, realm=realm
-        )
-        expr = '{path}/pkinit_anchors[.="{anchor}"]'.format(
-            path=path, anchor=anchor
-        )
+        path = f"/files{paths.KRB5KDC_KDC_CONF}/realms/{realm}"
+        expr = f'{path}/pkinit_anchors[.="{anchor}"]'
 
         try:
             aug.transform("IPAKrb5", paths.KRB5KDC_KDC_CONF)
             aug.load()
             if not aug.match(expr):
                 aug.set(
-                    "{path}/pkinit_anchors[last()+1]".format(path=path),
+                    f"{path}/pkinit_anchors[last()+1]",
                     anchor,
                 )
                 modified = True
@@ -68,7 +64,7 @@ class update_hcc(Updater):
                 logger.debug("Added new pkinit anchor to KDC configuration.")
                 try:
                     aug.save()
-                except IOError:
+                except OSError:
                     for error_path in aug.match("/augeas//error"):
                         logger.error(
                             "augeas: %s",
@@ -117,9 +113,7 @@ class update_hcc(Updater):
         """Update rhsm_id of server's host record"""
         host = self.api.env.host
         try:
-            self.api.Command.host_mod(
-                host, hccsubscriptionid=hccplatform.text(rhsm_id)
-            )
+            self.api.Command.host_mod(host, hccsubscriptionid=rhsm_id)
         except errors.EmptyModlist:
             logger.debug(
                 "hccSubscriptionId of host '%s' already configured.", host
@@ -136,7 +130,7 @@ class update_hcc(Updater):
         try:
             with open(hccplatform.RHSM_CERT, "rb") as f:
                 org_id, rhsm_id = parse_rhsm_cert(f.read())
-        except (OSError, IOError):  # Python 2
+        except OSError:
             logger.exception("Unable to read %s", hccplatform.RHSM_CERT)
         except Exception:  # pylint: disable=broad-except
             logger.exception("Failed to parse %s", hccplatform.RHSM_CERT)

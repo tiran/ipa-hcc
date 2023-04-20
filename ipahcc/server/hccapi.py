@@ -3,6 +3,7 @@
 import collections
 import logging
 import json
+from http.client import responses as http_responses
 
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
@@ -26,13 +27,6 @@ except ImportError:  # pragma: no cover
 
 from ipahcc import hccplatform
 from . import schema
-
-# pylint: disable=import-error
-if hccplatform.PY2:
-    from httplib import responses as http_responses
-else:
-    from http.client import responses as http_responses
-# pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
 
@@ -120,14 +114,14 @@ class APIError(Exception):
     """HCC D-Bus API error"""
 
     def __init__(self, apiresult):
-        super(APIError, self).__init__()
+        super().__init__()
         self.result = apiresult
 
     def __str__(self):
         # remove newline in JSON
         # content = self.result.body.replace("\n", "")
         clsname = self.__class__.__name__
-        return "{clsname}: {self.result}".format(clsname=clsname, self=self)
+        return f"{clsname}: {self.result}"
 
     __repr__ = __str__
 
@@ -151,9 +145,7 @@ class APIError(Exception):
         content = {
             "status": status_code,
             "title": reason,
-            "details": "Host with owner id '{rhsm_id}' not found in inventory.".format(
-                rhsm_id=rhsm_id
-            ),
+            "details": f"Host with owner id '{rhsm_id}' not found in inventory.",
         }
         return cls(
             APIResult(
@@ -175,9 +167,7 @@ class APIError(Exception):
         exc_name = type(e).__name__
         exc_msg = str(e)
         status_code = e.errno
-        reason = "{exc_name}: {exc_msg}".format(
-            exc_name=exc_name, exc_msg=exc_msg
-        )
+        reason = f"{exc_name}: {exc_msg}"
         content = {
             "status_code": status_code,
             "title": exc_name,
@@ -217,7 +207,7 @@ class APIError(Exception):
         )
 
 
-class HCCAPI(object):
+class HCCAPI:
     """Register or update domain information in HCC"""
 
     def __init__(self, api, timeout=DEFAULT_TIMEOUT):
@@ -276,9 +266,7 @@ class HCCAPI(object):
         )
         # update after successful registration
         try:
-            self.api.Command.config_mod(
-                hccdomainid=hccplatform.text(domain_id)
-            )
+            self.api.Command.config_mod(hccdomainid=str(domain_id))
         except errors.EmptyModlist:
             logger.debug("hccdomainid=%s already configured", domain_id)
         else:
@@ -354,9 +342,7 @@ class HCCAPI(object):
                 location_map[fqdn] = loc.to_text()
 
         # subscription manager id is in host plugin
-        hosts = self.api.Command.host_find(
-            in_hostgroup=hccplatform.text("ipaservers")
-        )
+        hosts = self.api.Command.host_find(in_hostgroup="ipaservers")
 
         result = []
         for host in hosts["result"]:
@@ -380,14 +366,10 @@ class HCCAPI(object):
     def _get_cacerts(self):
         """Get list of trusted CA cert info objects"""
         try:
-            result = self.api.Command.ca_is_enabled(
-                version=hccplatform.text("2.107")
-            )
+            result = self.api.Command.ca_is_enabled(version="2.107")
             ca_enabled = result["result"]
         except (errors.CommandError, errors.NetworkError):
-            result = self.api.Command.env(
-                server=True, version=hccplatform.text(version="2.0")
-            )
+            result = self.api.Command.env(server=True, version="2.0")
             ca_enabled = result["result"]["enable_ra"]
 
         certs = get_ca_certs(
@@ -403,19 +385,15 @@ class HCCAPI(object):
                 continue
             certinfo = {
                 "nickname": nickname,
+                # cryptography 3.2.1 on RHEL 8 does not support RFC map
+                "issuer": cert.issuer.rfc4514_string(),
+                "subject": cert.subject.rfc4514_string(),
                 "pem": cert.public_bytes(Encoding.PEM).decode("ascii"),
                 # JSON number type cannot handle large serial numbers
                 "serial_number": str(cert.serial_number),
                 "not_before": cert.not_valid_before.isoformat(),
                 "not_after": cert.not_valid_after.isoformat(),
             }
-
-            try:
-                certinfo["issuer"] = cert.issuer.rfc4514_string(RFC4514_MAP)
-                certinfo["subject"] = cert.subject.rfc4514_string(RFC4514_MAP)
-            except (AttributeError, TypeError):
-                # old cryptography 1.7.2 on RHEL 7.9
-                pass
 
             cacerts.append(certinfo)
 
@@ -463,9 +441,7 @@ class HCCAPI(object):
         }
 
     def _submit_idm_api(self, method, subpath, payload, extra_headers=None):
-        api_url = "https://{hcc_api_host}/api/idm/v1".format(
-            hcc_api_host=hccplatform.HCC_API_HOST
-        )
+        api_url = f"https://{hccplatform.HCC_API_HOST}/api/idm/v1"
         url = "/".join((api_url,) + subpath)
         headers = {}
         if extra_headers:
@@ -493,8 +469,6 @@ class HCCAPI(object):
             logger.error(
                 "Request to %s failed: %s: %s", url, type(e).__name__, e
             )
-            raise APIError.from_response(
-                resp, 4, "{method} request failed".format(method=method)
-            )
+            raise APIError.from_response(resp, 4, f"{method} request failed")
         else:
             return resp

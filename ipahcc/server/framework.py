@@ -11,24 +11,19 @@ import json
 import logging
 import re
 import traceback
+from http.client import responses as http_responses
 
 from ipahcc import hccplatform
 from ipahcc.server.schema import validate_schema, ValidationError
 from ipahcc.server.util import parse_rhsm_cert
 
-# pylint: disable=import-error
-if hccplatform.PY2:
-    from httplib import responses as http_responses
-else:
-    from http.client import responses as http_responses
-# pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
 
 
 class HTTPException(Exception):
     def __init__(self, code, msg):
-        super(HTTPException, self).__init__(code, msg)
+        super().__init__(code, msg)
         self.code = code
         self.message = msg
 
@@ -50,7 +45,7 @@ def route(method, path, schema=None):
     return inner
 
 
-class JSONWSGIApp(object):
+class JSONWSGIApp:
     """Trivial, opinionated WSGI framework for REST-like JSON API
 
     - supports request methods GET, POST, PUT, PATCH.
@@ -127,9 +122,7 @@ class JSONWSGIApp(object):
             if content_type != "application/json":
                 raise HTTPException(
                     406,
-                    "Unsupported content type {content_type}.".format(
-                        content_type=content_type
-                    ),
+                    f"Unsupported content type {content_type}.",
                 )
             body = json.loads(env["wsgi.input"].read(length))
         else:
@@ -143,29 +136,23 @@ class JSONWSGIApp(object):
             if meth is None:
                 raise HTTPException(
                     405,
-                    "Method {method} not allowed.".format(method=method),
+                    f"Method {method} not allowed.",
                 )
             return meth, schema, body, mo.groupdict()
 
-        raise HTTPException(
-            404, "{pathinfo} not found".format(pathinfo=pathinfo)
-        )
+        raise HTTPException(404, f"{pathinfo} not found")
 
     def _validate_schema(self, instance, schema_name, suffix):
         """Validate JSON schema"""
-        schema_id = "/schemas/{schema_name}/{suffix}".format(
-            schema_name=schema_name, suffix=suffix
-        )
+        schema_id = f"/schemas/{schema_name}/{suffix}"
         try:
             validate_schema(instance, schema_id)
         except ValidationError:
             logger.exception("schema violation")
             raise HTTPException(
                 400,
-                "schema violation: invalid JSON for {schema_id}".format(
-                    schema_id=schema_id,
-                ),
-            )
+                f"schema violation: invalid JSON for {schema_id}",
+            ) from None
 
     def before_call(self):
         """Before handle method call hook"""
@@ -182,7 +169,7 @@ class JSONWSGIApp(object):
         try:
             return parse_rhsm_cert(cert_pem)
         except ValueError as e:
-            raise HTTPException(400, str(e))
+            raise HTTPException(400, str(e)) from None
 
     def __call__(self, env, start_response):
         try:
@@ -210,16 +197,13 @@ class JSONWSGIApp(object):
             else:
                 logger.exception("Request failed")
                 code = 500
-                title = "server error: {e}".format(e=e)
+                title = f"server error: {e}"
                 details = traceback.format_exc()
             response = json.dumps(
                 {"status": code, "title": title, "details": details}
             )
 
-        if isinstance(response, hccplatform.text):
-            response = response.encode("utf-8")
-
-        status_line = "{} {}".format(code, http_responses[code])
+        status_line = f"{code} {http_responses[code]}"
         headers = {
             "Content-Type": "application/json",
             "Content-Length": str(len(response)),
@@ -227,4 +211,4 @@ class JSONWSGIApp(object):
         headers.update(hccplatform.HTTP_HEADERS)
 
         start_response(status_line, list(headers.items()))
-        return [response]
+        return [response.encode("utf-8")]

@@ -59,7 +59,7 @@ class update_hcc_enrollment_service(Updater):
 
     def add_hcc_enrollment_service(self):
         principal = self.service_principal
-        princname = hccplatform.text(principal)
+        princname = str(principal)
         try:
             self.api.Command.service_show(principal)
         except errors.NotFound:
@@ -116,7 +116,7 @@ class update_hcc_enrollment_service(Updater):
     def add_hcc_enrollment_service_keytab(self):
         """Create keytab for hcc-enrollment WSGI app"""
         keytab = hccplatform.HCC_ENROLLMENT_AGENT_KEYTAB
-        princname = hccplatform.text(self.service_principal)
+        princname = str(self.service_principal)
         ldap_uri = realm_to_ldapi_uri(self.api.env.realm)
 
         if os.path.isfile(keytab):
@@ -163,7 +163,7 @@ class update_hcc_enrollment_service(Updater):
             logger.debug("Cert DB %s does not exist.", db.certdb)
             return False
 
-        nicknames = set(nick for nick, _trust in db.list_certs())
+        nicknames = {nick for nick, _trust in db.list_certs()}
         # CA valid for client cert auth
         trustflags = parse_trust_flags("T,,")
         modified = False

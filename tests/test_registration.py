@@ -1,19 +1,18 @@
 import json
+from unittest import mock
 
 import gssapi
 
 import conftest
-from conftest import mock
 
 from ipahcc import hccplatform
 from ipahcc.registration import wsgi
 from ipahcc.server import dbus_client
 
 
-@conftest.requires_mock
 class TestRegistrationWSGI(conftest.IPABaseTests):
     def setUp(self):
-        super(TestRegistrationWSGI, self).setUp()
+        super().setUp()
         self.m_api = mock.Mock()
         self.m_api.env = self.get_mock_env()
         self.m_api.isdone.return_value = False

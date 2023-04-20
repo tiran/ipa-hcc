@@ -46,7 +46,6 @@ clean-idm-ci:
 
 .PHONY: clean
 clean:
-	find -name '*.pyc' -delete
 	find -name __pycache__ | xargs rm -rf
 	rm -f .coverage*
 	rm -rf htmlcov

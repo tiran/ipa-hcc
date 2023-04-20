@@ -1,12 +1,12 @@
 import json
 import textwrap
+from unittest import mock
 
 from ipalib import x509
 from ipapython import admintool
 from ipapython.dnsutil import DNSName
 
 import conftest
-from conftest import mock
 
 from ipahcc import hccplatform
 from ipahcc.server import hccapi
@@ -54,10 +54,9 @@ def mkresult(dct, status_code=200, exit_code=0, exit_message=0):
     )
 
 
-@conftest.requires_mock
 class TestHCCAPICommon(conftest.IPABaseTests):
     def setUp(self):
-        super(TestHCCAPICommon, self).setUp()
+        super().setUp()
 
         self.mock_hccplatform()
 
@@ -131,7 +130,6 @@ class TestHCCAPICommon(conftest.IPABaseTests):
         self.m_hccapi.session = self.m_session
 
 
-@conftest.requires_mock
 class TestHCCAPI(TestHCCAPICommon):
     def test_check_host(self):
         body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
@@ -168,10 +166,9 @@ class TestHCCAPI(TestHCCAPICommon):
         self.assertIsInstance(resp, hccapi.APIResult)
 
 
-@conftest.requires_mock
 class TestIPAHCCDbus(TestHCCAPICommon):
     def setUp(self):
-        super(TestIPAHCCDbus, self).setUp()
+        super().setUp()
         bus = mock.Mock()
         bus_name = mock.Mock()
         self.m_mainloop = mock.Mock()
@@ -283,10 +280,9 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         )
 
 
-@conftest.requires_mock
 class TestDBUSCli(conftest.IPABaseTests):
     def setUp(self):
-        super(TestDBUSCli, self).setUp()
+        super().setUp()
         p = mock.patch("ipahcc.hccplatform.is_ipa_configured")
         self.m_is_ipa_configured = p.start()
         self.addCleanup(p.stop)
@@ -356,14 +352,12 @@ class TestDBUSCli(conftest.IPABaseTests):
         self.assertEqual(
             out,
             textwrap.dedent(
-                """\
+                f"""\
             domain name: {conftest.DOMAIN}
             domain id: {conftest.DOMAIN_ID}
             org id: {conftest.ORG_ID}
             servers:
             \t{conftest.SERVER_FQDN} (HCC plugin: yes)
-            """.format(
-                    conftest=conftest
-                )
+            """
             ),
         )

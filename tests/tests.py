@@ -42,7 +42,6 @@ class IPAHCCServerTests(conftest.IPABaseTests):
         self.assert_cli_run(dbus_cli.main, "--help")
 
 
-@conftest.requires_jsonschema
 class TestJSONSchema(conftest.IPABaseTests):
     def test_hcc_request(self):
         instance = {

@@ -1,5 +1,6 @@
+from unittest import mock
+
 import conftest
-from conftest import mock
 
 from ipahcc.server.framework import JSONWSGIApp, route
 
@@ -29,12 +30,11 @@ class Application(JSONWSGIApp):
         return {}
 
 
-@conftest.requires_mock
 class TestWSGIFramework(conftest.IPABaseTests):
     maxDiff = None
 
     def setUp(self):
-        super(TestWSGIFramework, self).setUp()
+        super().setUp()
         self.m_api = mock.Mock()
         self.app = Application(self.m_api)
 

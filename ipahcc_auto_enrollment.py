@@ -9,11 +9,8 @@ Installation with older clients that lack PKINIT:
 - ipa-getkeytab for host principal 'host/$FQDN' using the first
   IPA server from remote configuration
 """
-from __future__ import print_function
 
 import argparse
-import collections
-import io
 import json
 import logging
 import os
@@ -25,23 +22,15 @@ import sys
 import tempfile
 import time
 import uuid
+from urllib.request import HTTPError, Request, urlopen
 
 from dns.exception import DNSException
 from ipalib import util
+from ipaplatform.osinfo import osinfo
 from ipaplatform.paths import paths
 from ipapython.dnsutil import query_srv
 from ipapython.ipautil import run
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
-
-try:
-    # pylint: disable=ungrouped-imports
-    from ipaplatform.osinfo import osinfo
-except ImportError:
-    OS_RELEASE_ID = None
-    OS_RELEASE_VERSION_ID = None
-else:
-    OS_RELEASE_ID = osinfo["ID"]
-    OS_RELEASE_VERSION_ID = osinfo["VERSION_ID"]
 
 try:
     # pylint: disable=unused-import,ungrouped-imports
@@ -52,11 +41,10 @@ else:
     # IPA >= 4.9.10 / 4.10.1
     HAS_KINIT_PKINIT = True
 
-PY2 = sys.version_info.major == 2
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
-VERSION = "0.7"
+VERSION = "0.9"
 
 # copied from ipahcc.hccplatform
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
@@ -67,43 +55,30 @@ INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
 IPA_DEFAULT_CONF = paths.IPA_DEFAULT_CONF
 HCC_DOMAIN_TYPE = "rhel-idm"
 HTTP_HEADERS = {
-    "User-Agent": "IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})".format(
-        VERSION=VERSION, IPA_VERSION=IPA_VERSION
-    ),
+    "User-Agent": f"IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})",
     "X-RH-IDM-Version": json.dumps(
         {
             "ipa-hcc": VERSION,
             "ipa": IPA_VERSION,
-            "os-release-id": OS_RELEASE_ID,
-            "os-release-version-id": OS_RELEASE_VERSION_ID,
+            "os-release-id": osinfo["ID"],
+            "os-release-version-id": osinfo["VERSION_ID"],
         }
     ),
 }
 
 logger = logging.getLogger(__name__)
 
-# pylint: disable=import-error
-if PY2:
-    from urllib2 import HTTPError, Request, urlopen
-else:
-    from urllib.request import HTTPError, Request, urlopen
-# pylint: enable=import-error
-
 
 def check_arg_hostname(arg):
     if arg.lower() in {"localhost", "localhost.localdomain"}:
         raise argparse.ArgumentError(
             None,
-            "Invalid hostname {arg}, host's FQDN is not configured.".format(
-                arg=arg
-            ),
+            f"Invalid hostname {arg}, host's FQDN is not configured.",
         )
     try:
         util.validate_hostname(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(
-            None, "Invalid hostname {arg}: {e}".format(arg=arg, e=e)
-        )
+        raise argparse.ArgumentError(None, f"Invalid hostname {arg}: {e}")
     return arg.lower()
 
 
@@ -111,9 +86,7 @@ def check_arg_domain_name(arg):
     try:
         util.validate_domain_name(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(
-            None, "Invalid domain name {arg}: {e}".format(arg=arg, e=e)
-        )
+        raise argparse.ArgumentError(None, f"Invalid domain name {arg}: {e}")
     return arg.lower()
 
 
@@ -121,9 +94,7 @@ def check_arg_location(arg):
     try:
         util.validate_dns_label(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(
-            None, "Invalid location {arg}: {e}".format(arg=arg, e=e)
-        )
+        raise argparse.ArgumentError(None, f"Invalid location {arg}: {e}")
     return arg.lower()
 
 
@@ -131,9 +102,7 @@ def check_arg_uuid(arg):
     try:
         uuid.UUID(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(
-            None, "Invalid UUID value {arg}: {e}".format(arg=arg, e=e)
-        )
+        raise argparse.ArgumentError(None, f"Invalid UUID value {arg}: {e}")
     return arg.lower()
 
 
@@ -155,7 +124,7 @@ parser.add_argument(
     "-V",
     help="Show version number and exit",
     action="version",
-    version="ipa-hcc {} (IPA {})".format(VERSION, IPA_VERSION),
+    version=f"ipa-hcc {VERSION} (IPA {IPA_VERSION})",
 )
 parser.add_argument(
     "--insecure",
@@ -185,7 +154,7 @@ parser.add_argument(
     "--hcc-api-host",
     help=(
         "URL of Hybrid Cloud Console API with cert auth "
-        "(default: {})".format(DEFAULT_HCC_API_HOST)
+        f"(default: {DEFAULT_HCC_API_HOST})"
     ),
     default=None,
 )
@@ -259,13 +228,13 @@ KRB5_CONF = """\
 
 class SystemStateError(Exception):
     def __init__(self, msg, remediation, filename):
-        super(SystemStateError, self).__init__(msg, remediation, filename)
+        super().__init__(msg, remediation, filename)
         self.msg = msg
         self.remediation = remediation
         self.filename = filename
 
 
-class AutoEnrollment(object):
+class AutoEnrollment:
     def __init__(self, args):
         self.args = args
         # initialized later
@@ -302,9 +271,7 @@ class AutoEnrollment(object):
             assert req.get_method() == "GET"
         else:
             logger.debug("POST request %s: %s", url, body)
-            data = json.dumps(body)
-            if not PY2:
-                data = data.encode("utf-8")
+            data = json.dumps(body).encode("utf-8")
             # Requests with data are always POST requests.
             req = Request(url, data=data, headers=headers)
             assert req.get_method() == "POST"
@@ -320,10 +287,10 @@ class AutoEnrollment(object):
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
 
-        resp = urlopen(
+        with urlopen(
             req, timeout=self.args.timeout, context=context
-        )  # nosec
-        j = json.load(resp)
+        ) as resp:  # nosec
+            j = json.load(resp)
         logger.debug("Server response: %s", j)
         return j
 
@@ -356,14 +323,14 @@ class AutoEnrollment(object):
     def pkinit_anchors(self):
         return [
             # Candlepin CA chain signs RHSM client cert
-            "FILE:{}".format(self.kdc_cacert),
+            f"FILE:{self.kdc_cacert}",
             # IPA CA signs KDC cert
-            "FILE:{}".format(self.ipa_cacert),
+            f"FILE:{self.ipa_cacert}",
         ]
 
     @property
     def pkinit_identity(self):
-        return "FILE:{cert},{key}".format(cert=RHSM_CERT, key=RHSM_KEY)
+        return f"FILE:{RHSM_CERT},{RHSM_KEY}"
 
     @property
     def krb_name(self):
@@ -394,12 +361,12 @@ class AutoEnrollment(object):
             self.check_system_state()
         except SystemStateError as e:
             print(
-                "ERROR: {e.msg} (file: {e.filename})".format(e=e),
+                f"ERROR: {e.msg} (file: {e.filename})",
                 file=sys.stderr,
             )
             if e.remediation:
                 print(
-                    "Remediation: run '{e.remediation}'".format(e=e),
+                    f"Remediation: run '{e.remediation}'",
                     file=sys.stderr,
                 )
             sys.exit(2)
@@ -418,9 +385,7 @@ class AutoEnrollment(object):
         if HAS_KINIT_PKINIT and self.args.upto is None:
             self.ipa_client_pkinit()
         else:
-            host_principal = "host/{}@{}".format(
-                self.args.hostname, self.realm
-            )
+            host_principal = f"host/{self.args.hostname}@{self.realm}"
             self.create_krb5_conf()
             self.pkinit(host_principal)
             self.check_upto("pkinit")
@@ -441,7 +406,7 @@ class AutoEnrollment(object):
         insights-client stores the result of Insights API query in a local file
         once the host is registered.
         """
-        with io.open(INSIGHTS_MACHINE_ID, "r", encoding="utf-8") as f:
+        with open(INSIGHTS_MACHINE_ID, encoding="utf-8") as f:
             self.insights_machine_id = f.read().strip()
         result = self._read_host_details_file()
         if result is None:
@@ -463,9 +428,9 @@ class AutoEnrollment(object):
         'insights-client --register' execution.
         """
         try:
-            with io.open(INSIGHTS_HOST_DETAILS, encoding="utf-8") as f:
+            with open(INSIGHTS_HOST_DETAILS, encoding="utf-8") as f:
                 j = json.load(f)
-        except (OSError, IOError, ValueError) as e:
+        except (OSError, ValueError) as e:
             logger.debug(
                 "Failed to read JSON file %s: %s", INSIGHTS_HOST_DETAILS, e
             )
@@ -506,17 +471,15 @@ class AutoEnrollment(object):
         /blob/insights-core-3.1.16/insights/client/auto_config.py
         """
         try:
-            with io.open(RHSM_CONF, "r", encoding="utf-8") as f:
+            with open(RHSM_CONF, encoding="utf-8") as f:
                 conf = f.read()
-        except (OSError, IOError):
+        except OSError:
             conf = ""
         if "subscription.rhsm.stage.redhat.com" in conf:
             base = "https://cert.cloud.stage.redhat.com/api"
         else:
             base = "https://cert-api.access.redhat.com/r/insights"
-        return "{base}/inventory/v1/hosts?insights_id={insights_id}".format(
-            base=base, insights_id=insights_id
-        )
+        return f"{base}/inventory/v1/hosts?insights_id={insights_id}"
 
     def _lookup_dns_srv(self):
         """Lookup IPA servers via LDAP SRV records
@@ -524,7 +487,7 @@ class AutoEnrollment(object):
         Returns a list of hostnames sorted by priority (takes locations
         into account).
         """
-        ldap_srv = "_ldap._tcp.{domain}.".format(domain=self.domain)
+        ldap_srv = f"_ldap._tcp.{self.domain}."
         try:
             anser = query_srv(ldap_srv)
         except DNSException as e:
@@ -546,19 +509,18 @@ class AutoEnrollment(object):
         3) Ignore any server in DNS SRV records that is not in `server_list`.
         4) Append additional servers (with randomization).
         """
-        # ordered dict is required to keep stable sorting under Python 2.7
         # fqdn -> location
-        enrollment_servers = collections.OrderedDict(
-            (s["fqdn"].rstrip(".").lower(), s.get("location"))
+        enrollment_servers = {
+            s["fqdn"].rstrip(".").lower(): s.get("location")
             for s in server_list
-        )
+        }
         # decorate-sort-undecorate, larger value means higher priority
         # [0.0, 1.0) is used for additional servers
-        dsu = collections.OrderedDict(
-            (name, i)
+        dsu = {
+            name: i
             for i, name in enumerate(reversed(dns_srvs), start=1)
-            if name in enrollment_servers  # only enrollment-servers
-        )
+            if name in enrollment_servers
+        }  # only enrollment-servers
         for fqdn, server_location in enrollment_servers.items():
             idx = dsu.get(fqdn)
             # sort additional servers after DNS SRV entries, randomize order
@@ -595,9 +557,9 @@ class AutoEnrollment(object):
             logger.error(
                 "Request to %s failed: %s: %s", url, type(e).__name__, e
             )
-            raise SystemExit(2)
+            raise SystemExit(2) from None
 
-        with io.open(self.ipa_cacert, "w", encoding="utf-8") as f:
+        with open(self.ipa_cacert, "w", encoding="utf-8") as f:
             f.write(j[HCC_DOMAIN_TYPE]["cabundle"])
 
         if j["domain_type"] != HCC_DOMAIN_TYPE:
@@ -641,14 +603,14 @@ class AutoEnrollment(object):
         )
         if j["status"] != "ok":
             raise SystemExit(3)
-        with io.open(self.kdc_cacert, "w", encoding="utf-8") as f:
+        with open(self.kdc_cacert, "w", encoding="utf-8") as f:
             f.write(j["kdc_cabundle"])
         return j
 
     def create_krb5_conf(self):
         """Create a temporary krb5.conf"""
         extra_kdcs = [
-            "kdc = {server}:88".format(server=server)
+            f"kdc = {server}:88"
             for server in self.servers
             if server != self.server
         ]
@@ -659,20 +621,16 @@ class AutoEnrollment(object):
             extra_kdcs="\n    ".join(extra_kdcs).strip(),
             hostname=self.args.hostname,
         )
-        if PY2:
-            conf = conf.decode("utf-8")
         logger.debug("Creating %s with content:\n%s", self.krb_name, conf)
-        with io.open(self.krb_name, "w", encoding="utf-8") as f:
+        with open(self.krb_name, "w", encoding="utf-8") as f:
             f.write(conf)
 
     def pkinit(self, host_principal):
         """Perform kinit with X509_user_identity (PKINIT)"""
         cmd = [paths.KINIT]
         for anchor in self.pkinit_anchors:
-            cmd.extend(["-X", "X509_anchors={anchor}".format(anchor=anchor)])
-        cmd.extend(
-            ["-X", "X509_user_identity={}".format(self.pkinit_identity)]
-        )
+            cmd.extend(["-X", f"X509_anchors={anchor}"])
+        cmd.extend(["-X", f"X509_user_identity={self.pkinit_identity}"])
         cmd.append(host_principal)
         # send \n on stdin in case we get a password prompt
         self._run(cmd, stdin="\n", setenv=True)
