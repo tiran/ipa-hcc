@@ -2,14 +2,14 @@
 
 import contextlib
 import importlib
-import logging
 import io
 import json
+import logging
 import os
 import sys
 import unittest
-from unittest import mock
 from http.client import responses as http_responses
+from unittest import mock
 
 from ipalib import api
 from ipaplatform.paths import paths
@@ -17,7 +17,6 @@ from requests import Response
 
 from ipahcc import hccplatform
 from ipahcc.server.util import read_cert_dir
-
 
 BASEDIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 TESTDATA = os.path.join(BASEDIR, "tests", "data")
@@ -141,7 +140,7 @@ class IPABaseTests(unittest.TestCase):
             INSIGHTS_HOST_DETAILS=HOST_DETAILS,
             HMSIDM_CACERTS_DIR=KDC_CA_DIR,
             HCC_API_HOST="invalid.test",
-            TOKEN_URL="http://invalid.test",
+            TOKEN_URL="http://invalid.test",  # noqa: S106
             INVENTORY_URL="http://invalid.test",
             HCC_ENROLLMENT_AGENT_KEYTAB=NO_FILE,
         )
@@ -190,8 +189,8 @@ class IPABaseTests(unittest.TestCase):
             )
         if extra_headers:
             for key, value in extra_headers.items():
-                key = "HTTP_" + key.upper().replace("-", "_")
-                env[key] = value
+                newkey = "HTTP_" + key.upper().replace("-", "_")
+                env[newkey] = value
         start_response = mock.Mock()
         response = self.app(env, start_response)
         status = start_response.call_args[0][0]

@@ -1,10 +1,8 @@
 from unittest import mock
 
 import conftest
-
 from ipahcc import hccplatform
 from ipahcc.mockapi import wsgi
-
 
 domain_request = {
     "domain_name": conftest.DOMAIN,

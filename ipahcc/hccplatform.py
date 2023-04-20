@@ -11,8 +11,8 @@ import json
 from configparser import ConfigParser
 
 from ipalib.facts import is_ipa_configured
-from ipaplatform.osinfo import osinfo
 from ipaplatform.constants import constants
+from ipaplatform.osinfo import osinfo
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 # version is updated by Makefile
@@ -50,8 +50,8 @@ INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
 
 # Hybrid Cloud Console and Host Based Inventory API
 # see https://access.redhat.com/articles/3626371
-TOKEN_CLIENT_ID = "rhsm-api"
-REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"
+TOKEN_CLIENT_ID = "rhsm-api"  # noqa: S105
+REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"  # noqa: S105
 
 # D-Bus API
 # dbus doesn't like '-' in names
@@ -62,7 +62,7 @@ HCC_DBUS_IFACE_NAME = HCC_DBUS_NAME
 # configuration
 HCC_CONFIG = "/etc/ipa/hcc.conf"
 
-HCC_DOMAIN_TYPE = "rhel-idm"
+HCC_DOMAIN_TYPE = "rhel-idm"  # noqa: S105
 
 TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
 

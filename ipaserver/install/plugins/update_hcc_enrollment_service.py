@@ -5,27 +5,23 @@
 #
 """Configure Hybrid Cloud Console enrollment services
 """
-import os
 import logging
+import os
 
-from ipalib import errors
-from ipalib import Registry
-from ipalib import Updater
+from ipalib import Registry, Updater, errors
 from ipalib.install.kinit import kinit_keytab  # pylint: disable=import-error
-
-from ipapython.kerberos import Principal
+from ipaplatform.paths import paths
+from ipaplatform.services import knownservices
 from ipapython import ipautil
 from ipapython.ipaldap import realm_to_ldapi_uri
 from ipapython.ipautil import remove_file
+from ipapython.kerberos import Principal
 
-from ipaplatform.paths import paths
-from ipaplatform.services import knownservices
-
+from ipahcc import hccplatform
 from ipaserver.plugins.hccserverroles import (  # pylint:disable=import-error
     hcc_enrollment_agent_attribute,
     hcc_update_server_attribute,
 )
-from ipahcc import hccplatform
 
 logger = logging.getLogger(__name__)
 

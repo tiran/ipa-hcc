@@ -19,14 +19,14 @@ os.environ["GSS_USE_PROXY"] = "1"
 
 # pylint: disable=wrong-import-position,wrong-import-order,ungrouped-imports
 from ipalib import errors  # noqa: E402
+
 from ipahcc.server import dbus_client  # noqa: E402
 from ipahcc.server.framework import (  # noqa: E402
-    JSONWSGIApp,
     HTTPException,
+    JSONWSGIApp,
     route,
 )
 from ipahcc.server.util import read_cert_dir  # noqa: E402
-
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")

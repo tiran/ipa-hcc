@@ -1,23 +1,21 @@
 """Interface to register or update domains with Hybrid Cloud Console
 """
-import logging
 import json
+import logging
 import typing
 from http.client import responses as http_responses
 
-from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.x509.oid import NameOID
 import requests
 import requests.exceptions
+from cryptography.hazmat.primitives.serialization import Encoding
+from cryptography.x509.oid import NameOID
+from ipalib import errors
 from requests.structures import CaseInsensitiveDict
 
-from ipalib import errors
-
-# WIP: workaround until registration service uses D-Bus client
 try:
-    from ipalib.install.certstore import (
+    from ipalib.install.certstore import (  # pylint: disable=ungrouped-imports
         get_ca_certs,
-    )  # pylint: disable=import-error
+    )
 except ImportError:  # pragma: no cover
 
     def get_ca_certs(
@@ -31,6 +29,7 @@ except ImportError:  # pragma: no cover
 
 
 from ipahcc import hccplatform
+
 from . import schema
 
 logger = logging.getLogger(__name__)
@@ -456,7 +455,7 @@ class HCCAPI:
         except Exception as e:
             msg = "Unable to get global configuration from IPA"
             logger.exception(msg)
-            raise APIError.from_ipaerror(e, 5, msg)
+            raise APIError.from_ipaerror(e, 5, msg) from None
 
     def _get_ipa_info(self, config: typing.Dict[str, typing.Any]):
         return {
@@ -499,13 +498,15 @@ class HCCAPI:
             )
         except Exception as e:
             # TODO: better error handling
-            raise APIError.from_other(500, 2, str(e))
+            raise APIError.from_other(500, 2, str(e)) from None
         try:
             resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             logger.error(
                 "Request to %s failed: %s: %s", url, type(e).__name__, e
             )
-            raise APIError.from_response(resp, 4, f"{method} request failed")
+            raise APIError.from_response(
+                resp, 4, f"{method} request failed"
+            ) from None
         else:
             return resp

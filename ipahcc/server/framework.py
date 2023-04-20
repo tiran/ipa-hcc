@@ -15,9 +15,8 @@ import typing
 from http.client import responses as http_responses
 
 from ipahcc import hccplatform
-from ipahcc.server.schema import validate_schema, ValidationError
+from ipahcc.server.schema import ValidationError, validate_schema
 from ipahcc.server.util import parse_rhsm_cert
-
 
 logger = logging.getLogger(__name__)
 

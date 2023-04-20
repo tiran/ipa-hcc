@@ -45,6 +45,6 @@ standard_list_of_entries: Incomplete
 standard_delete: Incomplete
 standard_multi_delete: Incomplete
 standard_boolean: Incomplete
-standard_value = standard_boolean
+standard_value: Incomplete
 simple_value: Incomplete
 simple_entry: Incomplete

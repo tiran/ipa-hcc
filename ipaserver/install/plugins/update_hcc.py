@@ -7,13 +7,10 @@
 """
 import logging
 
-from ipalib import errors
-from ipalib import Registry
-from ipalib import Updater
+from augeas import Augeas  # pylint: disable=import-error
+from ipalib import Registry, Updater, errors
 from ipaplatform.paths import paths
 from ipaplatform.services import knownservices
-
-from augeas import Augeas  # pylint: disable=import-error
 
 from ipahcc import hccplatform
 from ipahcc.server.util import parse_rhsm_cert
