@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+import typing
 import uuid
 
 import dbus.exceptions
@@ -9,7 +10,7 @@ from ipapython import admintool
 
 from ipahcc import hccplatform
 from . import dbus_client
-from .hccapi import APIError
+from .hccapi import APIError, APIResult
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ parser.add_argument(
 subparsers = parser.add_subparsers(dest="action")
 
 
-def register_callback(result):
+def register_callback(result: APIResult) -> None:
     print(result)
 
 
@@ -55,7 +56,7 @@ parser_register.add_argument("domain_id", type=uuidtype)
 parser_register.add_argument("token", type=str)
 
 
-def update_callback(result):
+def update_callback(result: APIResult) -> None:
     print(result)
 
 
@@ -66,8 +67,10 @@ parser_update.set_defaults(callback=update_callback)
 parser_update.add_argument("--update-server-only", action="store_true")
 
 
-def status_callback(result):
+def status_callback(result: APIResult) -> None:
     j = result.body
+    if typing.TYPE_CHECKING:
+        assert isinstance(j, dict)
     nr = "<not registered>"
     print("domain name: {}".format(j["domain_name"]))
     print("domain id: {}".format(j.get("domain_id") or nr))
@@ -85,7 +88,7 @@ parser_status.set_defaults(callback=status_callback)
 # undocumented debug helper
 
 
-def check_host_callback(result):
+def check_host_callback(result: APIResult) -> None:
     print(result)
 
 

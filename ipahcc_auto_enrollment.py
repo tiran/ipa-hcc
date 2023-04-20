@@ -21,6 +21,7 @@ import socket
 import sys
 import tempfile
 import time
+import typing
 import uuid
 from urllib.request import HTTPError, Request, urlopen
 
@@ -69,7 +70,7 @@ HTTP_HEADERS = {
 logger = logging.getLogger(__name__)
 
 
-def check_arg_hostname(arg):
+def check_arg_hostname(arg: str) -> str:
     if arg.lower() in {"localhost", "localhost.localdomain"}:
         raise argparse.ArgumentError(
             None,
@@ -82,7 +83,7 @@ def check_arg_hostname(arg):
     return arg.lower()
 
 
-def check_arg_domain_name(arg):
+def check_arg_domain_name(arg: str) -> str:
     try:
         util.validate_domain_name(arg)
     except ValueError as e:
@@ -90,7 +91,7 @@ def check_arg_domain_name(arg):
     return arg.lower()
 
 
-def check_arg_location(arg):
+def check_arg_location(arg: str) -> str:
     try:
         util.validate_dns_label(arg)
     except ValueError as e:
@@ -98,7 +99,7 @@ def check_arg_location(arg):
     return arg.lower()
 
 
-def check_arg_uuid(arg):
+def check_arg_uuid(arg: str) -> str:
     try:
         uuid.UUID(arg)
     except ValueError as e:
@@ -227,7 +228,9 @@ KRB5_CONF = """\
 
 
 class SystemStateError(Exception):
-    def __init__(self, msg, remediation, filename):
+    def __init__(
+        self, msg: str, remediation: typing.Optional[str], filename: str
+    ):
         super().__init__(msg, remediation, filename)
         self.msg = msg
         self.remediation = remediation
@@ -235,20 +238,20 @@ class SystemStateError(Exception):
 
 
 class AutoEnrollment:
-    def __init__(self, args):
+    def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
         # initialized later
-        self.servers = None
-        self.server = None
-        self.domain = None
-        self.realm = None
-        self.domain_id = None
-        self.insights_machine_id = None
-        self.inventory_id = None
+        self.servers: typing.Optional[typing.List[str]] = None
+        self.server: typing.Optional[str] = None
+        self.domain: typing.Optional[str] = None
+        self.realm: typing.Optional[str] = None
+        self.domain_id: typing.Optional[str] = None
+        self.insights_machine_id: typing.Optional[str] = None
+        self.inventory_id: typing.Optional[str] = None
         # internals
-        self.tmpdir = None
+        self.tmpdir: typing.Optional[str] = None
 
-    def __enter__(self):
+    def __enter__(self) -> "AutoEnrollment":
         self.tmpdir = tempfile.mkdtemp()
         return self
 
@@ -259,7 +262,13 @@ class AutoEnrollment:
             shutil.rmtree(self.tmpdir)
             self.tmpdir = None
 
-    def _do_json_request(self, url, body=None, verify=True, cafile=None):
+    def _do_json_request(
+        self,
+        url: str,
+        body: typing.Optional[dict] = None,
+        verify: bool = True,
+        cafile: typing.Optional[str] = None,
+    ) -> dict:
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -294,7 +303,12 @@ class AutoEnrollment:
         logger.debug("Server response: %s", j)
         return j
 
-    def _run(self, cmd, stdin=None, setenv=False):
+    def _run(
+        self,
+        cmd: typing.List[str],
+        stdin: typing.Optional[str] = None,
+        setenv: bool = False,
+    ) -> None:
         if setenv:
             # pass KRB5 and OpenSSL env vars
             env = {
@@ -304,23 +318,29 @@ class AutoEnrollment:
             }
             env["LC_ALL"] = "C.UTF-8"
             env["KRB5_CONFIG"] = self.krb_name
+            if typing.TYPE_CHECKING:
+                assert self.tmpdir
             env["KRB5CCNAME"] = os.path.join(self.tmpdir, "ccache")
             if self.args.verbose >= 2:
                 env["KRB5_TRACE"] = "/dev/stderr"
         else:
             env = None
-        return run(cmd, stdin=stdin, env=env, raiseonerr=True)
+        run(cmd, stdin=stdin, env=env, raiseonerr=True)
 
     @property
-    def ipa_cacert(self):
+    def ipa_cacert(self) -> str:
+        if typing.TYPE_CHECKING:
+            assert self.tmpdir
         return os.path.join(self.tmpdir, "ipa_ca.crt")
 
     @property
-    def kdc_cacert(self):
+    def kdc_cacert(self) -> str:
+        if typing.TYPE_CHECKING:
+            assert self.tmpdir
         return os.path.join(self.tmpdir, "kdc_ca.crt")
 
     @property
-    def pkinit_anchors(self):
+    def pkinit_anchors(self) -> typing.List[str]:
         return [
             # Candlepin CA chain signs RHSM client cert
             f"FILE:{self.kdc_cacert}",
@@ -329,14 +349,16 @@ class AutoEnrollment:
         ]
 
     @property
-    def pkinit_identity(self):
+    def pkinit_identity(self) -> str:
         return f"FILE:{RHSM_CERT},{RHSM_KEY}"
 
     @property
-    def krb_name(self):
+    def krb_name(self) -> str:
+        if typing.TYPE_CHECKING:
+            assert self.tmpdir
         return os.path.join(self.tmpdir, "krb5.conf")
 
-    def check_system_state(self):
+    def check_system_state(self) -> None:
         for fname in (RHSM_CERT, RHSM_KEY):
             if not os.path.isfile(fname):
                 raise SystemStateError(
@@ -356,7 +378,7 @@ class AutoEnrollment:
                 "Host is already an IPA client.", None, IPA_DEFAULT_CONF
             )
 
-    def enroll_host(self):
+    def enroll_host(self) -> None:
         try:
             self.check_system_state()
         except SystemStateError as e:
@@ -395,12 +417,12 @@ class AutoEnrollment:
 
             self.ipa_client_keytab(keytab)
 
-    def check_upto(self, phase):
+    def check_upto(self, phase) -> None:
         if self.args.upto is not None and self.args.upto == phase:
             logger.info("Stopping at phase %s", phase)
             parser.exit(0)
 
-    def get_host_details(self):
+    def get_host_details(self) -> dict:
         """Get inventory id from Insights' host details file or API call.
 
         insights-client stores the result of Insights API query in a local file
@@ -420,7 +442,7 @@ class AutoEnrollment:
         )
         return result
 
-    def _read_host_details_file(self):
+    def _read_host_details_file(self) -> typing.Optional[dict]:
         """Attempt to read host-details.json file
 
         The file is created and updated by insights-clients. On some older
@@ -440,9 +462,11 @@ class AutoEnrollment:
                 return None
             return j
 
-    def _get_host_details_api(self):
+    def _get_host_details_api(self) -> dict:
         """Fetch host details from Insights API"""
         mid = self.insights_machine_id
+        if typing.TYPE_CHECKING:
+            assert isinstance(mid, str)
         url = self._get_inventory_url(mid)
         time.sleep(3)  # short initial sleep
         sleep_dur = 10  # sleep for 10, 20, 40, ...
@@ -464,7 +488,7 @@ class AutoEnrollment:
         # TODO: error message
         raise RuntimeError("Unable to find machine in host inventory")
 
-    def _get_inventory_url(self, insights_id):
+    def _get_inventory_url(self, insights_id: str) -> str:
         """Get Insights API url (prod or stage)
 
         Base on https://github.com/RedHatInsights/insights-core
@@ -481,7 +505,7 @@ class AutoEnrollment:
             base = "https://cert-api.access.redhat.com/r/insights"
         return f"{base}/inventory/v1/hosts?insights_id={insights_id}"
 
-    def _lookup_dns_srv(self):
+    def _lookup_dns_srv(self) -> typing.List[str]:
         """Lookup IPA servers via LDAP SRV records
 
         Returns a list of hostnames sorted by priority (takes locations
@@ -500,7 +524,12 @@ class AutoEnrollment:
         return result
 
     @classmethod
-    def _sort_servers(cls, server_list, dns_srvs, location=None):
+    def _sort_servers(
+        cls,
+        server_list: typing.List[dict],
+        dns_srvs: typing.List[str],
+        location: typing.Optional[str] = None,
+    ) -> typing.List[str]:
         """Sort servers by location and DNS SRV records
 
         1) If `location` is set, prefer servers from that location.
@@ -516,12 +545,14 @@ class AutoEnrollment:
         }
         # decorate-sort-undecorate, larger value means higher priority
         # [0.0, 1.0) is used for additional servers
+        dsu: typing.Dict[str, typing.Union[int, float]]
         dsu = {
             name: i
             for i, name in enumerate(reversed(dns_srvs), start=1)
             if name in enrollment_servers
         }  # only enrollment-servers
         for fqdn, server_location in enrollment_servers.items():
+            idx: typing.Union[int, float, None]
             idx = dsu.get(fqdn)
             # sort additional servers after DNS SRV entries, randomize order
             if idx is None:
@@ -531,9 +562,9 @@ class AutoEnrollment:
                 idx += 1000
             dsu[fqdn] = idx
 
-        return sorted(dsu, key=dsu.get, reverse=True)
+        return sorted(dsu, key=dsu.get, reverse=True)  # type: ignore
 
-    def hcc_host_conf(self):
+    def hcc_host_conf(self) -> dict:
         body = {
             "domain_type": HCC_DOMAIN_TYPE,
         }
@@ -573,6 +604,8 @@ class AutoEnrollment:
             self.args.location,
         )
         # TODO: use all servers
+        if typing.TYPE_CHECKING:
+            assert self.servers
         if self.args.override_server is None:
             self.server = self.servers[0]
         else:
@@ -582,7 +615,7 @@ class AutoEnrollment:
         logger.info("Servers: %s", ", ".join(self.servers))
         return j
 
-    def hcc_register(self):
+    def hcc_register(self) -> dict:
         """Register this host with /hcc API endpoint
 
         TODO: On 404 try next server
@@ -607,8 +640,10 @@ class AutoEnrollment:
             f.write(j["kdc_cabundle"])
         return j
 
-    def create_krb5_conf(self):
+    def create_krb5_conf(self) -> None:
         """Create a temporary krb5.conf"""
+        if typing.TYPE_CHECKING:
+            assert self.servers
         extra_kdcs = [
             f"kdc = {server}:88"
             for server in self.servers
@@ -625,7 +660,7 @@ class AutoEnrollment:
         with open(self.krb_name, "w", encoding="utf-8") as f:
             f.write(conf)
 
-    def pkinit(self, host_principal):
+    def pkinit(self, host_principal: str) -> None:
         """Perform kinit with X509_user_identity (PKINIT)"""
         cmd = [paths.KINIT]
         for anchor in self.pkinit_anchors:
@@ -650,7 +685,7 @@ class AutoEnrollment:
         self._run(cmd, setenv=True)
         return keytab
 
-    def _run_ipa_client(self, extra_args=()):
+    def _run_ipa_client(self, extra_args=()) -> None:
         # fmt: off
         cmd = [
             paths.IPA_CLIENT_INSTALL,
@@ -668,14 +703,14 @@ class AutoEnrollment:
         cmd.append("--unattended")
         cmd.extend(extra_args)
 
-        return self._run(cmd)
+        self._run(cmd)
 
-    def ipa_client_keytab(self, keytab):
+    def ipa_client_keytab(self, keytab: str) -> None:
         """Install IPA client with existing keytab"""
         extra_args = ["--keytab", keytab]
-        return self._run_ipa_client(extra_args)
+        self._run_ipa_client(extra_args)
 
-    def ipa_client_pkinit(self):
+    def ipa_client_pkinit(self) -> None:
         """Install IPA client with PKINIT"""
         extra_args = [
             "--pkinit-identity",
@@ -683,7 +718,7 @@ class AutoEnrollment:
         ]
         for anchor in self.pkinit_anchors:
             extra_args.extend(["--pkinit-anchor", anchor])
-        return self._run_ipa_client(extra_args)
+        self._run_ipa_client(extra_args)
 
 
 def main(args=None):

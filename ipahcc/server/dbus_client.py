@@ -1,5 +1,6 @@
 import json
 import logging
+import typing
 
 import dbus
 import dbus.mainloop.glib
@@ -12,7 +13,9 @@ __all__ = ("check_host", "register_domain", "update_domain")
 logger = logging.getLogger("dbus-client")
 
 
-def _dbus_getmethod(method_name, bus=None):  # pragma: no cover
+def _dbus_getmethod(
+    method_name: str, bus: typing.Optional[dbus.Bus] = None
+) -> typing.Callable:  # pragma: no cover
     """Get method wrapper from HCC D-Bus service"""
     if bus is None:
         bus = dbus.SystemBus()
@@ -23,7 +26,7 @@ def _dbus_getmethod(method_name, bus=None):  # pragma: no cover
     return getattr(iface, method_name)
 
 
-def _dbus_call(method_name, *args, **kwargs):
+def _dbus_call(method_name: str, *args, **kwargs) -> APIResult:
     method = _dbus_getmethod(method_name, kwargs.get("bus"))
     logger.info("D-Bus call: %s%s", method_name, args)
     try:
@@ -40,8 +43,10 @@ def _dbus_call(method_name, *args, **kwargs):
     status_code = int(tmp.status_code)
     reason = str(tmp.reason)
     url = str(tmp.url) if tmp.url else None
+    assert tmp.headers
     headers = {str(k).lower(): str(v) for k, v in tmp.headers.items()}
     if headers.get("content-type") == "application/json":
+        assert isinstance(tmp.body, str)
         body = json.loads(tmp.body)
     else:
         body = str(tmp.body)
@@ -57,19 +62,29 @@ def _dbus_call(method_name, *args, **kwargs):
         raise APIError(result)
 
 
-def check_host(domain_id, inventory_id, rhsm_id, fqdn, bus=None):
+def check_host(
+    domain_id: str,
+    inventory_id: str,
+    rhsm_id: str,
+    fqdn: str,
+    bus: typing.Optional[dbus.Bus] = None,
+) -> APIResult:
     return _dbus_call(
         "check_host", domain_id, inventory_id, rhsm_id, fqdn, bus=bus
     )
 
 
-def register_domain(domain_id, token, bus=None):
+def register_domain(
+    domain_id: str, token: str, bus: typing.Optional[dbus.Bus] = None
+) -> APIResult:
     return _dbus_call("register_domain", domain_id, token, bus=bus)
 
 
-def update_domain(update_server_only=False, bus=None):
+def update_domain(
+    update_server_only: bool = False, bus: typing.Optional[dbus.Bus] = None
+) -> APIResult:
     return _dbus_call("update_domain", update_server_only, bus=bus)
 
 
-def status_check(bus=None):
+def status_check(bus: typing.Optional[dbus.Bus] = None) -> APIResult:
     return _dbus_call("status_check", bus=bus)

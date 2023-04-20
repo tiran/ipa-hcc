@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import traceback
+import typing
 from http.client import responses as http_responses
 
 from ipahcc import hccplatform
@@ -72,13 +73,11 @@ class JSONWSGIApp:
             self.api = api
         if not self.api.isdone("bootstrap"):
             self.api.bootstrap(in_server=False)
-        self.routes = (
-            self._get_routes()
-        )  # type: dict[re.compile, tuple[str, callable]]
+        self.routes = self._get_routes()
 
-    def _get_routes(self):
+    def _get_routes(self) -> typing.List[typing.Tuple["re.Pattern", dict]]:
         """Inspect class and get a list of routes"""
-        routes = {}
+        routes: typing.Dict[str, dict] = {}
         for name, meth in inspect.getmembers(self, inspect.ismethod):
             if name.startswith("_"):
                 continue
@@ -92,7 +91,14 @@ class JSONWSGIApp:
             for path, methmap in sorted(routes.items())
         ]
 
-    def _route_lookup(self, env):
+    def _route_lookup(
+        self, env: dict
+    ) -> typing.Tuple[
+        typing.Callable,
+        typing.Optional[str],
+        typing.Dict[str, typing.Any],
+        typing.Dict[str, str],
+    ]:
         """Lookup route by path info
 
         Returns callable, schema, body, kwargs
@@ -142,7 +148,9 @@ class JSONWSGIApp:
 
         raise HTTPException(404, f"{pathinfo} not found")
 
-    def _validate_schema(self, instance, schema_name, suffix):
+    def _validate_schema(
+        self, instance: dict, schema_name: str, suffix: str
+    ) -> None:
         """Validate JSON schema"""
         schema_id = f"/schemas/{schema_name}/{suffix}"
         try:
@@ -154,13 +162,13 @@ class JSONWSGIApp:
                 f"schema violation: invalid JSON for {schema_id}",
             ) from None
 
-    def before_call(self):
+    def before_call(self) -> None:
         """Before handle method call hook"""
 
-    def after_call(self):
+    def after_call(self) -> None:
         """After handle method call hook"""
 
-    def parse_cert(self, env):
+    def parse_cert(self, env: dict) -> typing.Tuple[int, str]:
         """Parse XRHID certificate"""
 
         cert_pem = env.get("SSL_CLIENT_CERT")
@@ -171,7 +179,9 @@ class JSONWSGIApp:
         except ValueError as e:
             raise HTTPException(400, str(e)) from None
 
-    def __call__(self, env, start_response):
+    def __call__(
+        self, env: dict, start_response: typing.Callable
+    ) -> typing.Iterable[typing.ByteString]:
         try:
             meth, schema_name, body, kwargs = self._route_lookup(env)
             if schema_name is not None:

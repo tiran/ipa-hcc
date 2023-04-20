@@ -11,6 +11,7 @@ testing, though.
 """
 
 import logging
+import typing
 from time import monotonic as monotonic_time
 
 import requests
@@ -27,16 +28,16 @@ logger.setLevel(logging.DEBUG)
 
 
 class Application(JSONWSGIApp):
-    def __init__(self, api=None):
+    def __init__(self, api=None) -> None:
         super().__init__(api=api)
         # inventory bearer token + validity timestamp
-        self.access_token = None
-        self.valid_until = 0
+        self.access_token: typing.Optional[str] = None
+        self.valid_until: int = 0
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
 
-    def get_access_token(self):  # pragma: no cover
+    def get_access_token(self) -> str:  # pragma: no cover
         """Get a bearer access token from an offline token
 
         TODO: Poor man's OAuth2 workflow. Replace with
@@ -72,7 +73,7 @@ class Application(JSONWSGIApp):
         if resp.status_code >= 400:
             raise HTTPException(
                 resp.status_code,
-                f"get_access_token() failed: {resp} {resp.content} ({url})",
+                f"get_access_token() failed: {resp} {resp.content!r} ({url})",
             )
         logger.debug(
             "Got access token from refresh token in %0.3fs.",
@@ -82,9 +83,13 @@ class Application(JSONWSGIApp):
         self.access_token = j["access_token"]
         # 10 seconds slack
         self.valid_until = monotonic_time() + j["expires_in"] - 10
+        if typing.TYPE_CHECKING:
+            assert self.access_token
         return self.access_token
 
-    def lookup_inventory(self, inventory_id, rhsm_id, access_token):
+    def lookup_inventory(
+        self, inventory_id: str, rhsm_id: str, access_token: str
+    ) -> typing.Tuple[str, str, str]:
         """Lookup host by its inventory_id
 
         Returns fqdn, inventory_id, rhsm_id
@@ -130,38 +135,42 @@ class Application(JSONWSGIApp):
         )
         return fqdn, inventory_id, rhsm_id
 
-    def check_inventory(self, inventory_id, fqdn, rhsm_id):
+    def check_inventory(
+        self, inventory_id: str, fqdn: str, rhsm_id: str
+    ) -> None:
         if not fqdn.endswith(self.api.env.domain):
-            raise HTTPException.from_error(404, "hostname not recognized")
+            raise HTTPException(404, "hostname not recognized")
 
         access_token = self.get_access_token()
         exp_fqdn, exp_id, exp_rhsm_id = self.lookup_inventory(
             inventory_id, rhsm_id, access_token=access_token
         )
         if fqdn != exp_fqdn:
-            raise HTTPException.from_error(
+            raise HTTPException(
                 400,
                 f"unexpected fqdn: {fqdn} != {exp_fqdn}",
             )
         if inventory_id != exp_id:
-            raise HTTPException.from_error(
+            raise HTTPException(
                 400,
                 f"unexpected inventory_id: {inventory_id} != {exp_id}",
             )
         # RHEL 7.9 clients have subscription_manager_id == None
         if exp_rhsm_id is not None and rhsm_id != exp_rhsm_id:
-            raise HTTPException.from_error(
+            raise HTTPException(
                 400,
                 f"unexpected RHSM id: {rhsm_id} != {exp_rhsm_id}",
             )
 
-    def get_ca_crt(self):
+    def get_ca_crt(self) -> str:
         with open(paths.IPA_CA_CRT, encoding="utf-8") as f:
             ipa_ca_pem = f.read()
         return ipa_ca_pem
 
     @route("GET", "^/$")
-    def handle_root(self, env, body):  # pylint: disable=unused-argument
+    def handle_root(  # pylint: disable=unused-argument
+        self, env: dict, body: dict
+    ) -> dict:
         return {}
 
     @route(
@@ -169,9 +178,9 @@ class Application(JSONWSGIApp):
         "^/host-conf/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
         schema="host-conf",
     )
-    def handle_host_conf(
-        self, env, body, inventory_id, fqdn
-    ):  # pylint: disable=unused-argument
+    def handle_host_conf(  # pylint: disable=unused-argument
+        self, env: dict, body: dict, inventory_id: str, fqdn: str
+    ) -> dict:
         org_id, rhsm_id = self.parse_cert(env)
         logger.warning(
             "Received host configuration request for "
@@ -213,9 +222,9 @@ class Application(JSONWSGIApp):
         "^/check-host/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
         schema="check-host",
     )
-    def handle_check_host(
-        self, env, body, inventory_id, fqdn
-    ):  # pylint: disable=unused-argument
+    def handle_check_host(  # pylint: disable=unused-argument
+        self, env: dict, body: dict, inventory_id: str, fqdn: str
+    ) -> dict:
         logger.info("Checking host %s (%s)", fqdn, inventory_id)
 
         domain_name = body["domain_name"]
@@ -245,7 +254,9 @@ class Application(JSONWSGIApp):
         "^/domains/(?P<domain_id>[^/]+)/register$",
         schema="domain-register-update",
     )
-    def handle_register_domain(self, env, body, domain_id):
+    def handle_register_domain(
+        self, env: dict, body: dict, domain_id: str
+    ) -> dict:
         logger.info("Register domain %s", domain_id)
         token = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
         if token is None:
@@ -259,13 +270,15 @@ class Application(JSONWSGIApp):
         "^/domains/(?P<domain_id>[^/]+)/update$",
         schema="domain-register-update",
     )
-    def handle_update_domain(self, env, body, domain_id):
+    def handle_update_domain(
+        self, env: dict, body: dict, domain_id: str
+    ) -> dict:
         logger.info("Update domain %s", domain_id)
         return self._handle_domain(env, body, domain_id)
 
-    def _handle_domain(
-        self, env, body, domain_id
-    ):  # pylint: disable=unused-argument
+    def _handle_domain(  # pylint: disable=unused-argument
+        self, env: dict, body: dict, domain_id: str
+    ) -> dict:
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
         if domain_name != self.api.env.domain:

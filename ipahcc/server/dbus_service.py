@@ -3,6 +3,7 @@ import logging
 import queue
 import signal
 import threading
+import typing
 
 # Use dasbus from Anaconda Installer instead?
 # https://pypi.org/project/dasbus/
@@ -21,7 +22,7 @@ from ipahcc.server.hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
 try:
     from systemd import daemon as sd
 except ImportError:
-    sd = None
+    sd = None  # type: ignore
 
 
 logger = logging.getLogger("ipa-hcc-dbus")
@@ -72,14 +73,20 @@ class LookupQueue:
         "check_host": 100,
     }
 
-    def __init__(self, hccapi, maxsize=0):
-        self._queue = queue.PriorityQueue(maxsize=maxsize)
-        self._hccapi = hccapi
+    def __init__(self, hccapi: HCCAPI, maxsize: int = 0):
+        self._queue: queue.Queue = queue.PriorityQueue(maxsize=maxsize)
+        self._hccapi: HCCAPI = hccapi
 
     def stop(self):
         self._queue.put((self.priorities["stop"], None, None, None, None))
 
-    def add_task(self, name, args, ok_cb, err_cb):
+    def add_task(
+        self,
+        name: str,
+        args: tuple,
+        ok_cb: typing.Callable,
+        err_cb: typing.Callable,
+    ):
         prio = self.priorities[name]
         method = getattr(self._hccapi, name)
         argcount = method.__func__.__code__.co_argcount
@@ -93,6 +100,7 @@ class LookupQueue:
             prio, name, args, ok_cb, err_cb = self._queue.get(block=True)
             if prio == -1:
                 logger.info("Stopping lookup queue")
+                self._queue.task_done()
                 break
             try:
                 logger.info("API call %s%s", name, args)
@@ -126,13 +134,24 @@ class IPAHCCDbus(dbus.service.Object):
         str: exit message
     """
 
-    def __init__(self, conn, object_path, bus_name, loop, hccapi):
+    def __init__(
+        self,
+        conn: dbus.Bus,
+        object_path: str,
+        bus_name: str,
+        loop,
+        hccapi: HCCAPI,
+    ) -> None:
         super().__init__(conn, object_path, bus_name)
         self.loop = loop
         self._lq = LookupQueue(hccapi)
         self._lq_thread = threading.Thread(target=self._lq.run)
         self._lq_thread.start()
 
+    # python-dbus on RHEL 8 is incompatible with type annotations
+    # dbus.decorators.decorator() uses inspect.getargspec(), which fails with
+    # ValueError: Function has keyword-only parameters or annotations, use
+    #     getfullargspec() API which can support them
     @dbus.service.method(
         hccplatform.HCC_DBUS_IFACE_NAME,
         "ssss",
@@ -188,7 +207,9 @@ class IPAHCCDbus(dbus.service.Object):
     def stop(self):
         self.signal_handler(signal.SIGTERM, None)
 
-    def signal_handler(self, sig, stack):  # pylint: disable=unused-argument
+    def signal_handler(  # pylint: disable=unused-argument
+        self, sig: int, stack
+    ) -> None:
         self._lq.stop()
         self._lq_thread.join()
         self.loop.quit()

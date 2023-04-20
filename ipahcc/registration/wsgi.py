@@ -6,6 +6,7 @@
 
 import logging
 import os
+import typing
 
 import gssapi
 
@@ -33,22 +34,24 @@ logger.setLevel(logging.DEBUG)
 
 
 class Application(JSONWSGIApp):
-    def __init__(self, api=None):
+    def __init__(self, api=None) -> None:
         super().__init__(api=api)
         # cached org_id from IPA config_show
-        self._org_id = None
-        self._domain_id = None
+        self._org_id: typing.Optional[int] = None
+        self._domain_id: typing.Optional[str] = None
         # cached PEM bundle
         self._kdc_cabundle = read_cert_dir(hccplatform.HMSIDM_CACERTS_DIR)
 
-    def kinit_gssproxy(self):
+    def kinit_gssproxy(self) -> gssapi.Credentials:
         service = hccplatform.HCC_ENROLLMENT_AGENT
         principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
         name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
         store = {"ccache": hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME}
-        return gssapi.Credentials(name=name, store=store, usage="initiate")
+        return gssapi.Credentials(
+            name=name, store=store, usage="initiate"  # type: ignore
+        )
 
-    def before_call(self):
+    def before_call(self) -> None:
         logger.debug("Connecting to IPA")
         self.kinit_gssproxy()
         if not self.api.isdone("finalize"):
@@ -59,14 +62,14 @@ class Application(JSONWSGIApp):
         else:
             logger.debug("IPA rpcclient is already connected.")
 
-    def after_call(self):
+    def after_call(self) -> None:
         if (
             self.api.isdone("finalize")
             and self.api.Backend.rpcclient.isconnected()
         ):
             self.api.Backend.rpcclient.disconnect()
 
-    def _get_ipa_config(self):
+    def _get_ipa_config(self) -> typing.Tuple[int, str]:
         """Get org_id and domain_id from IPA config"""
         # no need to fetch additional values
         result = self.api.Command.config_show(raw=True)["result"]
@@ -84,32 +87,34 @@ class Application(JSONWSGIApp):
         return int(org_ids[0]), domain_ids[0]
 
     @property
-    def org_id(self):
+    def org_id(self) -> int:
         if self._org_id is None:
             self._org_id, self._domain_id = self._get_ipa_config()
         return self._org_id
 
     @property
-    def domain_id(self):
+    def domain_id(self) -> str:
         if self._domain_id is None:
             self._org_id, self._domain_id = self._get_ipa_config()
         return self._domain_id
 
-    def check_host(self, inventory_id, rhsm_id, fqdn):
+    def check_host(self, inventory_id: str, rhsm_id: str, fqdn: str) -> str:
         try:
             result = dbus_client.check_host(
                 self.domain_id, inventory_id, rhsm_id, fqdn
             )
         except dbus_client.APIError as e:
             raise HTTPException(e.result.status_code, e.result.body) from None
+        if typing.TYPE_CHECKING:
+            assert isinstance(result.body, dict)
         return result.body["inventory_id"]
 
     def update_ipa(
         self,
-        org_id,
-        rhsm_id,
-        inventory_id,
-        fqdn,
+        org_id: int,
+        rhsm_id: str,
+        inventory_id: str,
+        fqdn: str,
     ):
         ipa_org_id = self.org_id
         if org_id != ipa_org_id:
@@ -149,9 +154,9 @@ class Application(JSONWSGIApp):
         "^/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
         schema="hcc-host-register",
     )
-    def handle(
-        self, env, body, inventory_id, fqdn
-    ):  # pylint: disable=unused-argument
+    def handle(  # pylint: disable=unused-argument
+        self, env: dict, body: dict, inventory_id: str, fqdn: str
+    ) -> dict:
         org_id, rhsm_id = self.parse_cert(env)
         logger.warning(
             "Received self-enrollment request for org O=%s, CN=%s",

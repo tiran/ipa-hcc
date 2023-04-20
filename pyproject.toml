@@ -33,3 +33,15 @@ exclude_lines = [
     "if __name__ == .__main__.",
     "if False:",
 ]
+
+[tool.mypy]
+mypy_path = "stubs/"
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = [
+    'augeas.*',
+    'dbus.*',
+    'gi.*',
+]
+ignore_missing_imports = true
