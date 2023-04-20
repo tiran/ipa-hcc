@@ -384,7 +384,7 @@ SCHEMATA = {
 }
 
 
-def validate_schema(instance, schema_id):
+def validate_schema(instance: dict, schema_id: str):
     schema = SCHEMATA[schema_id]
     try:
         return jsonschema.validate(instance, schema)

@@ -49,6 +49,7 @@ clean:
 	find -name __pycache__ | xargs rm -rf
 	rm -f .coverage*
 	rm -rf htmlcov
+	rm -rf .mypy_cache
 
 .PHONY: cleanall
 cleanall: clean clean-idm-ci
@@ -140,7 +141,7 @@ install_server_plugin:
 	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipaserver/install/plugins
 	$(CP_PD) $(srcdir)/ipaserver/install/plugins/update_hcc.py $(DEST)$(PYTHON_SITELIB)/ipaserver/install/plugins/
 	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipaserver/plugins
-	$(CP_PD) $(srcdir)/ipaserver/plugins/*.py $(DEST)$(PYTHON_SITELIB)/ipaserver/plugins/
+	$(CP_PD) $(srcdir)/ipaserver/plugins/hcc*.py $(DEST)$(PYTHON_SITELIB)/ipaserver/plugins/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates/
 	$(CP_PD) $(srcdir)/install/server/updates/85-hcc.update $(DEST)$(DATADIR)/ipa/updates/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/schema.d

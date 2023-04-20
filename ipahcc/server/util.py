@@ -4,13 +4,16 @@
 # See COPYING for license
 #
 import os
+import typing
 
 from cryptography.x509.oid import NameOID
 
 from ipalib import x509
 
 
-def parse_rhsm_cert(data):
+def parse_rhsm_cert(
+    data: typing.Union[str, typing.ByteString]
+) -> typing.Tuple[int, str]:
     """Parse RHSM certificate
 
     returns org_id and rhsm_id (CN UUID)
@@ -30,7 +33,7 @@ def parse_rhsm_cert(data):
     return org_id, nas[1].value
 
 
-def read_cert_dir(path):
+def read_cert_dir(path: str) -> str:
     """Read certs from DIR and return a PEM bundle"""
     data = []
     for filename in os.listdir(path):

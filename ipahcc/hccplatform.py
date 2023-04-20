@@ -29,7 +29,7 @@ HTTP_HEADERS = {
             "os-release-version-id": osinfo["VERSION_ID"],
         }
     ),
-}
+}  # type: dict[str, str]
 
 # HCC enrollment agent (part pf ipa-hcc-server-plugin)
 # Note: IPA's gssproxy directory comes with correct SELinux rule.
@@ -85,15 +85,15 @@ class _HCCConfig:
         self._cp.read(HCC_CONFIG)
 
     @property
-    def hcc_api_host(self):
+    def hcc_api_host(self) -> str:
         return self._cp.get(self._section, "hcc_api_host")
 
     @property
-    def token_url(self):
+    def token_url(self) -> str:
         return self._cp.get(self._section, "token_url")
 
     @property
-    def inventory_url(self):
+    def inventory_url(self) -> str:
         return self._cp.get(self._section, "inventory_url")
 
 

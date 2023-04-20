@@ -156,7 +156,7 @@ class IPABaseTests(unittest.TestCase):
         resp.reason = http_responses[status_code]
         resp.encoding = "utf-8"
         resp.headers["content-type"] = "application/json"
-        resp.headers["content-length"] = len(j)
+        resp.headers["content-length"] = str(len(j))
         resp.raw = io.BytesIO(j)
         resp.raw.seek(0)
         return resp

@@ -1,0 +1,1 @@
+osinfo: dict[str, str]

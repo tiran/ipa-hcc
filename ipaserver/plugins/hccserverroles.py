@@ -141,7 +141,7 @@ def set_hcc_update_server(self, server):
         pass
 
 
-server_role.get_hcc_enrollment_agents = get_hcc_enrollment_agents
-server_role.get_hcc_update_server = get_hcc_update_server
-server_role.set_hcc_enrollment_agents = set_hcc_enrollment_agents
-server_role.set_hcc_update_server = set_hcc_update_server
+server_role.get_hcc_enrollment_agents = get_hcc_enrollment_agents  # type: ignore
+server_role.get_hcc_update_server = get_hcc_update_server  # type: ignore
+server_role.set_hcc_enrollment_agents = set_hcc_enrollment_agents  # type: ignore
+server_role.set_hcc_update_server = set_hcc_update_server  # type: ignore
