@@ -11,13 +11,12 @@ import dbus
 import dbus.exceptions
 import dbus.mainloop.glib
 import dbus.service
-from gi.repository import GLib
-
 import ipalib
+from gi.repository import GLib
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform
-from ipahcc.server.hccapi import HCCAPI, APIError, DEFAULT_TIMEOUT
+from ipahcc.server.hccapi import DEFAULT_TIMEOUT, HCCAPI, APIError
 
 try:
     from systemd import daemon as sd

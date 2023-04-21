@@ -16,8 +16,8 @@ import logging
 import os
 import random
 import shutil
-import ssl
 import socket
+import ssl
 import sys
 import tempfile
 import time
@@ -79,7 +79,9 @@ def check_arg_hostname(arg: str) -> str:
     try:
         util.validate_hostname(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, f"Invalid hostname {arg}: {e}")
+        raise argparse.ArgumentError(
+            None, f"Invalid hostname {arg}: {e}"
+        ) from None
     return arg.lower()
 
 
@@ -87,7 +89,9 @@ def check_arg_domain_name(arg: str) -> str:
     try:
         util.validate_domain_name(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, f"Invalid domain name {arg}: {e}")
+        raise argparse.ArgumentError(
+            None, f"Invalid domain name {arg}: {e}"
+        ) from None
     return arg.lower()
 
 
@@ -95,7 +99,9 @@ def check_arg_location(arg: str) -> str:
     try:
         util.validate_dns_label(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, f"Invalid location {arg}: {e}")
+        raise argparse.ArgumentError(
+            None, f"Invalid location {arg}: {e}"
+        ) from None
     return arg.lower()
 
 
@@ -103,7 +109,9 @@ def check_arg_uuid(arg: str) -> str:
     try:
         uuid.UUID(arg)
     except ValueError as e:
-        raise argparse.ArgumentError(None, f"Invalid UUID value {arg}: {e}")
+        raise argparse.ArgumentError(
+            None, f"Invalid UUID value {arg}: {e}"
+        ) from None
     return arg.lower()
 
 
@@ -296,7 +304,7 @@ class AutoEnrollment:
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
 
-        with urlopen(
+        with urlopen(  # noqa: S310
             req, timeout=self.args.timeout, context=context
         ) as resp:  # nosec
             j = json.load(resp)
@@ -556,7 +564,8 @@ class AutoEnrollment:
             idx = dsu.get(fqdn)
             # sort additional servers after DNS SRV entries, randomize order
             if idx is None:
-                idx = random.random()  # [0.0, 1.0)
+                # [0.0, 1.0)
+                idx = random.random()  # noqa: S311
             # bump servers with current location
             if location is not None and server_location == location:
                 idx += 1000

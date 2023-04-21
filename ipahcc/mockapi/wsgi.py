@@ -15,12 +15,10 @@ import typing
 from time import monotonic as monotonic_time
 
 import requests
-
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform
-from ipahcc.server.framework import JSONWSGIApp, HTTPException, route
-
+from ipahcc.server.framework import HTTPException, JSONWSGIApp, route
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-mockapi")
@@ -261,7 +259,7 @@ class Application(JSONWSGIApp):
         token = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
         if token is None:
             raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
-        if token != "mockapi":
+        if token != "mockapi":  # noqa: S105
             raise HTTPException(404, "invalid X-RH-IDM-Registration-Token")
         return self._handle_domain(env, body, domain_id)
 

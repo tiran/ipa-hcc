@@ -4,12 +4,11 @@ import tempfile
 from unittest import mock
 
 from ipalib import errors
-from ipapython.kerberos import Principal
 from ipaplatform.services import knownservices
-
-from ipahcc import hccplatform
+from ipapython.kerberos import Principal
 
 import conftest
+from ipahcc import hccplatform
 
 
 @conftest.requires_ipaserver

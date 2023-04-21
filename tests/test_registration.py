@@ -4,7 +4,6 @@ from unittest import mock
 import gssapi
 
 import conftest
-
 from ipahcc import hccplatform
 from ipahcc.registration import wsgi
 from ipahcc.server import dbus_client

@@ -5,16 +5,13 @@
 #
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
-from ipalib import _
-from ipalib import errors
+from ipalib import _, errors
 from ipalib.parameters import Int, Str
 
 # pylint: disable=import-error
-from ipaserver.plugins.config import config
-from ipaserver.plugins.config import config_show
-from ipaserver.plugins.config import config_mod
-from ipaserver.plugins.internal import i18n_messages
+from ipaserver.plugins.config import config, config_mod, config_show
 from ipaserver.plugins.hccserverroles import hcc_enrollment_server_role
+from ipaserver.plugins.internal import i18n_messages
 
 # pylint: enable=import-error
 

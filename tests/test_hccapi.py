@@ -7,7 +7,6 @@ from ipapython import admintool
 from ipapython.dnsutil import DNSName
 
 import conftest
-
 from ipahcc import hccplatform
 from ipahcc.server import hccapi
 from ipahcc.server.dbus_service import IPAHCCDbus

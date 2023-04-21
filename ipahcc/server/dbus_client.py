@@ -6,6 +6,7 @@ import dbus
 import dbus.mainloop.glib
 
 from ipahcc import hccplatform
+
 from .hccapi import APIError, APIResult
 
 __all__ = ("check_host", "register_domain", "update_domain")

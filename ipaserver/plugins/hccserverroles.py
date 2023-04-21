@@ -7,15 +7,13 @@
 
 Server roles and associated attribute extension.
 """
-from ipalib import api
-from ipalib import errors
+from ipalib import api, errors
 from ipaplatform.base import services as base_services
-from ipaplatform.redhat import services as rh_services
 from ipaplatform.fedora import services as fed_services
+from ipaplatform.redhat import services as rh_services
 
 # pylint: disable=import-error
-from ipaserver import masters
-from ipaserver import servroles
+from ipaserver import masters, servroles
 from ipaserver.plugins import serverroles
 from ipaserver.plugins.serverrole import server_role
 

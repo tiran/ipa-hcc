@@ -7,7 +7,6 @@ import os
 import typing
 
 from cryptography.x509.oid import NameOID
-
 from ipalib import x509
 
 

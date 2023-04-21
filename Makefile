@@ -1,4 +1,4 @@
-VERSION = 0.7
+VERSION = 0.9
 
 srcdir = .
 DEST =
@@ -56,9 +56,13 @@ cleanall: clean clean-idm-ci
 	rm -rf .tox
 
 .PHONY: lint
-lint:
+lint: ruff
 	$(BLACK) --check .
 	yamllint --strict .
+
+.PHONY: ruff
+ruff:
+	tox -e ruff
 
 .PHONY: black
 black:

@@ -1,7 +1,6 @@
 from unittest import mock
 
 import conftest
-
 from ipahcc.server.framework import JSONWSGIApp, route
 
 
@@ -141,7 +140,10 @@ class TestWSGIFramework(conftest.IPABaseTests):
         self.assertEqual(
             response,
             {
-                "details": "schema violation: invalid JSON for /schemas/host-conf/request",
+                "details": (
+                    "schema violation: "
+                    "invalid JSON for /schemas/host-conf/request"
+                ),
                 "status": 400,
                 "title": "Bad Request",
             },
@@ -157,7 +159,10 @@ class TestWSGIFramework(conftest.IPABaseTests):
         self.assertEqual(
             response,
             {
-                "details": "schema violation: invalid JSON for /schemas/host-conf/response",
+                "details": (
+                    "schema violation: "
+                    "invalid JSON for /schemas/host-conf/response"
+                ),
                 "status": 400,
                 "title": "Bad Request",
             },

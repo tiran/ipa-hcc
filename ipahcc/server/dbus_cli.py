@@ -5,10 +5,10 @@ import typing
 import uuid
 
 import dbus.exceptions
-
 from ipapython import admintool
 
 from ipahcc import hccplatform
+
 from . import dbus_client
 from .hccapi import APIError, APIResult
 

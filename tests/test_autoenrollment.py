@@ -9,11 +9,9 @@ from dns.rdtypes.IN.SRV import SRV
 from ipaplatform.paths import paths
 
 import conftest
-
+import ipahcc_auto_enrollment as auto_enrollment
 from ipahcc import hccplatform
 from ipahcc.server import schema
-import ipahcc_auto_enrollment as auto_enrollment
-
 
 HOST_CONF_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,

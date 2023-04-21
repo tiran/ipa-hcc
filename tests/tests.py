@@ -21,10 +21,12 @@ class IPAClientTests(conftest.IPABaseTests):
 class IPAServerTests(conftest.IPABaseTests):
     def test_server_plugin_imports(self):
         # pylint: disable=unused-import,unused-variable,import-error
-        from ipaserver.plugins import hccconfig  # noqa: F401
-        from ipaserver.plugins import hcchost  # noqa: F401
-        from ipaserver.plugins import hccserverroles  # noqa: F401
         from ipaserver.install.plugins import update_hcc  # noqa: F401
+        from ipaserver.plugins import (
+            hccconfig,  # noqa: F401
+            hcchost,  # noqa: F401
+            hccserverroles,  # noqa: F401
+        )
 
     def test_registration_service_imports(self):
         # pylint: disable=unused-import,unused-variable,import-error
@@ -35,8 +37,7 @@ class IPAServerTests(conftest.IPABaseTests):
 
 class IPAHCCServerTests(conftest.IPABaseTests):
     def test_ipa_hcc_dbus_help(self):
-        from ipahcc.server import dbus_service
-        from ipahcc.server import dbus_cli
+        from ipahcc.server import dbus_cli, dbus_service
 
         self.assert_cli_run(dbus_service.main, "--help")
         self.assert_cli_run(dbus_cli.main, "--help")
