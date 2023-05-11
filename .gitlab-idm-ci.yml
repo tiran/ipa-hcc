@@ -5,6 +5,10 @@ srv87_c87_91:
   needs: ["rpms", "tox_check"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel87.yaml
+    RHC_ENV: ${RHC_ENV}
+    RHC_ORG: ${RHC_ORG}
+    RHC_KEY: ${RHC_KEY}
+    RH_API_TOKEN: ${RH_API_TOKEN}
 
 # RHEL versions under development
 srv92_c88_92:
@@ -12,3 +16,7 @@ srv92_c88_92:
   needs: ["rpms", "tox_check"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92.yaml
+    RHC_ENV: ${RHC_ENV}
+    RHC_ORG: ${RHC_ORG}
+    RHC_KEY: ${RHC_KEY}
+    RH_API_TOKEN: ${RH_API_TOKEN}

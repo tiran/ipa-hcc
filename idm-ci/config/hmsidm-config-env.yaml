@@ -1,6 +1,0 @@
----
-rhc_env: "{{ lookup('env', 'RHC_ENV', default=undef()) }}"
-rhc_org: "{{ lookup('env', 'RHC_ORG', default=undef()) }}"
-rhc_key: "{{ lookup('env', 'RHC_KEY', default=undef()) }}"
-rh_api_token: "{{ lookup('env', 'RH_API_TOKEN', default=undef()) }}"
-ipa_hcc_copr: copr.devel.redhat.com/cheimes/ipa-hcc
