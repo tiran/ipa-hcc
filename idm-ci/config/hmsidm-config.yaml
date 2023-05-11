@@ -1,1 +1,20 @@
-hmsidm-config-stage.yaml
+---
+# settings are provided by CI/CD pipeline or `idm-ci/secrets` source file
+# Stage account settings are backed up in `ETHEL_EXPORTED_ACCOUNTS` secret.
+
+# "prod" or "stage"
+rhc_env: "{{ lookup('env', 'RHC_ENV', default=undef()) }}"
+
+# organization id and activation key
+# prod: https://access.redhat.com/management/activation_keys
+# stage: https://access.stage.redhat.com/management/activation_keys
+rhc_org: "{{ lookup('env', 'RHC_ORG', default=undef()) }}"
+rhc_key: "{{ lookup('env', 'RHC_KEY', default=undef()) }}"
+
+# RHSM API token
+# prod: https://access.redhat.com/management/api
+# stage: https://access.stage.redhat.com/management/api
+rh_api_token: "{{ lookup('env', 'RH_API_TOKEN', default=undef()) }}"
+
+# COPR repo with builds (not used by hmsidm-dev.yaml)
+ipa_hcc_copr: copr.devel.redhat.com/cheimes/ipa-hcc
