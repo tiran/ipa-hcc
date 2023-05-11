@@ -1,0 +1,28 @@
+---
+name: CI
+
+on:
+  pull_request:
+    branches: ["main", "v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  tox-check:
+    name: "tox ${{ matrix.toxenv }}"
+    runs-on: "ubuntu-latest"
+    container: quay.io/tiran/ipa-hcc-ci:fedora
+    strategy:
+      fail-fast: false
+      matrix:
+        toxenv:
+          - "py,py36,cov"
+          - "ruff,mypy,pylint"
+          - "jslint,yamllint,maketest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: "Run tox for ${{ matrix.toxenv }}"
+        run: "tox -e  ${{ matrix.toxenv }}"
