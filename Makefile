@@ -92,7 +92,6 @@ run-idm-ci:
 	@# tmpfs at /root/.ansible is needed to work around an SELinux violation
 	@# when copying files from fusefs to mount point.
 	podman run -ti --rm \
-		--pull always \
 		-v $(PWD):/ipa-hcc:Z \
 		-w /ipa-hcc \
 		--tmpfs /root/.ansible:rw,mode=750 \

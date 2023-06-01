@@ -1,11 +1,21 @@
 [hcc]
-# use mockapi
-hcc_api_host={{ meta_fqdn }}
-
 {% if hmsidm_config.rhc_env == 'stage' %}
 token_url=https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
-inventory_url=https://console.stage.redhat.com/api/inventory/v1
-{% else %}
+inventory_api_url=https://console.stage.redhat.com/api/inventory/v1
+# mockapi
+idm_api_url=https://{{ meta_fqdn }}/api/idm/v1
+{% elif hmsidm_config.rhc_env == 'prod' %}
 token_url=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
-inventory_url=https://console.redhat.com/api/inventory/v1
+inventory_api_url=https://console.redhat.com/api/inventory/v1
+# mockapi
+idm_api_url=https://{{ meta_fqdn }}/api/idm/v1
+{% elif hmsidm_config.rhc_env == 'ephemeral' %}
+token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token
+inventory_api_url=https://console.invalid/api/inventory/v1
+idm_api_url=https://{{ hmsidm_config.ephemeral_hmsidm_backend }}/api/hmsidm/v1
+# see idm-domains-backend: ./scripts/http/public.http
+dev_org_id=12345
+dev_cert_cn=6f324116-b3d2-11ed-8a37-482ae3863d30
+dev_username={{ hmsidm_config.ephemeral_username }}
+dev_password={{ hmsidm_config.ephemeral_password }}
 {% endif %}

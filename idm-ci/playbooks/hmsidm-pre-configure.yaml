@@ -25,6 +25,14 @@
         src: hcc.conf.j2
         dest: /etc/ipa/hcc.conf
 
+    - name: Set ipa-hcc-dbus to verbose
+      copy:
+        dest: /etc/sysconfig/ipa-hcc-dbus
+        content: 'OPTIONS="-v"'
+        mode: 0640
+        owner: root
+        group: root
+
     # See https://access.redhat.com/articles/3626371
     - name: Write Red Hat API offline token to /etc/ipa/hcc/refresh_token
       copy:
@@ -36,3 +44,6 @@
 
     - name: Restart HTTPD if running to reload /etc/ipa/hcc.conf
       command: systemctl try-restart httpd
+
+    - name: Restart ipa-hcc-dbus if running to reload /etc/ipa/hcc.conf
+      command: systemctl try-restart ipa-hcc-dbus

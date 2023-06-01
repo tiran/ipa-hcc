@@ -1,5 +1,6 @@
 import argparse
 import logging
+import pprint
 import sys
 import typing
 import uuid
@@ -45,7 +46,7 @@ subparsers = parser.add_subparsers(dest="action")
 
 
 def register_callback(result: APIResult) -> None:
-    print(result)
+    pprint.pprint(result.asdict())
 
 
 parser_register = subparsers.add_parser(
@@ -57,7 +58,7 @@ parser_register.add_argument("token", type=str)
 
 
 def update_callback(result: APIResult) -> None:
-    print(result)
+    pprint.pprint(result.asdict())
 
 
 parser_update = subparsers.add_parser(
@@ -89,7 +90,7 @@ parser_status.set_defaults(callback=status_callback)
 
 
 def check_host_callback(result: APIResult) -> None:
-    print(result)
+    pprint.pprint(result.asdict())
 
 
 parser_check_host = subparsers.add_parser("check-host")

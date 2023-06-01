@@ -8,8 +8,9 @@ After=syslog.target network.target httpd.service
 # BusName=com.redhat.console.ipahcc
 Type=notify
 Environment=LC_ALL=C.UTF-8
+EnvironmentFile=-/etc/sysconfig/ipa-hcc-dbus
 PrivateTmp=yes
-ExecStart=/usr/libexec/ipa-hcc/ipa-hcc-dbus
+ExecStart=/usr/libexec/ipa-hcc/ipa-hcc-dbus $OPTIONS
 
 [Install]
 WantedBy=multi-user.target

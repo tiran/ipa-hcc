@@ -1,5 +1,6 @@
 """Interface to register or update domains with Hybrid Cloud Console
 """
+import base64
 import json
 import logging
 import typing
@@ -7,6 +8,7 @@ import uuid
 from http.client import responses as http_responses
 
 import requests
+import requests.auth
 import requests.exceptions
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
@@ -94,6 +96,12 @@ class APIResult(typing.NamedTuple):
             exit_message,
         )
 
+    def asdict(self) -> dict:
+        """Convert to dict with dict body"""
+        d = self._asdict()
+        d["body"] = self.json()
+        return d
+
     def to_dbus(self) -> "APIResult":
         """Convert to D-Bus format"""
         headers = self.headers or {}
@@ -113,8 +121,10 @@ class APIResult(typing.NamedTuple):
         )
 
     def json(self) -> dict:
-        assert isinstance(self.body, str)
-        return json.loads(self.body)
+        if isinstance(self.body, dict):
+            return self.body
+        else:
+            return json.loads(self.body)
 
 
 def _get_one(dct: dict, key: str, default=_missing) -> typing.Any:
@@ -249,7 +259,6 @@ class HCCAPI:
         self.api = api
         self.timeout = timeout
         self.session = requests.Session()
-        self.session.headers.update(hccplatform.HTTP_HEADERS)
 
     def __enter__(self) -> "HCCAPI":
         self.api.Backend.ldap2.connect(time_limit=self.timeout)
@@ -432,8 +441,8 @@ class HCCAPI:
                 "pem": cert.public_bytes(Encoding.PEM).decode("ascii"),
                 # JSON number type cannot handle large serial numbers
                 "serial_number": str(cert.serial_number),
-                "not_before": cert.not_valid_before.isoformat(),
-                "not_after": cert.not_valid_after.isoformat(),
+                "not_before": schema.rfc3339_datetime(cert.not_valid_before),
+                "not_after": schema.rfc3339_datetime(cert.not_valid_after),
             }
 
             ca_certs.append(certinfo)
@@ -483,6 +492,31 @@ class HCCAPI:
             },
         }
 
+    def _get_dev_headers(self):
+        fake_identity = {
+            "identity": {
+                "account_number": "11111",
+                "org_id": hccplatform.DEV_ORG_ID,
+                "type": "System",
+                "auth_type": "cert-auth",
+                "system": {
+                    "cert_type": "system",
+                    "cn": hccplatform.DEV_CERT_CN,
+                },
+                "internal": {
+                    "auth_time": 900,
+                    "cross_access": False,
+                    "org_id": hccplatform.DEV_ORG_ID,
+                },
+            }
+        }
+        return {
+            "X-Rh-Insights-Request-Id": str(uuid.uuid4()),
+            "X-Rh-Fake-Identity": base64.b64encode(
+                json.dumps(fake_identity).encode("utf-8")
+            ),
+        }
+
     def _submit_idm_api(
         self,
         method: str,
@@ -490,14 +524,37 @@ class HCCAPI:
         payload: typing.Dict[str, typing.Any],
         extra_headers=None,
     ) -> requests.Response:
-        api_url = f"https://{hccplatform.HCC_API_HOST}/api/idm/v1"
+        api_url = hccplatform.IDM_API_URL.rstrip("/")
         url = "/".join((api_url,) + subpath)
         headers = {}
+        headers.update(hccplatform.HTTP_HEADERS)
         if extra_headers:
             headers.update(extra_headers)
-        logger.debug(
-            "Sending %s request to %s with headers %s", method, url, headers
-        )
+
+        if hccplatform.DEV_CERT_CN is not None:
+            logger.warning(
+                "Using dev X-Rh-Fake-Identity O=%s,CN=%s",
+                hccplatform.DEV_ORG_ID,
+                hccplatform.DEV_CERT_CN,
+            )
+            headers.update(self._get_dev_headers())
+
+        if hccplatform.DEV_USERNAME and hccplatform.DEV_PASSWORD:
+            logger.warning(
+                "Using dev basic auth with account '%s'",
+                hccplatform.DEV_USERNAME,
+            )
+            auth = requests.auth.HTTPBasicAuth(
+                hccplatform.DEV_USERNAME,
+                hccplatform.DEV_PASSWORD,
+            )
+            cert = None
+        else:
+            auth = None
+            cert = (hccplatform.RHSM_CERT, hccplatform.RHSM_KEY)
+
+        logger.debug("Sending %s request to %s", method, url)
+        logger.debug("headers: %s", headers)
         body = json.dumps(payload, indent=2)
         logger.debug("body: %s", body)
         try:
@@ -506,7 +563,8 @@ class HCCAPI:
                 url,
                 headers=headers,
                 timeout=self.timeout,
-                cert=(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY),
+                auth=auth,
+                cert=cert,
                 json=payload,
             )
         except Exception as e:
@@ -522,4 +580,5 @@ class HCCAPI:
                 resp, 4, f"{method} request failed"
             ) from None
         else:
+            logger.debug("response %s", resp.json())
             return resp

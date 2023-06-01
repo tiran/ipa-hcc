@@ -94,7 +94,7 @@ class Application(JSONWSGIApp):
         """
         # cannot lookup from .../hosts/{inventory_id}, RHEL 7 does not include
         # subscription_manager_id in return value.
-        url = "/".join((hccplatform.INVENTORY_URL.rstrip("/"), "hosts"))
+        url = "/".join((hccplatform.INVENTORY_API_URL.rstrip("/"), "hosts"))
         logger.debug(
             "Looking up inventory id %s / rhsm %s in console inventory %s",
             inventory_id,
