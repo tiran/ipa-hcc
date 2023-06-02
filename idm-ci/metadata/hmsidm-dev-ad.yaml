@@ -1,0 +1,60 @@
+---
+# Set up Active Directory for testing AD join
+#
+# $ kinit administrator@WINDOWS.TEST
+#
+# Join with realmd / adcli
+# $ adcli preset-computer --domain=windows.test --login-ccache=KCM:0 --one-time-password=RandomPassword $(hostname)
+# $ realm join --one-time-password RandomPassword windows.test
+#
+domains:
+  - name: hmsidm-dev.test
+    type: IPA
+    hosts:
+      - name: client.hmsidm-dev.test
+        role: client
+        group: ipaclient
+        os: rhel-9.2
+  - name: windows.test
+    type: ad
+    hosts:
+      - name: ad1.windows.test
+        role: ad
+        group: ad_root
+        os: win-2022-latest
+        netbios: WIN2022
+        host_type: 'windows'
+        network: IPv4
+  # - name: sub1.windows.test
+  #   type: ad
+  #   parent: windows.test
+  #   hosts:
+  #     - name: ad2.sub1.windows.test
+  #       role: ad
+  #       group: ad_subdomain
+  #       os: win-2022-latest
+  #       netbios: SUB1
+  #       domain_level: sub1
+  #       network: IPv4
+phases:
+  - name: init
+    steps:
+      - playbook: init/testrunner-dir.yaml
+  - name: provision
+    steps:
+      - playbook: provision/mrack-up.yaml
+      - playbook: provision/wait.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-dump-hosts.yaml
+  - name: prep
+    steps:
+      - playbook: prep/prefer-ipv4.yaml
+      - playbook: prep/redhat-base.yaml
+      - playbook: prep/repos.yaml
+      - playbook: prep/install-ipa-packages.yaml
+      - playbook: prep/firewall.yaml
+      - playbook: prep/ipa-network.yaml
+      - playbook: prep/win-domain-setup.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-ad-prep.yaml
+  - name: teardown
+    steps:
+      - playbook: teardown/mrack-destroy.yaml

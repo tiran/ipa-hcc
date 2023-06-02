@@ -1,0 +1,45 @@
+- hosts: ipaclient
+  become: True
+  become_method: sudo
+  tasks:
+    - set_fact:
+        ad_server_ip: "{{ hostvars[groups.ad_root.0].meta_ip }}"
+        ad_domain: "{{ hostvars[groups.ad_root.0].meta_domain }}"
+
+    - name: Install packages
+      yum:
+        name:
+          - samba-common-tools
+          - realmd
+          - sssd
+          - sssd-ad
+          - oddjob
+          - oddjob-mkhomedir
+          - adcli
+          - krb5-workstation
+          - samba-winbind
+          - samba-winbind-clients
+        state: present
+
+    - name: NetworkManager should not auto-update /etc/resolv.conf
+      lineinfile:
+        path: /etc/NetworkManager/NetworkManager.conf
+        regexp: '^[main]'
+        insertafter: '^\[main\]'
+        line: 'dns=none'
+
+    - name: Add AD name server to /etc/resolv.conf
+      template:
+        src: resolv.conf-ad.j2
+        dest: /etc/resolv.conf
+
+    - name: Update crypto policies
+      shell: update-crypto-policies --set DEFAULT:AD-SUPPORT
+
+    - name: Discover AD REALM
+      shell: realm discover {{ ad_domain }}
+      register: discover_realm
+
+    - name: Print the AD REALM info
+      debug: msg={{ discover_realm }}
+      when: discover_realm is defined
