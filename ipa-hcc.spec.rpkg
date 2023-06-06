@@ -27,6 +27,9 @@
 # --without mockapi (enabled by default)
 %bcond_without mockapi
 
+# local development
+%bcond_with devel
+
 %if %{with platform_python}
   %global python /usr/libexec/platform-python
 %else
@@ -62,7 +65,18 @@ BuildRequires: make
 BuildRequires: openssl
 BuildRequires: systemd-devel
 BuildRequires: selinux-policy-devel
-
+%if %{with devel}
+BuildRequires: tox
+BuildRequires: openldap-compat
+BuildRequires: gcc
+BuildRequires: krb5-devel
+BuildRequires: glib2-devel
+BuildRequires: dbus-devel
+BuildRequires: dbus-daemon
+BuildRequires: gobject-introspection-devel
+BuildRequires: cairo-devel
+BuildRequires: cairo-gobject-devel
+%endif
 
 %description
 An extension for IPA integration with Red Hat Hybrid Cloud Console.

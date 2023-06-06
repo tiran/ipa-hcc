@@ -283,20 +283,27 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 - Kerberos KDC loads extra PKINIT trust anchors from
   `DIR:/usr/share/ipa-hcc/cacerts`.
 
-## RPM build
+## RPM build and local testing
 
 This project uses [rpkg](https://docs.pagure.org/rpkg-util/v3/index.html) to
 build SRPM and RPMs from git.
 
+Install development dependencies:
 ```
-dnf install rpkg tox
+dnf install rpkg
 rpkg spec --outdir .
-dnf builddep --spec ipa-hcc.spec
+dnf builddep -D "with_devel 1" --spec ipa-hcc.spec
 rm ipa-hcc.spec
 ```
 
+Build local RPMs:
 ```
 make rpkg
+```
+
+Run all tests locally:
+```
+tox
 ```
 
 RHEL 8 builds and COPR need `idm:DL1` module.
