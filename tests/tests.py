@@ -96,7 +96,7 @@ class TestJSONSchema(conftest.IPABaseTests):
                         "pkinit_server": True,
                     },
                 ],
-                "cacerts": [
+                "ca_certs": [
                     {
                         "nickname": "IPAHCC.TEST IPA CA",
                         "pem": conftest.IPA_CA_DATA,
