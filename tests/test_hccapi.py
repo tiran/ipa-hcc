@@ -40,6 +40,14 @@ COMMON_RESULT = {
 }
 
 DOMAIN_RESULT = copy.deepcopy(COMMON_RESULT)
+DOMAIN_RESULT.update(
+    {
+        "title": "Some title",
+        "description": "Some description",
+        "auto_enrollment_enabled": True,
+        "domain_id": conftest.DOMAIN_ID,
+    }
+)
 DOMAIN_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(
     {
         "cacerts": [

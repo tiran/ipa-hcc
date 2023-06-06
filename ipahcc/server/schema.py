@@ -2,6 +2,7 @@ __all__ = (
     "validate_schema",
     "ValidationError",
 )
+import copy
 import logging
 
 import jsonschema
@@ -235,6 +236,19 @@ DOMAIN_REQUEST = {
     ],
     "additionalProperties": False,
     "properties": {
+        "title": {
+            "oneOf": [
+                {"type": "string"},
+                {"type": "null"},
+            ]
+        },
+        "description": {
+            "oneOf": [
+                {"type": "string"},
+                {"type": "null"},
+            ]
+        },
+        "auto_enrollment_enabled": {"type": "boolean", "default": True},
         "domain_type": {"$ref": "#/$defs/domain_type"},
         "domain_name": {"$ref": "#/$defs/domain_name"},
         hccplatform.HCC_DOMAIN_TYPE: {
@@ -340,13 +354,20 @@ DOMAIN_REQUEST = {
     "$defs": DEFS,
 }
 
-# shallow copy
-DOMAIN_RESPONSE = DOMAIN_REQUEST.copy()
+DOMAIN_RESPONSE = copy.deepcopy(DOMAIN_REQUEST)
 DOMAIN_RESPONSE.update(
     {
         "$id": "/schemas/domain-register-update/response",
         "title": "Domain registration or update response",
         "description": "Response from HCC API to RHEL IdM server",
+    }
+)
+
+# mypy: disable-error-code="attr-defined"
+DOMAIN_RESPONSE["required"].extend(["domain_id"])
+DOMAIN_RESPONSE["properties"].update(
+    {
+        "domain_id": {"$ref": "#/$defs/uuid"},
     }
 )
 
