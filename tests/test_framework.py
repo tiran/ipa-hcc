@@ -2,6 +2,7 @@ from unittest import mock
 
 import conftest
 from ipahcc.server.framework import JSONWSGIApp, route
+from ipahcc.server.hccapi import APIResult
 
 
 class Application(JSONWSGIApp):
@@ -36,6 +37,13 @@ class TestWSGIFramework(conftest.IPABaseTests):
         super().setUp()
         self.m_api = mock.Mock()
         self.app = Application(self.m_api)
+        p = mock.patch.object(APIResult, "genrid")
+        self.m_genrid = p.start()
+        self.m_genrid.return_value = "rid"
+
+    def tearDown(self):
+        self.m_genrid.stop()
+        super().tearDown()
 
     def test_route(self):
         with self.assertRaises(ValueError):
@@ -139,14 +147,17 @@ class TestWSGIFramework(conftest.IPABaseTests):
         self.assertEqual(headers["Content-Type"], "application/json")
         self.assertEqual(
             response,
-            {
-                "details": (
-                    "schema violation: "
-                    "invalid JSON for /schemas/host-conf/request"
-                ),
-                "status": 400,
-                "title": "Bad Request",
-            },
+            [
+                {
+                    "id": self.m_genrid.return_value,
+                    "details": (
+                        "schema violation: "
+                        "invalid JSON for /schemas/host-conf/request"
+                    ),
+                    "status": 400,
+                    "title": "Bad Request",
+                }
+            ],
         )
 
         body = {}
@@ -158,12 +169,15 @@ class TestWSGIFramework(conftest.IPABaseTests):
         self.assertEqual(headers["Content-Type"], "application/json")
         self.assertEqual(
             response,
-            {
-                "details": (
-                    "schema violation: "
-                    "invalid JSON for /schemas/host-conf/response"
-                ),
-                "status": 400,
-                "title": "Bad Request",
-            },
+            [
+                {
+                    "id": self.m_genrid.return_value,
+                    "details": (
+                        "schema violation: "
+                        "invalid JSON for /schemas/host-conf/response"
+                    ),
+                    "status": 400,
+                    "title": "Bad Request",
+                }
+            ],
         )

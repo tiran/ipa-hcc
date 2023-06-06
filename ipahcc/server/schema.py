@@ -358,13 +358,18 @@ ERROR_RESPONSE = {
     "$id": "/schemas/error/response",
     "title": "Generic error response",
     "description": "Error response",
-    "type": "object",
-    "required": ["status", "title", "details"],
-    "additionalProperties": False,
-    "properties": {
-        "status": {"title": "HTTP status code", "type": "integer"},
-        "title": {"title": "HTTP status reason", "type": "string"},
-        "details": {"title": "Reason text", "type": "string"},
+    "type": "array",
+    "minItems": 1,
+    "items": {
+        "type": "object",
+        "required": ["id", "status", "title", "details"],
+        "additionalProperties": False,
+        "properties": {
+            "id": {"title": "Unique error id", "type": "str"},
+            "status": {"title": "HTTP status code", "type": "integer"},
+            "title": {"title": "HTTP status reason", "type": "string"},
+            "details": {"title": "Reason text", "type": "string"},
+        },
     },
 }
 

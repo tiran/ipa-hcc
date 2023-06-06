@@ -3,6 +3,7 @@
 import json
 import logging
 import typing
+import uuid
 from http.client import responses as http_responses
 
 import requests
@@ -42,6 +43,7 @@ RFC4514_MAP = {
 
 
 class APIResult(typing.NamedTuple):
+    id: str  # request / error id
     status_code: int  # HTTP status code or IPA errno (>= 900)
     reason: str  # HTTP reason or IPA exception name
     url: typing.Optional[str]  # remote URL or None
@@ -53,10 +55,16 @@ class APIResult(typing.NamedTuple):
     exit_message: str  # human readable error message for CLI
 
     @classmethod
+    def genrid(cls) -> str:
+        """Generate request / response / error id"""
+        return str(uuid.uuid4())
+
+    @classmethod
     def from_response(
         cls, response: requests.Response, exit_code: int, exit_message: str
     ) -> "APIResult":
         return cls(
+            cls.genrid(),
             response.status_code,
             response.reason,
             response.url,
@@ -73,6 +81,7 @@ class APIResult(typing.NamedTuple):
         assert isinstance(dct, dict)
         text = json.dumps(dct, sort_keys=True)
         return cls(
+            cls.genrid(),
             status_code,
             http_responses[status_code],
             None,
@@ -93,6 +102,7 @@ class APIResult(typing.NamedTuple):
         if isinstance(body, dict):
             body = json.dumps(body, sort_keys=True)
         return type(self)(
+            self.id,
             self.status_code,
             self.reason,
             url,
@@ -162,6 +172,7 @@ class APIError(Exception):
         }
         return cls(
             APIResult(
+                APIResult.genrid(),
                 status_code,
                 reason,
                 response.url,
@@ -190,6 +201,7 @@ class APIError(Exception):
         }
         return cls(
             APIResult(
+                APIResult.genrid(),
                 status_code,
                 reason,
                 None,
@@ -213,6 +225,7 @@ class APIError(Exception):
         }
         return cls(
             APIResult(
+                APIResult.genrid(),
                 status_code,
                 reason,
                 None,

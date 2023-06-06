@@ -50,6 +50,7 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
     def test_register(self):
         self.m_dbus_method.return_value = mock.Mock(
             return_value=(
+                "rid",
                 200,
                 "OK",
                 "url",
