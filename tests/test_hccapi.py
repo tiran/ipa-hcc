@@ -43,6 +43,7 @@ STATUS_CHECK_RESULT = {
 
 def mkresult(dct, status_code=200, exit_code=0, exit_message=0):
     return hccapi.APIResult(
+        "",
         status_code,
         "",
         "",
@@ -212,6 +213,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
 
         err_cb.assert_not_called()
         ok_cb.assert_called_once_with(
+            "rid",
             200,
             "OK",
             "",
@@ -230,6 +232,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
 
         err_cb.assert_not_called()
         ok_cb.assert_called_once_with(
+            "rid",
             200,
             "OK",
             "",
@@ -249,6 +252,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
 
         err_cb.assert_not_called()
         ok_cb.assert_called_once_with(
+            "rid",
             200,
             "OK",
             "",
@@ -266,6 +270,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
 
         err_cb.assert_not_called()
         ok_cb.assert_called_once_with(
+            "rid",
             200,
             "OK",
             "",

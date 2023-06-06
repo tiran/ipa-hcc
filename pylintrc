@@ -33,6 +33,7 @@ disable=
     # complexity
     too-many-instance-attributes,
     too-many-arguments,
+    too-many-locals,
     # style choices
     no-else-return,
     no-else-raise,

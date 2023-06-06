@@ -15,6 +15,7 @@ import typing
 from http.client import responses as http_responses
 
 from ipahcc import hccplatform
+from ipahcc.server.hccapi import APIResult
 from ipahcc.server.schema import ValidationError, validate_schema
 from ipahcc.server.util import parse_rhsm_cert
 
@@ -198,6 +199,7 @@ class JSONWSGIApp:
             response = json.dumps(result)
             code = 200
         except BaseException as e:  # pylint: disable=broad-except
+            error_id = APIResult.genrid()
             if isinstance(e, HTTPException):
                 code = e.code
                 title = http_responses[code]
@@ -208,8 +210,16 @@ class JSONWSGIApp:
                 code = 500
                 title = f"server error: {e}"
                 details = traceback.format_exc()
+            logger.error("[%s] %i %s", error_id, code, title)
             response = json.dumps(
-                {"status": code, "title": title, "details": details}
+                [
+                    {
+                        "id": error_id,
+                        "status": code,
+                        "title": title,
+                        "details": details,
+                    }
+                ]
             )
 
         status_line = f"{code} {http_responses[code]}"

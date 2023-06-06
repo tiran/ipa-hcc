@@ -41,6 +41,7 @@ def _dbus_call(method_name: str, *args, **kwargs) -> APIResult:
 
     # convert from D-Bus types to Python types
     tmp = APIResult(*result)
+    rid = tmp.id
     status_code = int(tmp.status_code)
     reason = str(tmp.reason)
     url = str(tmp.url) if tmp.url else None
@@ -55,7 +56,7 @@ def _dbus_call(method_name: str, *args, **kwargs) -> APIResult:
     exit_message = str(tmp.exit_message)
 
     result = APIResult(
-        status_code, reason, url, headers, body, exit_code, exit_message
+        rid, status_code, reason, url, headers, body, exit_code, exit_message
     )
     if result.exit_code == 0:
         return result

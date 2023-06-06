@@ -53,6 +53,7 @@ parser.add_argument(
     type=int,
 )
 
+# id (s: str)
 # status_code (q: int)
 # reason (s: str)
 # url (s: str)
@@ -60,7 +61,7 @@ parser.add_argument(
 # JSON body (s: str)
 # exit_code (q: int)
 # error_message (s: str)
-DBUS_RETURN = "qssa{ss}sqs"
+DBUS_RETURN = "sqssa{ss}sqs"
 
 
 class LookupQueue:
