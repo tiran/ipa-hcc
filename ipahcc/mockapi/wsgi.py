@@ -160,7 +160,7 @@ class Application(JSONWSGIApp):
                 f"unexpected RHSM id: {rhsm_id} != {exp_rhsm_id}",
             )
 
-    def get_ca_crt(self) -> str:
+    def get_ca_certs(self) -> str:
         with open(paths.IPA_CA_CRT, encoding="utf-8") as f:
             ipa_ca_pem = f.read()
         return ipa_ca_pem
@@ -191,7 +191,7 @@ class Application(JSONWSGIApp):
 
         self.check_inventory(inventory_id, fqdn, rhsm_id)
 
-        ca = self.get_ca_crt()
+        ca = self.get_ca_certs()
         logger.info(
             "host-conf for %s (%s, %s) is domain %s.",
             fqdn,

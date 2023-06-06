@@ -347,7 +347,7 @@ class HCCAPI:
         config = self._get_ipa_config(all_fields=True)
         info = self._get_ipa_info(config)
         # remove CA certs, add domain and org id
-        info[hccplatform.HCC_DOMAIN_TYPE].pop("cacerts", None)
+        info[hccplatform.HCC_DOMAIN_TYPE].pop("ca_certs", None)
         info.update(
             domain_id=_get_one(config, "hccdomainid", None),
             org_id=_get_one(config, "hccorgid", default=None),
@@ -404,7 +404,7 @@ class HCCAPI:
 
         return result
 
-    def _get_cacerts(self) -> typing.List[dict]:
+    def _get_ca_certs(self) -> typing.List[dict]:
         """Get list of trusted CA cert info objects"""
         try:
             result = self.api.Command.ca_is_enabled(version="2.107")
@@ -420,7 +420,7 @@ class HCCAPI:
             ca_enabled,
         )
 
-        cacerts = []
+        ca_certs = []
         for cert, nickname, trusted, _eku in certs:
             if not trusted:
                 continue
@@ -436,9 +436,9 @@ class HCCAPI:
                 "not_after": cert.not_valid_after.isoformat(),
             }
 
-            cacerts.append(certinfo)
+            ca_certs.append(certinfo)
 
-        return cacerts
+        return ca_certs
 
     def _get_realm_domains(self) -> typing.List[str]:
         """Get list of realm domain names"""
@@ -477,7 +477,7 @@ class HCCAPI:
             hccplatform.HCC_DOMAIN_TYPE: {
                 "realm_name": self.api.env.realm,
                 "servers": self._get_servers(config),
-                "cacerts": self._get_cacerts(),
+                "ca_certs": self._get_ca_certs(),
                 "realm_domains": self._get_realm_domains(),
                 "locations": self._get_locations(),
             },

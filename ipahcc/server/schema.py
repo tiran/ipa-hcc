@@ -253,10 +253,15 @@ DOMAIN_REQUEST = {
         "domain_name": {"$ref": "#/$defs/domain_name"},
         hccplatform.HCC_DOMAIN_TYPE: {
             "type": "object",
-            "required": ["cacerts", "realm_name", "realm_domains", "servers"],
+            "required": [
+                "ca_certs",
+                "realm_name",
+                "realm_domains",
+                "servers",
+            ],
             "additionalProperties": False,
             "properties": {
-                "cacerts": {
+                "ca_certs": {
                     "title": "Array of trusted CA certificates",
                     "type": "array",
                     "items": {
