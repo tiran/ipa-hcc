@@ -287,4 +287,7 @@ class Application(JSONWSGIApp):
             raise HTTPException(400, "unsupported domain id")
 
         # return request value
+        body = body.copy()
+        body["domain_id"] = domain_id
+        body.setdefault("auto_enrollment_enabled", True)
         return body
