@@ -1,3 +1,4 @@
+import copy
 import json
 import textwrap
 from unittest import mock
@@ -11,13 +12,12 @@ from ipahcc import hccplatform
 from ipahcc.server import hccapi
 from ipahcc.server.dbus_service import IPAHCCDbus
 
-CACERT = x509.load_certificate_from_file(conftest.IPA_CA_CRT)
+CACERT = x509.load_pem_x509_certificate(conftest.IPA_CA_DATA.encode("ascii"))
 
-STATUS_CHECK_RESULT = {
-    "domain_id": conftest.DOMAIN_ID,
+COMMON_RESULT = {
     "domain_name": conftest.DOMAIN,
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-    "rhel-idm": {
+    hccplatform.HCC_DOMAIN_TYPE: {
         "realm_name": conftest.REALM,
         "servers": [
             {
@@ -37,8 +37,27 @@ STATUS_CHECK_RESULT = {
         ],
         "realm_domains": [conftest.DOMAIN],
     },
-    "org_id": conftest.ORG_ID,
 }
+
+DOMAIN_RESULT = copy.deepcopy(COMMON_RESULT)
+DOMAIN_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(
+    {
+        "cacerts": [
+            {
+                "nickname": conftest.IPA_CA_NICKNAME,
+                "pem": conftest.IPA_CA_DATA,
+            },
+        ],
+    }
+)
+
+STATUS_CHECK_RESULT = copy.deepcopy(COMMON_RESULT)
+STATUS_CHECK_RESULT.update(
+    {
+        "domain_id": conftest.DOMAIN_ID,
+        "org_id": conftest.ORG_ID,
+    }
+)
 
 
 def mkresult(dct, status_code=200, exit_code=0, exit_message=0):
@@ -121,7 +140,7 @@ class TestHCCAPICommon(conftest.IPABaseTests):
         p = mock.patch.object(hccapi, "get_ca_certs")
         self.m_get_ca_certs = p.start()
         self.m_get_ca_certs.return_value = [
-            (CACERT, "IPA-HCC.TEST IPA CA", True, None)
+            (CACERT, conftest.IPA_CA_NICKNAME, True, None)
         ]
         self.addCleanup(p.stop)
 
@@ -144,8 +163,9 @@ class TestHCCAPI(TestHCCAPICommon):
         self.assertIsInstance(resp, hccapi.APIResult)
 
     def test_register_domain(self):
-        body = {"status": "ok"}
-        self.m_session.request.return_value = self.mkresponse(200, body)
+        self.m_session.request.return_value = self.mkresponse(
+            200, DOMAIN_RESULT
+        )
         info, resp = self.m_hccapi.register_domain(
             conftest.DOMAIN_ID, "mockapi"
         )
@@ -153,8 +173,9 @@ class TestHCCAPI(TestHCCAPICommon):
         self.assertIsInstance(resp, hccapi.APIResult)
 
     def test_update_domain(self):
-        body = {"status": "ok"}
-        self.m_session.request.return_value = self.mkresponse(200, body)
+        self.m_session.request.return_value = self.mkresponse(
+            200, DOMAIN_RESULT
+        )
         info, resp = self.m_hccapi.update_domain()
         self.assertIsInstance(info, dict)
         self.assertIsInstance(resp, hccapi.APIResult)
@@ -224,26 +245,30 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         )
 
     def test_register_domain(self):
-        body = {"status": "ok"}
+        body = DOMAIN_RESULT
         self.m_session.request.return_value = self.mkresponse(200, body)
         ok_cb, err_cb = self.dbus_call(
             self.dbus.register_domain, conftest.DOMAIN_ID, "mockapi"
         )
 
         err_cb.assert_not_called()
+        body_str = json.dumps(body)
         ok_cb.assert_called_once_with(
             "rid",
             200,
             "OK",
             "",
-            {"content-type": "application/json", "content-length": "16"},
-            json.dumps(body),
+            {
+                "content-type": "application/json",
+                "content-length": str(len(body_str)),
+            },
+            body_str,
             0,
             "OK",
         )
 
     def test_update_domain(self):
-        body = {"status": "ok"}
+        body = DOMAIN_RESULT
         self.m_session.request.return_value = self.mkresponse(200, body)
         ok_cb, err_cb = self.dbus_call(
             self.dbus.update_domain,
@@ -251,13 +276,17 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         )
 
         err_cb.assert_not_called()
+        body_str = json.dumps(body)
         ok_cb.assert_called_once_with(
             "rid",
             200,
             "OK",
             "",
-            {"content-type": "application/json", "content-length": "16"},
-            json.dumps(body),
+            {
+                "content-type": "application/json",
+                "content-length": str(len(body_str)),
+            },
+            body_str,
             0,
             "OK",
         )

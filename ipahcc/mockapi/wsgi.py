@@ -286,5 +286,5 @@ class Application(JSONWSGIApp):
         if domain_id != hccplatform.TEST_DOMAIN_ID:
             raise HTTPException(400, "unsupported domain id")
 
-        response = {"status": "ok"}
-        return response
+        # return request value
+        return body

@@ -50,6 +50,7 @@ with open(RHSM_CERT, encoding="utf-8") as f:
     RHSM_CERT_DATA = f.read()
 with open(IPA_CA_CRT, encoding="utf-8") as f:
     IPA_CA_DATA = f.read()
+IPA_CA_NICKNAME = "IPA-HCC.TEST IPA CA"
 KDC_CA_DATA = read_cert_dir(KDC_CA_DIR)
 
 # initialize first step of IPA API so server imports work
