@@ -86,7 +86,7 @@ HCC_RESPONSE = {
     "description": "Response of an IPA server to to host",
     "type": "object",
     "required": [
-        # XXX
+        # XXX: more fields?
         "status",
         "kdc_cabundle",
     ],
@@ -219,12 +219,13 @@ CHECK_HOST_RESPONSE = {
 
 # PUT /api/idm/v1/domains/{domain_id}/register
 # PUT /api/idm/v1/domains/{domain_id}/update
+# GET /api/idm/v1/domains/{domain_id} (not implemented in mockapi)
 DOMAIN_REQUEST = {
     "$id": "/schemas/domain-register-update/request",
-    "title": "Domain registration or update request",
+    "title": "Domain registration/update request and response",
     "description": (
         "Request from an RHEL IdM server to HCC API to "
-        "register or update a domain"
+        "register or update a domain."
     ),
     "type": "object",
     "required": [
@@ -339,20 +340,15 @@ DOMAIN_REQUEST = {
     "$defs": DEFS,
 }
 
-DOMAIN_RESPONSE = {
-    "$id": "/schemas/domain-register-update/response",
-    "title": "Domain registration or update response",
-    "description": "Response from HCC API to RHEL IdM server",
-    "type": "object",
-    "required": [
-        # XXX
-        "status",
-    ],
-    "additionalProperties": False,
-    "properties": {
-        "status": {"type": "string"},
-    },
-}
+# shallow copy
+DOMAIN_RESPONSE = DOMAIN_REQUEST.copy()
+DOMAIN_RESPONSE.update(
+    {
+        "$id": "/schemas/domain-register-update/response",
+        "title": "Domain registration or update response",
+        "description": "Response from HCC API to RHEL IdM server",
+    }
+)
 
 ERROR_RESPONSE = {
     "$id": "/schemas/error/response",
