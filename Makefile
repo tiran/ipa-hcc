@@ -31,7 +31,6 @@ MKDIR_P = mkdir -p -m755
 CP_PD = cp -p -d
 CP_CONFIG = $(CP_PD) -n
 
-BLACK = black
 CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem
 
 
@@ -55,18 +54,17 @@ clean:
 cleanall: clean clean-idm-ci
 	rm -rf .tox
 
+.PHONY: tox
+tox:
+	tox -p auto
+
 .PHONY: lint
 lint: ruff
-	$(BLACK) --check .
-	yamllint --strict .
+	tox -e format,yamllint
 
 .PHONY: ruff
 ruff:
 	tox -e ruff
-
-.PHONY: black
-black:
-	$(BLACK) .
 
 .PHONY: version
 version:
@@ -76,6 +74,10 @@ version:
 
 .PHONY: rpkg
 rpkg:
+	tox -e rpkg
+
+.PHONY: _rpkg
+_rpkg:
 	@rm -rf .tox/rpkg
 	@mkdir -p .tox/rpkg
 	rpkg local --outdir $$(pwd)/.tox/rpkg
