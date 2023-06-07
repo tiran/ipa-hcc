@@ -45,7 +45,7 @@ else:
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
-VERSION = "0.9"
+VERSION = "0.11"
 
 # copied from ipahcc.hccplatform
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
