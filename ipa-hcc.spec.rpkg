@@ -67,6 +67,7 @@ BuildRequires: systemd-devel
 BuildRequires: selinux-policy-devel
 %if %{with devel}
 BuildRequires: tox
+BuildRequires: rpmlint
 BuildRequires: openldap-compat
 BuildRequires: gcc
 BuildRequires: krb5-devel
