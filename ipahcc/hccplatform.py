@@ -7,8 +7,9 @@
 """
 __all__ = ("is_ipa_configured",)
 
+import configparser
 import json
-from configparser import ConfigParser
+from typing import Optional
 
 from ipalib.facts import is_ipa_configured
 from ipaplatform.constants import constants
@@ -69,36 +70,66 @@ TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
 
 class _HCCConfig:
     _defaults = {
-        "hcc_api_host": "cert.console.redhat.com",
         "token_url": (
             "https://sso.redhat.com/auth/realms/redhat-external"
             "/protocol/openid-connect/token"
         ),
-        "inventory_url": "https://console.redhat.com/api/inventory/v1",
+        "inventory_api_url": "https://console.redhat.com/api/inventory/v1",
+        "idm_api_url": "https://console.redhat.com/api/idm/v1",
     }
 
     _section = "hcc"
 
     def __init__(self):
-        self._cp = ConfigParser(defaults=self._defaults)
+        self._cp = configparser.ConfigParser(
+            defaults=self._defaults,
+            interpolation=configparser.ExtendedInterpolation(),
+        )
         self._cp.add_section(self._section)
         self._cp.read(HCC_CONFIG)
 
     @property
-    def hcc_api_host(self) -> str:
-        return self._cp.get(self._section, "hcc_api_host")
+    def idm_api_url(self) -> str:
+        """IDM API url with cert authentication"""
+        return self._cp.get(self._section, "idm_api_url")
 
     @property
     def token_url(self) -> str:
+        """SSO token url"""
         return self._cp.get(self._section, "token_url")
 
     @property
-    def inventory_url(self) -> str:
-        return self._cp.get(self._section, "inventory_url")
+    def inventory_api_url(self) -> str:
+        """host based inventory API url with token auth"""
+        return self._cp.get(self._section, "inventory_api_url")
+
+    @property
+    def dev_org_id(self) -> Optional[str]:
+        """Ephemeral dev/test org id (for fake header)"""
+        return self._cp.get(self._section, "dev_org_id", fallback=None)
+
+    @property
+    def dev_cert_cn(self) -> Optional[str]:
+        """Ephemeral dev/test cert CN (for fake header)"""
+        return self._cp.get(self._section, "dev_cert_cn", fallback=None)
+
+    @property
+    def dev_username(self) -> Optional[str]:
+        """Ephemeral dev/test username for API auth"""
+        return self._cp.get(self._section, "dev_username", fallback=None)
+
+    @property
+    def dev_password(self) -> Optional[str]:
+        """Ephemeral dev/test password for API auth"""
+        return self._cp.get(self._section, "dev_password", fallback=None)
 
 
 _hccconfig = _HCCConfig()
 
-HCC_API_HOST = _hccconfig.hcc_api_host
+IDM_API_URL = _hccconfig.idm_api_url
 TOKEN_URL = _hccconfig.token_url
-INVENTORY_URL = _hccconfig.inventory_url
+INVENTORY_API_URL = _hccconfig.inventory_api_url
+DEV_ORG_ID = _hccconfig.dev_org_id
+DEV_CERT_CN = _hccconfig.dev_cert_cn
+DEV_USERNAME = _hccconfig.dev_username
+DEV_PASSWORD = _hccconfig.dev_password

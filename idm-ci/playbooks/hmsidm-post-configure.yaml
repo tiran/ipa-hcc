@@ -7,9 +7,10 @@
         file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
         name: hmsidm_config
 
-    # TODO: hard-coded test domain_id and token
     - name: Run ipa-hcc register
-      command: ipa-hcc register 772e9618-d0f8-4bf8-bfed-d2831f63c619 mockapi
+      command: "ipa-hcc register {{ hmsidm_config.domain_id }} {{ hmsidm_config.domain_token }}"
+      when:
+        hmsidm_config.rhc_env != 'ephemeral'
 
     - name: kinit as IPA admin
       shell: |
@@ -31,7 +32,7 @@
       register: result
       failed_when:
         - result.rc != 0
-        - '"already exists" not in result.stderr'
+        - '"no modifications to be performed" not in result.stderr'
       when: meta_role == 'master'
 
     - name: Add replicas to location tau
@@ -39,5 +40,5 @@
       register: result
       failed_when:
         - result.rc != 0
-        - '"already exists" not in result.stderr'
+        - '"no modifications to be performed" not in result.stderr'
       when: meta_role == 'replica'

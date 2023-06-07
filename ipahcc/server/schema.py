@@ -1,9 +1,12 @@
 __all__ = (
+    "rfc3339_datetime",
     "validate_schema",
     "ValidationError",
 )
+
 import copy
 import logging
+from datetime import datetime, timezone
 
 import jsonschema
 from jsonschema import ValidationError
@@ -11,6 +14,13 @@ from jsonschema import ValidationError
 from ipahcc import hccplatform
 
 logger = logging.getLogger(__name__)
+
+
+def rfc3339_datetime(dt: datetime) -> str:
+    """Convert datetime to RFC 3339 compatible string"""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat("T", timespec="seconds")
 
 
 DEFS = {
@@ -336,7 +346,9 @@ DOMAIN_REQUEST = {
                             "fqdn": {"$ref": "#/$defs/hostname"},
                             "subscription_manager_id": {
                                 "oneOf": [
-                                    {"$ref": "#/$defs/uuid"},
+                                    # TODO: 'string' is a workaround for HMS-1914
+                                    # {"$ref": "#/$defs/uuid"},
+                                    {"type": "string"},
                                     {"type": "null"},
                                 ],
                             },

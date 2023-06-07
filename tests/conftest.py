@@ -140,9 +140,9 @@ class IPABaseTests(unittest.TestCase):
             RHSM_KEY=RHSM_KEY,
             INSIGHTS_HOST_DETAILS=HOST_DETAILS,
             HMSIDM_CACERTS_DIR=KDC_CA_DIR,
-            HCC_API_HOST="invalid.test",
+            IDM_API_URL="http://invalid.test",
             TOKEN_URL="http://invalid.test",  # noqa: S106
-            INVENTORY_URL="http://invalid.test",
+            INVENTORY_API_URL="http://invalid.test",
             HCC_ENROLLMENT_AGENT_KEYTAB=NO_FILE,
         )
         p.start()
