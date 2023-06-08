@@ -36,6 +36,14 @@ parser = argparse.ArgumentParser(
     ),
 )
 parser.add_argument(
+    "--verbose",
+    "-v",
+    help="Enable verbose logging (-vv for extra verbose logging)",
+    dest="verbose",
+    default=0,
+    action="count",
+)
+parser.add_argument(
     "--version",
     "-V",
     help="Show version number and exit",
@@ -103,6 +111,16 @@ parser_check_host.add_argument("fqdn")
 
 def main(args=None):
     args = parser.parse_args(args)
+
+    # -v and -vv option
+    if args.verbose == 0:
+        level = logging.WARNING
+    elif args.verbose == 1:
+        level = logging.INFO
+    else:
+        level = logging.DEBUG
+    logging.basicConfig(format="%(message)s", level=level)
+
     # Python < 3.7 does not have required subparser
     if not getattr(args, "action", None):
         parser.error("action required\n")
