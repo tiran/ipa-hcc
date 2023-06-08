@@ -580,5 +580,5 @@ class HCCAPI:
                 resp, 4, f"{method} request failed"
             ) from None
         else:
-            logger.debug("response %s", resp.json())
+            logger.debug("response: %s", json.dumps(resp.json(), indent=2))
             return resp
