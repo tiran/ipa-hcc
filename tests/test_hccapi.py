@@ -68,7 +68,7 @@ STATUS_CHECK_RESULT.update(
 )
 
 
-def mkresult(dct, status_code=200, exit_code=0, exit_message=0):
+def mkresult(dct, status_code=200, exit_code=0, exit_message="ok"):
     return hccapi.APIResult(
         "",
         status_code,
@@ -272,7 +272,10 @@ class TestIPAHCCDbus(TestHCCAPICommon):
             },
             body_str,
             0,
-            "OK",
+            (
+                f"Successfully register domain '{conftest.DOMAIN}' "
+                f"with Hybrid Cloud Console (id: {conftest.DOMAIN_ID})."
+            ),
         )
 
     def test_update_domain(self):
@@ -296,7 +299,10 @@ class TestIPAHCCDbus(TestHCCAPICommon):
             },
             body_str,
             0,
-            "OK",
+            (
+                f"Successfully updated domain '{conftest.DOMAIN}' "
+                f"({conftest.DOMAIN_ID})."
+            ),
         )
 
     def test_status_check(self):
@@ -317,7 +323,11 @@ class TestIPAHCCDbus(TestHCCAPICommon):
             },
             expected,
             0,
-            "OK",
+            (
+                f"IPA domain '{conftest.DOMAIN}' is registered with Hybrid Cloud "
+                f"Console (domain_id: {conftest.DOMAIN_ID}, organization: "
+                f"{conftest.ORG_ID})."
+            ),
         )
 
 

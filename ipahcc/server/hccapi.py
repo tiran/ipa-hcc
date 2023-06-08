@@ -314,7 +314,11 @@ class HCCAPI:
             logger.debug("hccdomainid=%s already configured", domain_id)
         else:
             logger.debug("hccdomainid=%s set", domain_id)
-        result = APIResult.from_response(resp, 0, "OK")
+        msg = (
+            f"Successfully register domain '{info['domain_name']}' "
+            f"with Hybrid Cloud Console (id: {domain_id})."
+        )
+        result = APIResult.from_response(resp, 0, msg)
         return info, result
 
     def update_domain(
@@ -349,7 +353,11 @@ class HCCAPI:
         schema.validate_schema(
             resp.json(), "/schemas/domain-register-update/response"
         )
-        result = APIResult.from_response(resp, 0, "OK")
+        msg = (
+            f"Successfully updated domain '{info['domain_name']}' "
+            f"({domain_id})."
+        )
+        result = APIResult.from_response(resp, 0, msg)
         return info, result
 
     def status_check(self) -> typing.Tuple[dict, APIResult]:
@@ -357,11 +365,17 @@ class HCCAPI:
         info = self._get_ipa_info(config)
         # remove CA certs, add domain and org id
         info[hccplatform.HCC_DOMAIN_TYPE].pop("ca_certs", None)
-        info.update(
-            domain_id=_get_one(config, "hccdomainid", None),
-            org_id=_get_one(config, "hccorgid", default=None),
-        )
-        result = APIResult.from_dict(info, 200, 0, "OK")
+        domain_id = _get_one(config, "hccdomainid", None)
+        org_id = _get_one(config, "hccorgid", default=None)
+        info.update(domain_id=domain_id, org_id=org_id)
+        if domain_id:
+            msg = (
+                f"IPA domain '{info['domain_name']}' is registered with Hybrid "
+                f"Cloud Console (domain_id: {domain_id}, organization: {org_id})."
+            )
+        else:
+            msg = "IPA domain is not registered."
+        result = APIResult.from_dict(info, 200, 0, msg)
         return {}, result
 
     def _get_domain_id(self, config: typing.Dict[str, typing.Any]):

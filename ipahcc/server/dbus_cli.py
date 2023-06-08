@@ -54,7 +54,7 @@ subparsers = parser.add_subparsers(dest="action")
 
 
 def register_callback(result: APIResult) -> None:
-    pprint.pprint(result.asdict())
+    print(result.exit_message)
 
 
 parser_register = subparsers.add_parser(
@@ -66,7 +66,7 @@ parser_register.add_argument("token", type=str)
 
 
 def update_callback(result: APIResult) -> None:
-    pprint.pprint(result.asdict())
+    print(result.exit_message)
 
 
 parser_update = subparsers.add_parser(
@@ -152,11 +152,12 @@ def main(args=None):
         print(e.result.exit_message, file=sys.stderr)
         parser.exit(e.result.exit_code)
     else:
+        logger.debug("APIResult: %s", pprint.pformat(result.asdict()))
         args.callback(result)
         if result.exit_code == 0:
             parser.exit(0)
         else:
-            parser.exit(result.exit_code, result.exit_code + "\n")
+            parser.exit(result.exit_code, result.exit_message + "\n")
 
 
 if __name__ == "__main__":
