@@ -208,7 +208,7 @@ class Application(JSONWSGIApp):
                 "realm_name": self.api.env.realm,
                 "cabundle": ca,
                 "enrollment_servers": [
-                    {"fqdn": self.api.env.host, "location": None},
+                    {"fqdn": self.api.env.host},
                 ],
             },
             "inventory_id": inventory_id,

@@ -404,11 +404,15 @@ class HCCAPI:
                 "hcc_enrollment_server": (fqdn in hcc_enrollment),
                 "hcc_update_server": (fqdn == hcc_update),
                 "pkinit_server": (fqdn in pkinit_servers),
-                "subscription_manager_id": _get_one(
-                    host, "hccsubscriptionid", default=None
-                ),
-                "location": location_map.get(fqdn),
             }
+            # optional, non-NULL fields
+            location = location_map.get(fqdn)
+            if location is not None:
+                server_info["location"] = location
+            rhsm_id = _get_one(host, "hccsubscriptionid", default=None)
+            if rhsm_id is not None:
+                server_info["subscription_manager_id"] = rhsm_id
+
             result.append(server_info)
 
         return result
@@ -459,14 +463,14 @@ class HCCAPI:
         locations = self.api.Command.location_find()
         result = []
         for location in locations["result"]:
-            result.append(
-                {
-                    "name": _get_one(location, "idnsname").to_text(),
-                    "description": _get_one(
-                        location, "description", default=None
-                    ),
-                }
-            )
+            loc = {
+                "name": _get_one(location, "idnsname").to_text(),
+            }
+            # optional, non-NULL field
+            description = _get_one(location, "description", default=None)
+            if description is not None:
+                loc["description"] = description
+            result.append(loc)
         return result
 
     def _get_ipa_config(

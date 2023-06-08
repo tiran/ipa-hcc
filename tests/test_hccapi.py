@@ -31,8 +31,8 @@ COMMON_RESULT = {
             }
         ],
         "locations": [
-            {"name": "kappa", "description": None},
-            {"name": "sigma", "description": None},
+            {"name": "kappa"},
+            {"name": "sigma"},
             {"name": "tau", "description": "location tau"},
         ],
         "realm_domains": [conftest.DOMAIN],

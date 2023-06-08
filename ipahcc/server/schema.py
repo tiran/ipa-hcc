@@ -166,16 +166,11 @@ HOST_CONF_RESPONSE = {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["fqdn", "location"],
+                        "required": ["fqdn"],
                         "additionalProperties": False,
                         "properties": {
                             "fqdn": {"$ref": "#/$defs/hostname"},
-                            "location": {
-                                "oneOf": [
-                                    {"$ref": "#/$defs/location"},
-                                    {"type": "null"},
-                                ],
-                            },
+                            "location": {"$ref": "#/$defs/location"},
                         },
                     },
                 },
@@ -246,18 +241,8 @@ DOMAIN_REQUEST = {
     ],
     "additionalProperties": False,
     "properties": {
-        "title": {
-            "oneOf": [
-                {"type": "string"},
-                {"type": "null"},
-            ]
-        },
-        "description": {
-            "oneOf": [
-                {"type": "string"},
-                {"type": "null"},
-            ]
-        },
+        "title": {"type": "string"},
+        "description": {"type": "string"},
         "auto_enrollment_enabled": {"type": "boolean", "default": True},
         "domain_type": {"$ref": "#/$defs/domain_type"},
         "domain_name": {"$ref": "#/$defs/domain_name"},
@@ -323,16 +308,11 @@ DOMAIN_REQUEST = {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["name", "description"],
+                        "required": ["name"],
                         "additionalProperties": False,
                         "properties": {
                             "name": {"$ref": "#/$defs/location"},
-                            "description": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "null"},
-                                ]
-                            },
+                            "description": {"type": "string"},
                         },
                     },
                 },
@@ -340,24 +320,25 @@ DOMAIN_REQUEST = {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["fqdn"],
+                        "required": [
+                            "fqdn",
+                            "ca_server",
+                            "hcc_enrollment_server",
+                            "hcc_update_server",
+                            "pkinit_server",
+                        ],
                         "additionalProperties": False,
                         "properties": {
                             "fqdn": {"$ref": "#/$defs/hostname"},
+                            # The RHSM id is not available unless a server
+                            # has the ipa-hcc-server package installed or the
+                            # value was added manually.
                             "subscription_manager_id": {
-                                "oneOf": [
-                                    # TODO: 'string' is a workaround for HMS-1914
-                                    # {"$ref": "#/$defs/uuid"},
-                                    {"type": "string"},
-                                    {"type": "null"},
-                                ],
+                                # TODO: 'string' is a workaround for HMS-1914
+                                # "$ref": "#/$defs/uuid"
+                                "type": "string",
                             },
-                            "location": {
-                                "oneOf": [
-                                    {"$ref": "#/$defs/location"},
-                                    {"type": "null"},
-                                ],
-                            },
+                            "location": {"$ref": "#/$defs/location"},
                             "ca_server": {"type": "boolean"},
                             "hcc_enrollment_server": {"type": "boolean"},
                             "hcc_update_server": {"type": "boolean"},

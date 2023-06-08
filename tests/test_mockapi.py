@@ -28,7 +28,7 @@ domain_request = {
         ],
         "realm_domains": [conftest.DOMAIN],
         "locations": [
-            {"name": "sigma", "description": None},
+            {"name": "sigma"},
             {"name": "tau", "description": "location tau"},
         ],
     },

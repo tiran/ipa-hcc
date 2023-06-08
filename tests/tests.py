@@ -88,8 +88,6 @@ class TestJSONSchema(conftest.IPABaseTests):
                     },
                     {
                         "fqdn": "ipareplica2.ipahcc.test",
-                        "subscription_manager_id": None,
-                        "location": None,
                         "ca_server": False,
                         "hcc_enrollment_server": False,
                         "hcc_update_server": False,
@@ -104,8 +102,8 @@ class TestJSONSchema(conftest.IPABaseTests):
                 ],
                 "realm_domains": [conftest.DOMAIN],
                 "locations": [
-                    {"name": "kappa", "description": None},
-                    {"name": "sigma", "description": None},
+                    {"name": "kappa"},
+                    {"name": "sigma"},
                     {"name": "tau", "description": "location tau"},
                 ],
             },
