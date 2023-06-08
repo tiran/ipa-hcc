@@ -77,6 +77,34 @@ To re-deploy code and refresh configuration:
 te --phase pkg idm-ci/metadata/hmsidm-ephemeral.yaml
 ```
 
+### Manual configuring /etc/ipa/hcc.conf
+
+The `idm_api_url` and `dev_password` is different for each ephemeral
+environment. The other values usually don't change or are ignored. The
+`dev_org_id` and `dev_cert_cn` settings enable `X-Rh-Fake-Identity`
+development header. The `dev_username` and `dev_password` are required to
+authenticate HTTPS requests with ephemeral's ingress. Otherwise requests
+won't even reach the backend.
+
+```
+[hcc]
+token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token
+inventory_api_url=https://console.invalid/api/inventory/v1
+# oc get routes -l app=hmsidm-backend -o jsonpath='{.items[0].spec.host}'
+idm_api_url=https://HMSIDM-BACKEND/api/hmsidm/v1
+dev_org_id=12345
+dev_cert_cn=6f324116-b3d2-11ed-8a37-482ae3863d30
+dev_username=jdoe
+# oc get secrets/env-$(oc project -q)-keycloak -o jsonpath='{.data.defaultPassword}' | base64 -d
+dev_password=PASSWORD
+```
+
+Then restart the D-BUs service and Apache HTTPd:
+
+```
+systemctl restart ipa-hcc-dbus.service httpd.service
+```
+
 ## Register IPA domain with idm-domains-backend
 
 Use the information from `host-info.txt` to login into the IPA server
