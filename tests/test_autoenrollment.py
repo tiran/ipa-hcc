@@ -26,7 +26,7 @@ HOST_CONF_RESPONSE = {
         "realm_name": conftest.REALM,
         "cabundle": conftest.IPA_CA_DATA,
         "enrollment_servers": [
-            {"fqdn": conftest.SERVER_FQDN, "location": None},
+            {"fqdn": conftest.SERVER_FQDN},
         ],
     },
     "inventory_id": conftest.CLIENT_INVENTORY_ID,
