@@ -8,7 +8,7 @@
         name: hmsidm_config
 
     - name: Run ipa-hcc register
-      command: "ipa-hcc register {{ hmsidm_config.domain_id }} {{ hmsidm_config.domain_token }}"
+      command: "ipa-hcc register --unattended {{ hmsidm_config.domain_id }} {{ hmsidm_config.domain_token }}"
       when:
         hmsidm_config.rhc_env != 'ephemeral'
 

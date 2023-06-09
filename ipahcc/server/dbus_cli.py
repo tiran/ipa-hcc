@@ -11,6 +11,7 @@ from ipahcc import hccplatform
 
 from . import dbus_client
 from .hccapi import APIError, APIResult
+from .util import prompt_yesno
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,19 @@ parser.add_argument(
 subparsers = parser.add_subparsers(dest="action")
 
 
+def confirm_register(result: APIResult) -> bool:
+    print("Domain information:")
+    j = result.body
+    if typing.TYPE_CHECKING:
+        assert isinstance(j, dict)
+    dns_domains = j[hccplatform.HCC_DOMAIN_TYPE]["realm_domains"]
+    print(f" realm name:  {j[hccplatform.HCC_DOMAIN_TYPE]['realm_name']}")
+    print(f" domain name: {j['domain_name']}")
+    print(f" dns domains: {', '.join(dns_domains)}")
+    print()
+    return prompt_yesno("Proceed with registration?", default=False)
+
+
 def register_callback(result: APIResult) -> None:
     print(result.exit_message)
 
@@ -62,6 +76,12 @@ parser_register = subparsers.add_parser(
 parser_register.set_defaults(callback=register_callback)
 parser_register.add_argument("domain_id", type=uuidtype)
 parser_register.add_argument("token", type=str)
+parser_register.add_argument(
+    "--unattended",
+    "-U",
+    action="store_true",
+    help="Don't prompt for confirmation",
+)
 
 
 def update_callback(result: APIResult) -> None:
@@ -136,6 +156,13 @@ def main(args=None):
                 args.fqdn,
             )
         elif args.action == "register":
+            do_it = True
+            if not args.unattended and sys.stdin.isatty():
+                # print summary and ask for confirmation
+                result = dbus_client.status_check()
+                do_it = confirm_register(result)
+            if not do_it:
+                parser.exit(status=0, message="Registration cancelled\n")
             result = dbus_client.register_domain(args.domain_id, args.token)
         elif args.action == "update":
             result = dbus_client.update_domain(args.update_server_only)

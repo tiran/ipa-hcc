@@ -373,7 +373,7 @@ class TestDBUSCli(conftest.IPABaseTests):
         with mock.patch("ipahcc.server.dbus_client.register_domain") as m:
             m.return_value = mkresult({"status": "ok"})
             out = self.assert_dbus_cli_run(
-                "register", conftest.DOMAIN_ID, "mockapi"
+                "register", "--unattended", conftest.DOMAIN_ID, "mockapi"
             )
         self.assertIn("ok", out)
 

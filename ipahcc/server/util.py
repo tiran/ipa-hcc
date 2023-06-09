@@ -44,3 +44,45 @@ def read_cert_dir(path: str) -> str:
     # trust anchor last
     data.sort(reverse=True)
     return "\n".join(data)
+
+
+def prompt_yesno(label, default: typing.Optional[bool] = None) -> bool:
+    """
+    Prompt user for yes/no input. This method returns True/False according
+    to user response.
+
+    Parameter "default" should be True, False or None
+
+    If Default parameter is not None, user can enter an empty input instead
+    of Yes/No answer. Value passed to Default is returned in that case.
+
+    If Default parameter is None, user is asked for Yes/No answer until
+    a correct answer is provided. Answer is then returned.
+
+    `KeyboardInterrupt` or `EOFError` is interpreted as "no".
+    """
+
+    default_prompt = None  # type: typing.Optional[str]
+    if default is not None:
+        if default:
+            default_prompt = "Yes"
+        else:
+            default_prompt = "No"
+
+    if default_prompt:
+        prompt = "%s Yes/No (default %s): " % (label, default_prompt)
+    else:
+        prompt = "%s Yes/No: " % label
+
+    while True:
+        try:
+            data = input(prompt)
+        except (KeyboardInterrupt, EOFError):
+            return False
+        else:
+            if data in ("y", "yes"):
+                return True
+            elif data in ("n", "no"):
+                return False
+            elif default is not None and not data:
+                return default
