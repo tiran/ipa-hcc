@@ -5,7 +5,6 @@ import sys
 import typing
 import uuid
 
-import dbus.exceptions
 from ipapython import admintool
 
 from ipahcc import hccplatform
@@ -127,6 +126,7 @@ def main(args=None):
     if not hccplatform.is_ipa_configured():
         print("IPA is not configured on this system.", file=sys.stderr)
         parser.exit(admintool.SERVER_NOT_CONFIGURED)
+
     try:
         if args.action == "check-host":
             result = dbus_client.check_host(
@@ -143,8 +143,7 @@ def main(args=None):
             result = dbus_client.status_check()
         else:  # pragma: no cover
             raise ValueError(args.action)
-    except dbus.exceptions.DBusException as e:
-        logger.exception("D-Bus call failed")
+    except dbus_client.DBusError as e:
         print(f"D-Bus error: {e}", file=sys.stderr)
         parser.exit(255)
     except APIError as e:

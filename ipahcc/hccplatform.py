@@ -56,6 +56,7 @@ REFRESH_TOKEN_FILE = "/etc/ipa/hcc/refresh_token"  # noqa: S105
 
 # D-Bus API
 # dbus doesn't like '-' in names
+HCC_DBUS_SERVICE = "ipa-hcc-dbus"
 HCC_DBUS_NAME = "com.redhat.console.ipahcc"
 HCC_DBUS_OBJ_PATH = "/com/redhat/console/ipahcc"
 HCC_DBUS_IFACE_NAME = HCC_DBUS_NAME
