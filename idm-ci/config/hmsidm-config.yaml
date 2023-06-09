@@ -28,3 +28,8 @@ ephemeral_password: "{{ lookup('env', 'EPHEMERAL_PASSWORD', default=undef()) }}"
 # see ipahcc.hccplatform
 domain_id: '772e9618-d0f8-4bf8-bfed-d2831f63c619'
 domain_token: 'mockapi'
+
+# container registries
+# Docker Hub credentials (to avoid rate limiting)
+docker_username: "{{ lookup('env', 'DOCKER_USERNAME', default=undef()) }}"
+docker_password: "{{ lookup('env', 'DOCKER_PASSWORD', default=undef()) }}"

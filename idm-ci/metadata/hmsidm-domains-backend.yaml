@@ -1,5 +1,5 @@
 ---
-# hmsidm-dev metadata file builds and installs RPMs from local checkout
+# metadata file to run tests with locally deployed idm-domains-backend
 domains:
   - name: hmsidm-dev.test
     type: IPA
@@ -7,15 +7,15 @@ domains:
       - name: server.hmsidm-dev.test
         role: master
         group: ipaserver
-        os: rhel-9.1
-      # - name: replica1.hmsidm-dev.test
-      #   role: replica
-      #   group: ipaserver
-      #   os: rhel-9.1
+        os: rhel-9.2
       - name: client.hmsidm-dev.test
         role: client
         group: ipaclient
-        os: rhel-9.1
+        os: rhel-9.2
+      - name: backend.hmsidm-dev.test
+        role: backend
+        group: ipaclient
+        os: rhel-9.2
 phases:
   - name: init
     steps:
@@ -33,6 +33,9 @@ phases:
       - playbook: prep/install-ipa-packages.yaml
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml
+  - name: backend
+    steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend.yaml
   - name: pkg
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-rpkg-local.yaml
@@ -40,20 +43,13 @@ phases:
   - name: server
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
-      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
-        extra_vars:
-          target_group: ipaserver
       - playbook: prep/ipa-server-install.yaml
       - playbook: prep/ipa-replica-install.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
-  - name: backend
-    steps:
-      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend.yaml
   - name: collect
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
   - name: teardown
     steps:
-      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
       - playbook: teardown/mrack-destroy.yaml

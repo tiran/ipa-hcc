@@ -3,57 +3,67 @@
   become: true
   become_method: sudo
   tasks:
-    - name: Enable code ready builder CRB for EPEL
-      shell: yum config-manager --set-enabled "*CRB*"
-      args:
-          warn: no
+    - name: Provision idm-domains-backend
+      when: meta_role == 'backend'
+      block:
+        - include_vars:
+            file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
+            name: hmsidm_config
 
-    - name: Enable EPEL for podman-compose
-      yum:
-          name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm
-          disable_gpg_check: yes
-          state: present
+        - name: Enable code ready builder CRB for EPEL
+          shell: yum config-manager --set-enabled "*CRB*"
+          args:
+              warn: no
 
-    - name: Gather the rpm package facts
-      package_facts:
-        manager: auto
+        - name: Enable EPEL for podman-compose
+          yum:
+              name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm
+              disable_gpg_check: yes
+              state: present
 
-    - name: Install build dependencies
-      yum:
-        name:
-          - git
-          - golang
-          - make
-          - podman
-          - podman-compose
-        state: latest
+        - name: Gather the rpm package facts
+          package_facts:
+            manager: auto
 
-    - name: Git checkout idm-domains-backend
-      ansible.builtin.git:
-        repo: 'https://gitlab.cee.redhat.com/identity-management/idmocp/idm-domains-backend.git'
-        dest: /idm-domains-backend
+        - name: Install build dependencies
+          yum:
+            name:
+              - git
+              - golang
+              - make
+              - podman
+              - podman-compose
+            state: latest
 
-    # docker.io/mockserver/mockserver: toomanyrequests: You have reached your pull rate limit.
-    # podman login -u someaccount docker.io
+        - name: Git checkout idm-domains-backend
+          ansible.builtin.git:
+            repo: 'https://gitlab.cee.redhat.com/identity-management/idmocp/idm-domains-backend.git'
+            dest: /idm-domains-backend
 
-    - name: Copy configs/config.example.yaml to configs/config.yaml
-      ansible.builtin.copy:
-        src: /idm-domains-backend/configs/config.example.yaml
-        dest: /idm-domains-backend/configs/config.yaml
-        remote_src: yes
+        - name: Copy configs/config.example.yaml to configs/config.yaml
+          ansible.builtin.copy:
+            src: /idm-domains-backend/configs/config.example.yaml
+            dest: /idm-domains-backend/configs/config.yaml
+            remote_src: yes
 
-    - name: Install build tools
-      command: make install-tools
-      args:
-        chdir: /idm-domains-backend
-      when: false
+        - name: Build idm-domains-backend
+          command: make build
+          args:
+            chdir: /idm-domains-backend
 
-    - name: Build idm-domains-backend
-      command: make build
-      args:
-        chdir: /idm-domains-backend
+        # compose-up fails because it cannot pull mockserver from Docker Hub
+        # docker.io/mockserver/mockserver: toomanyrequests: You have reached your pull rate limit.
+        - name: Log into Docker Hub
+          command: >
+            podman login
+              -u {{ hmsidm_config.docker_username }}
+              -p {{ hmsidm_config.docker_password }}
+              docker.io
+          when:
+            - hmsidm_config.docker_username is defined
+            - hmsidm_config.docker_password is defined
 
-    - name: make compose-up
-      command: make compose-up
-      args:
-        chdir: /idm-domains-backend
+        - name: make compose-up
+          command: make compose-up
+          args:
+            chdir: /idm-domains-backend
