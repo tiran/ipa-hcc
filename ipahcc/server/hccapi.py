@@ -315,7 +315,7 @@ class HCCAPI:
         else:
             logger.debug("hccdomainid=%s set", domain_id)
         msg = (
-            f"Successfully register domain '{info['domain_name']}' "
+            f"Successfully registered domain '{info['domain_name']}' "
             f"with Hybrid Cloud Console (id: {domain_id})."
         )
         result = APIResult.from_response(resp, 0, msg)

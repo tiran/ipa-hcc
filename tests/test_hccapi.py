@@ -273,7 +273,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
             body_str,
             0,
             (
-                f"Successfully register domain '{conftest.DOMAIN}' "
+                f"Successfully registered domain '{conftest.DOMAIN}' "
                 f"with Hybrid Cloud Console (id: {conftest.DOMAIN_ID})."
             ),
         )
