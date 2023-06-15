@@ -1,16 +1,17 @@
 # see quay.io/tiran/ipa-hcc-ci
 FROM registry.fedoraproject.org/fedora:37
-RUN dnf --setopt=install_weak_deps=False -y --best install \
-        dnf-utils dnf-plugins-core \
-        tox python3.6 npm rpkg rpmlint openssl make \
-        python3-devel selinux-policy-devel systemd-devel \
-        gcc krb5-devel openldap-devel openldap-compat \
-        ipa-client python3-ipaserver python3-requests python3-sssdconfig \
-        python3-jsonschema python3-dbus python3-gobject-base yamllint \
-        glib2-devel dbus-devel gobject-introspection-devel cairo-devel cairo-gobject-devel \
+COPY requirements.txt ipa-hcc.spec /tmp/
+RUN dnf --nodocs --setopt=install_weak_deps=False -y --best \
+        install dnf-utils dnf-plugins-core rpkg \
+    && dnf builddep --nodocs --setopt=install_weak_deps=False -y --best\
+        -D "with_devel 1" --spec /tmp/ipa-hcc.spec \
     && dnf clean all
 RUN python3.6 -m ensurepip \
     && python3.6 -m pip install --upgrade pip \
-    && python3.6 -m pip install ipaclient requests 'cryptography < 38.0' dbus-python pygobject config[toml] \
+    && python3.6 -m pip install -r /tmp/requirements.txt \
+    && python3.9 -m ensurepip \
+    && python3.9 -m pip install --upgrade pip \
+    && python3.9 -m pip install -r /tmp/requirements.txt \
+    && python3.9 -m pip cache purge
     && python3.6 -m pip cache purge
 ENV LC_ALL="C.UTF-8"

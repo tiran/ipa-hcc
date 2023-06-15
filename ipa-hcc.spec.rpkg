@@ -61,13 +61,19 @@ BuildRequires: python3-requests
 BuildRequires: python3-systemd
 BuildRequires: python3-sssdconfig
 BuildRequires: python3-jsonschema
+BuildRequires: python3-jwcrypto
 BuildRequires: make
 BuildRequires: openssl
 BuildRequires: systemd-devel
 BuildRequires: selinux-policy-devel
 %if %{with devel}
+BuildRequires: ipa-client
 BuildRequires: tox
+BuildRequires: python3.6
+BuildRequires: python3.9
 BuildRequires: rpmlint
+BuildRequires: npm
+BuildRequires: openldap-devel
 BuildRequires: openldap-compat
 BuildRequires: gcc
 BuildRequires: krb5-devel
@@ -104,6 +110,7 @@ Requires: python3-mod_wsgi
 Requires: python3-dbus
 Requires: python3-gobject-base
 Requires: python3-jsonschema
+Requires: python3-jwcrypto
 Requires: python3-requests
 Requires: python3-systemd
 Requires: selinux-policy

@@ -40,5 +40,8 @@ systemctl restart ipa-hcc-update.timer
 killall -9 httpd
 systemctl restart httpd.service
 
+# force schema cache update
+rm -rf ~/.cache/ipa
+
 echo "NOTE: $0 is a hack for internal development."
 echo "Some changes require a proper ipa-server-upgrade or ipactl restart."
