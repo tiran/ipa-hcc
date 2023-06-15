@@ -9,7 +9,8 @@
     "domain_name",
     "domain_type",
     "inventory_id",
-    "rhel-idm"
+    "rhel-idm",
+    "token"
   ],
   "additionalProperties": false,
   "properties": {
@@ -64,6 +65,9 @@
           "$ref": "defs.json#/$defs/RealmName"
         }
       }
+    },
+    "token": {
+      "$ref": "defs.json#/$defs/JWSToken"
     }
   }
 }

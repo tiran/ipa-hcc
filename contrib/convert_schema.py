@@ -30,6 +30,7 @@ HOST_REGISTER_REQUEST = {
         "domain_type": {"$ref": "defs.json#/$defs/DomainType"},
         "domain_name": {"$ref": "defs.json#/$defs/DomainName"},
         "domain_id": {"$ref": "defs.json#/$defs/DomainId"},
+        "token": {"$ref": "defs.json#/$defs/JWSToken"},
     },
 }
 

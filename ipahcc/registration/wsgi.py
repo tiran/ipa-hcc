@@ -20,6 +20,7 @@ os.environ["GSS_USE_PROXY"] = "1"
 # pylint: disable=wrong-import-position,wrong-import-order,ungrouped-imports
 from ipalib import errors  # noqa: E402
 
+from ipahcc.server import token  # noqa: E402
 from ipahcc.server.framework import (  # noqa: E402
     HTTPException,
     JSONWSGIApp,
@@ -85,6 +86,18 @@ class Application(JSONWSGIApp):
 
         return int(org_ids[0]), domain_ids[0]
 
+    def _load_pub_jwk(self):
+        """Get JWKs from LDAP"""
+        # TODO: implement LDAP interface
+        keyfile = os.path.join(
+            hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-jwk.key"
+        )
+        with open(keyfile, "r", encoding="utf-8") as f:
+            raw = f.read()
+        priv_key = token.load_key(raw)
+        pub_key = token.get_public_key(priv_key)
+        return pub_key
+
     @property
     def org_id(self) -> int:
         if self._org_id is None:
@@ -96,6 +109,26 @@ class Application(JSONWSGIApp):
         if self._domain_id is None:
             self._org_id, self._domain_id = self._get_ipa_config()
         return self._domain_id
+
+    def validate_token(
+        self, raw_token: str, inventory_id: str, rhsm_id: str, fqdn: str
+    ):
+        pub_key = self._load_pub_jwk()
+        try:
+            header, claims = token.validate_host_token(
+                raw_token,
+                pub_key,
+                cert_o=str(self.org_id),
+                cert_cn=rhsm_id,
+                inventory_id=inventory_id,
+                fqdn=fqdn,
+                domain_id=self.domain_id,
+            )
+        except Exception as e:
+            # TODO: better exception handling
+            logger.exception("Token validation failed")
+            raise HTTPException(401, str(e)) from None
+        return header, claims
 
     def update_ipa(
         self,
@@ -151,8 +184,7 @@ class Application(JSONWSGIApp):
             org_id,
             rhsm_id,
         )
-        # TODO: verify client request with a signed assertion (token)
-        logger.warning("Enrollment request is not verified.")
+        self.validate_token(body["token"], inventory_id, rhsm_id, fqdn)
         self.update_ipa(org_id, rhsm_id, inventory_id, fqdn)
 
         logger.info(

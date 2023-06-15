@@ -22,6 +22,7 @@ HOST_CONF_RESPONSE = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     "domain_id": conftest.DOMAIN_ID,
     "auto_enrollment_enabled": True,
+    "token": conftest.DUMMY_TOKEN,
     hccplatform.HCC_DOMAIN_TYPE: {
         "realm_name": conftest.REALM,
         "cabundle": conftest.IPA_CA_DATA,
@@ -36,6 +37,7 @@ REGISTER_REQUEST = {
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     "domain_name": conftest.DOMAIN,
     "domain_id": conftest.DOMAIN_ID,
+    "token": conftest.DUMMY_TOKEN,
 }
 
 REGISTER_RESPONSE = {"status": "ok", "kdc_cabundle": conftest.KDC_CA_DATA}

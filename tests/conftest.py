@@ -43,6 +43,7 @@ NO_FILE = os.path.join(TESTDATA, "autoenrollment", "file-does-not-exist")
 
 KDC_CONF = os.path.join(TESTDATA, "kdc.conf")
 
+DUMMY_TOKEN = "dummy token"  # noqa: S105
 # patch
 paths.IPA_CA_CRT = IPA_CA_CRT
 hccplatform.HMSIDM_CACERTS_DIR = KDC_CA_DIR
@@ -124,6 +125,10 @@ class IPABaseTests(unittest.TestCase):
         root_logger = logging.getLogger(None)
         root_logger.handlers = self._old_handlers
         root_logger.setLevel(self._old_level)
+
+    def get_logs(self):
+        fmt = logging.Formatter()
+        return [fmt.format(r) for r in self.log_capture.records]
 
     def setUp(self):
         super().setUp()
@@ -208,6 +213,16 @@ class IPABaseTests(unittest.TestCase):
             response = json.loads(b"".join(response).decode("utf-8"))
         return status_code, status_msg, headers, response
 
+    def assert_response200(
+        self, status_code: int, status_msg: str, headers: dict, response: dict
+    ):
+        if status_code != 200:
+            for msg in self.get_logs():
+                print(msg)  # noqa: T201
+            self.assertEqual(status_code, 200, response)
+        self.assertEqual(status_msg, "OK")
+        self.assertEqual(headers["Content-Type"], "application/json")
+
     def assert_cli_run(self, mainfunc, *args, **kwargs):
         try:
             with capture_output() as out:
@@ -219,8 +234,7 @@ class IPABaseTests(unittest.TestCase):
         return out.read()
 
     def assert_log_entry(self, msg):
-        msgs = [r.getMessage() for r in self.log_capture.records]
-        self.assertIn(msg, msgs)
+        self.assertIn(msg, self.get_logs())
 
 
 @contextlib.contextmanager

@@ -256,6 +256,7 @@ class AutoEnrollment:
         self.domain_id: typing.Optional[str] = None
         self.insights_machine_id: typing.Optional[str] = None
         self.inventory_id: typing.Optional[str] = None
+        self.token: typing.Optional[str] = None
         # internals
         self.tmpdir: typing.Optional[str] = None
 
@@ -606,6 +607,7 @@ class AutoEnrollment:
             raise ValueError(j["domain_type"])
         self.domain = j["domain_name"]
         self.domain_id = j["domain_id"]
+        self.token = j["token"]
         self.realm = j[HCC_DOMAIN_TYPE]["realm_name"]
         self.servers = self._sort_servers(
             j[HCC_DOMAIN_TYPE]["enrollment_servers"],
@@ -638,6 +640,7 @@ class AutoEnrollment:
             "domain_type": HCC_DOMAIN_TYPE,
             "domain_name": self.domain,
             "domain_id": self.domain_id,
+            "token": self.token,
         }
         logger.info("Registering host at %s", url)
         j = self._do_json_request(

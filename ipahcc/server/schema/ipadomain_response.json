@@ -32,6 +32,9 @@
     },
     "rhel-idm": {
       "$ref": "defs.json#/$defs/RhelIdmDomain"
+    },
+    "signing_keys": {
+      "$ref": "defs.json#/$defs/JWKSet"
     }
   }
 }

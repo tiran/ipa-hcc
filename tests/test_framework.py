@@ -40,10 +40,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
         p = mock.patch.object(APIResult, "genrid")
         self.m_genrid = p.start()
         self.m_genrid.return_value = "rid"
-
-    def tearDown(self):
-        self.m_genrid.stop()
-        super().tearDown()
+        self.addCleanup(p.stop)
 
     def test_route(self):
         with self.assertRaises(ValueError):
@@ -56,9 +53,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
             path="/", body=None, method="GET"
         )
 
-        self.assertEqual(status_code, 200)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assert_response200(status_code, status_msg, headers, response)
         self.assertEqual(response, {"status": "ok"})
 
     def test_errors(self):
@@ -110,7 +105,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
             body=None,
             method="GET",
         )
-        self.assertEqual(status_code, 200)
+        self.assert_response200(status_code, status_msg, headers, response)
         self.assertEqual(
             response,
             {

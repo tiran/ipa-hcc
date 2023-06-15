@@ -46,6 +46,10 @@ DOMAIN_RESULT.update(
         "description": "Some description",
         "auto_enrollment_enabled": True,
         "domain_id": conftest.DOMAIN_ID,
+        "signing_keys": {
+            "keys": ["good JWK"],
+            "revoked": ["bad key id"],
+        },
     }
 )
 DOMAIN_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(
@@ -151,6 +155,11 @@ class TestHCCAPICommon(conftest.IPABaseTests):
         self.m_hccapi = hccapi.HCCAPI(self.m_api)
         self.m_hccapi.session = self.m_session
 
+        p = mock.patch.object(hccapi.APIResult, "genrid")
+        self.m_genrid = p.start()
+        self.m_genrid.return_value = "rid"
+        self.addCleanup(p.stop)
+
 
 class TestHCCAPI(TestHCCAPICommon):
     def test_register_domain(self):
@@ -222,7 +231,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         err_cb.assert_not_called()
         body_str = json.dumps(body)
         ok_cb.assert_called_once_with(
-            "rid",
+            self.m_genrid.return_value,
             200,
             "OK",
             "",
@@ -249,7 +258,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         err_cb.assert_not_called()
         body_str = json.dumps(body)
         ok_cb.assert_called_once_with(
-            "rid",
+            self.m_genrid.return_value,
             200,
             "OK",
             "",
@@ -273,7 +282,7 @@ class TestIPAHCCDbus(TestHCCAPICommon):
 
         err_cb.assert_not_called()
         ok_cb.assert_called_once_with(
-            "rid",
+            self.m_genrid.return_value,
             200,
             "OK",
             "",

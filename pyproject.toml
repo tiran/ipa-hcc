@@ -88,6 +88,7 @@ module = [
     'augeas.*',
     'dbus.*',
     'gi.*',
+    'jwcrypto.*',
 ]
 ignore_missing_imports = true
 

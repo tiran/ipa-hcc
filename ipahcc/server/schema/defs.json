@@ -225,6 +225,38 @@
       "maxLength": 36,
       "minLength": 36
     },
+    "JWKSet": {
+      "title": "JWK Set",
+      "description": "A JWK set with revocation information",
+      "type": "object",
+      "required": [
+        "keys"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "keys": {
+          "description": "An array of serialized JSON Web Keys (JWKs)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "revoked": {
+          "description": "An array of revoked key identifiers (JWK kid)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "JWSToken": {
+      "title": "JSON Web Signature Token (JWS token)",
+      "description": "A serialized JWS token or JWT",
+      "type": "string"
+    },
     "LocationName": {
       "title": "Location identifier (IPA location, AD site)",
       "description": "A location identifier (lower-case DNS label)",

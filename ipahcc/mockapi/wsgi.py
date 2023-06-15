@@ -11,6 +11,7 @@ testing, though.
 """
 
 import logging
+import os
 import typing
 from time import monotonic as monotonic_time
 
@@ -18,6 +19,7 @@ import requests
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform
+from ipahcc.server import token
 from ipahcc.server.framework import HTTPException, JSONWSGIApp, route
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
@@ -34,6 +36,26 @@ class Application(JSONWSGIApp):
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
+        self.priv_key, self.pub_key = self._load_jwk()
+
+    def _load_jwk(self) -> typing.Tuple[token.JWKDict, str]:
+        keyfile = os.path.join(
+            hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-jwk.key"
+        )
+        if not os.path.isfile(keyfile):
+            logger.warning("Generating mockapi JWK %s", keyfile)
+            priv_key = token.generate_private_key()
+            priv_str = priv_key.export_private()
+            with open(keyfile, "w", encoding="utf-8") as f:
+                f.write(priv_str)
+
+        logger.info("Loading mockapi JWK from %s", keyfile)
+        with open(keyfile, "r", encoding="utf-8") as f:
+            raw = f.read()
+
+        priv_key = token.load_key(raw)
+        pub_key = token.get_public_key(priv_key).export_public()
+        return priv_key, pub_key
 
     def get_access_token(self) -> str:  # pragma: no cover
         """Get a bearer access token from an offline token
@@ -199,11 +221,20 @@ class Application(JSONWSGIApp):
             rhsm_id,
             self.api.env.domain,
         )
+        tok = token.generate_host_token(
+            self.priv_key,
+            cert_o=str(org_id),
+            cert_cn=rhsm_id,
+            inventory_id=inventory_id,
+            fqdn=fqdn,
+            domain_id=hccplatform.TEST_DOMAIN_ID,
+        )
         response = {
             "domain_name": self.api.env.domain,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_id": hccplatform.TEST_DOMAIN_ID,
             "auto_enrollment_enabled": True,
+            "token": tok.serialize(compact=False),
             hccplatform.HCC_DOMAIN_TYPE: {
                 "realm_name": self.api.env.realm,
                 "cabundle": ca,
@@ -224,10 +255,10 @@ class Application(JSONWSGIApp):
         self, env: dict, body: dict, domain_id: str
     ) -> dict:
         logger.info("Register domain %s", domain_id)
-        token = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
-        if token is None:
+        regtok = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
+        if regtok is None:
             raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
-        if token != "mockapi":  # noqa: S105
+        if regtok != "mockapi":  # noqa: S105
             raise HTTPException(404, "invalid X-RH-IDM-Registration-Token")
         return self._handle_domain(env, body, domain_id)
 
@@ -258,4 +289,8 @@ class Application(JSONWSGIApp):
         body = body.copy()
         body["domain_id"] = domain_id
         body.setdefault("auto_enrollment_enabled", True)
+        body["signing_keys"] = {
+            "keys": [self.pub_key],
+            "revoked": ["bad key id"],
+        }
         return body

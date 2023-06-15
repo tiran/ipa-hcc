@@ -74,6 +74,7 @@ class TestJSONSchema(conftest.IPABaseTests):
             "domain_name": conftest.DOMAIN,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_id": conftest.DOMAIN_ID,
+            "token": conftest.DUMMY_TOKEN,
         }
         schema.validate_schema(instance, "HostRegisterRequest")
 
