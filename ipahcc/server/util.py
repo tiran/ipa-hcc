@@ -76,7 +76,7 @@ def prompt_yesno(label, default: typing.Optional[bool] = None) -> bool:
 
     while True:
         try:
-            data = input(prompt)
+            data = input(prompt).lower()
         except (KeyboardInterrupt, EOFError):
             return False
         else:
