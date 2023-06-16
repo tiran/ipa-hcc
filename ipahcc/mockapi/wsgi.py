@@ -1,7 +1,7 @@
 """Mock API endpoints
 
-The WSGI service provides a minimalistic implementation of /host-conf/ and
-/check-host API endpoints. It has to be installed on an IPA server with
+The WSGI service provides a minimalistic implementation of /host-conf/ API
+endpoints. It has to be installed on an IPA server with
 ipa-hcc-registration-service. The mockapi performs minimal checks.
 
 NOTE: The WSGI app does not use any frameworks such as FastAPI or Flask
@@ -213,38 +213,6 @@ class Application(JSONWSGIApp):
             },
             "inventory_id": inventory_id,
         }
-        return response
-
-    @route(
-        "POST",
-        "^/check-host/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
-        schema="check-host",
-    )
-    def handle_check_host(  # pylint: disable=unused-argument
-        self, env: dict, body: dict, inventory_id: str, fqdn: str
-    ) -> dict:
-        logger.info("Checking host %s (%s)", fqdn, inventory_id)
-
-        domain_name = body["domain_name"]
-        domain_type = body["domain_type"]
-        domain_id = body["domain_id"]
-        rhsm_id = body["subscription_manager_id"]
-
-        if domain_name != self.api.env.domain:
-            raise HTTPException(
-                400,
-                f"unsupported domain name: {domain_name} != {self.api.env.domain}",
-            )
-        if domain_type != hccplatform.HCC_DOMAIN_TYPE:
-            raise HTTPException(400, "unsupported domain type")
-
-        # TODO validate domain id
-        assert domain_id
-
-        self.check_inventory(inventory_id, fqdn, rhsm_id)
-
-        logger.info("Approving host %s (%s, %s)", fqdn, inventory_id, rhsm_id)
-        response = {"inventory_id": inventory_id}
         return response
 
     @route(

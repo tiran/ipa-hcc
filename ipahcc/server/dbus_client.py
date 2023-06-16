@@ -9,7 +9,7 @@ from ipahcc import hccplatform
 
 from .hccapi import APIError, APIResult
 
-__all__ = ("check_host", "register_domain", "update_domain")
+__all__ = ("register_domain", "update_domain")
 
 logger = logging.getLogger("dbus-client")
 
@@ -112,18 +112,6 @@ def _dbus_call(method_name: str, *args, **kwargs) -> APIResult:
         return result
     else:
         raise APIError(result)
-
-
-def check_host(
-    domain_id: str,
-    inventory_id: str,
-    rhsm_id: str,
-    fqdn: str,
-    bus: typing.Optional[dbus.Bus] = None,
-) -> APIResult:
-    return _dbus_call(
-        "check_host", domain_id, inventory_id, rhsm_id, fqdn, bus=bus
-    )
 
 
 def register_domain(

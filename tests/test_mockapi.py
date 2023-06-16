@@ -77,31 +77,6 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
         self.assertEqual(headers["Content-Type"], "application/json")
         self.assertEqual(response, {})
 
-    def test_check_host(self):
-        path = "/".join(
-            (
-                "",
-                "check-host",
-                conftest.CLIENT_INVENTORY_ID,
-                conftest.CLIENT_FQDN,
-            )
-        )
-        body = {
-            "domain_name": conftest.DOMAIN,
-            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-            "domain_id": conftest.DOMAIN_ID,
-            "subscription_manager_id": conftest.CLIENT_RHSM_ID,
-        }
-        status_code, status_msg, headers, response = self.call_wsgi(
-            path, body, method="POST"
-        )
-        self.assertEqual(status_code, 200, response)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
-        self.assertEqual(
-            response, {"inventory_id": conftest.CLIENT_INVENTORY_ID}
-        )
-
     def test_host_conf(self):
         path = "/".join(
             (

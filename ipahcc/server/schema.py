@@ -181,48 +181,6 @@ HOST_CONF_RESPONSE = {
     "$defs": DEFS,
 }
 
-# POST /api/idm/v1/check-host/{inventory_id}/{fqdn}
-CHECK_HOST_REQUEST = {
-    "$id": "/schemas/check-host/request",
-    "title": "Host verification request",
-    "description": (
-        "Request from a RHEL IdM server to HCC API to verify a "
-        "host enrollment request"
-    ),
-    "type": "object",
-    # subscription_manager_id and fqdn are passed via PATH variables
-    "required": [
-        "domain_type",
-        "domain_name",
-        "domain_id",
-        "subscription_manager_id",
-    ],
-    "additionalProperties": False,
-    "properties": {
-        "domain_type": {"$ref": "#/$defs/domain_type"},
-        "domain_name": {"$ref": "#/$defs/domain_name"},
-        "domain_id": {"$ref": "#/$defs/uuid"},
-        "subscription_manager_id": {"$ref": "#/$defs/uuid"},
-    },
-    "$defs": DEFS,
-}
-
-CHECK_HOST_RESPONSE = {
-    "$id": "/schemas/check-host/response",
-    "title": "Host verification response",
-    "description": "Response from HCC API to RHEL IdM server",
-    "type": "object",
-    "required": [
-        # XXX
-        "inventory_id"
-    ],
-    "additionalProperties": False,
-    "properties": {
-        "inventory_id": {"$ref": "#/$defs/uuid"},
-    },
-    "$defs": DEFS,
-}
-
 # PUT /api/idm/v1/domains/{domain_id}/register
 # PUT /api/idm/v1/domains/{domain_id}/update
 # GET /api/idm/v1/domains/{domain_id} (not implemented in mockapi)
@@ -395,8 +353,6 @@ SCHEMATA = {
         HCC_RESPONSE,
         HOST_CONF_REQUEST,
         HOST_CONF_RESPONSE,
-        CHECK_HOST_REQUEST,
-        CHECK_HOST_RESPONSE,
         DOMAIN_REQUEST,
         DOMAIN_RESPONSE,
         ERROR_RESPONSE,

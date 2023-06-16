@@ -30,8 +30,6 @@ parser = argparse.ArgumentParser(
             "  %(prog)s [options] register DOMAIN_ID TOKEN",
             "  %(prog)s [options] update [--update-server-only]",
             "  %(prog)s [options] status",
-            # undocumented option for debugging and testing
-            # "%prog [options] check-host INVENTORY_ID RHSM_ID FQDN",
         ]
     ),
 )
@@ -113,20 +111,6 @@ def status_callback(result: APIResult) -> None:
 parser_status = subparsers.add_parser("status", help="Check status")
 parser_status.set_defaults(callback=status_callback)
 
-# undocumented debug helper
-
-
-def check_host_callback(result: APIResult) -> None:
-    pprint.pprint(result.asdict())
-
-
-parser_check_host = subparsers.add_parser("check-host")
-parser_check_host.set_defaults(callback=check_host_callback)
-parser_check_host.add_argument("domain_id", type=uuidtype)
-parser_check_host.add_argument("inventory_id", type=uuidtype)
-parser_check_host.add_argument("rhsm_id", type=uuidtype)
-parser_check_host.add_argument("fqdn")
-
 
 def main(args=None):
     args = parser.parse_args(args)
@@ -148,14 +132,7 @@ def main(args=None):
         parser.exit(admintool.SERVER_NOT_CONFIGURED)
 
     try:
-        if args.action == "check-host":
-            result = dbus_client.check_host(
-                args.domain_id,
-                args.inventory_id,
-                args.rhsm_id,
-                args.fqdn,
-            )
-        elif args.action == "register":
+        if args.action == "register":
             do_it = True
             if not args.unattended and sys.stdin.isatty():
                 # print summary and ask for confirmation

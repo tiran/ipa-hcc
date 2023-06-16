@@ -158,18 +158,6 @@ class TestHCCAPICommon(conftest.IPABaseTests):
 
 
 class TestHCCAPI(TestHCCAPICommon):
-    def test_check_host(self):
-        body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
-        self.m_session.request.return_value = self.mkresponse(200, body)
-        info, resp = self.m_hccapi.check_host(
-            conftest.DOMAIN_ID,
-            conftest.CLIENT_INVENTORY_ID,
-            conftest.CLIENT_RHSM_ID,
-            conftest.CLIENT_FQDN,
-        )
-        self.assertIsInstance(info, dict)
-        self.assertIsInstance(resp, hccapi.APIResult)
-
     def test_register_domain(self):
         self.m_session.request.return_value = self.mkresponse(
             200, DOMAIN_RESULT
@@ -228,29 +216,6 @@ class TestIPAHCCDbus(TestHCCAPICommon):
         self.assertFalse(self.dbus._lq_thread.is_alive())
         self.assert_log_entry("Stopping lookup queue")
         self.m_mainloop.quit.assert_called_once()
-
-    def test_check_host(self):
-        body = {"inventory_id": conftest.CLIENT_INVENTORY_ID}
-        self.m_session.request.return_value = self.mkresponse(200, body)
-        ok_cb, err_cb = self.dbus_call(
-            self.dbus.check_host,
-            conftest.DOMAIN_ID,
-            conftest.CLIENT_INVENTORY_ID,
-            conftest.CLIENT_RHSM_ID,
-            conftest.CLIENT_FQDN,
-        )
-
-        err_cb.assert_not_called()
-        ok_cb.assert_called_once_with(
-            "rid",
-            200,
-            "OK",
-            "",
-            {"content-type": "application/json", "content-length": "56"},
-            json.dumps(body),
-            0,
-            "OK",
-        )
 
     def test_register_domain(self):
         body = DOMAIN_RESULT
@@ -341,7 +306,6 @@ class TestDBUSCli(conftest.IPABaseTests):
 
         p = mock.patch.multiple(
             "ipahcc.server.dbus_client",
-            check_host=mock.Mock(),
             register_domain=mock.Mock(),
             update_domain=mock.Mock(),
         )
@@ -381,18 +345,6 @@ class TestDBUSCli(conftest.IPABaseTests):
         with mock.patch("ipahcc.server.dbus_client.update_domain") as m:
             m.return_value = mkresult({"status": "ok"})
             out = self.assert_dbus_cli_run("update")
-        self.assertIn("ok", out)
-
-    def test_cli_check_host(self):
-        with mock.patch("ipahcc.server.dbus_client.check_host") as m:
-            m.return_value = mkresult({"status": "ok"})
-            out = self.assert_dbus_cli_run(
-                "check-host",
-                conftest.DOMAIN_ID,
-                conftest.CLIENT_INVENTORY_ID,
-                conftest.CLIENT_RHSM_ID,
-                conftest.CLIENT_FQDN,
-            )
         self.assertIn("ok", out)
 
     def test_cli_status(self):

@@ -267,26 +267,6 @@ class HCCAPI:
     def __exit__(self, exc_type, exc_value, traceback):
         self.api.Backend.ldap2.disconnect()
 
-    def check_host(
-        self, domain_id: str, inventory_id: str, rhsm_id: str, fqdn: str
-    ) -> typing.Tuple[dict, APIResult]:
-        info = {
-            "domain_name": self.api.env.domain,
-            "domain_id": domain_id,
-            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-            "subscription_manager_id": rhsm_id,
-        }
-        schema.validate_schema(info, "/schemas/check-host/request")
-        resp = self._submit_idm_api(
-            method="POST",
-            subpath=("check-host", inventory_id, fqdn),
-            payload=info,
-            extra_headers=None,
-        )
-        schema.validate_schema(resp.json(), "/schemas/check-host/response")
-        result = APIResult.from_response(resp, 0, "OK")
-        return info, result
-
     def register_domain(
         self, domain_id: str, token: str
     ) -> typing.Tuple[dict, APIResult]:

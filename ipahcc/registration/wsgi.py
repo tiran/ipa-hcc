@@ -20,7 +20,6 @@ os.environ["GSS_USE_PROXY"] = "1"
 # pylint: disable=wrong-import-position,wrong-import-order,ungrouped-imports
 from ipalib import errors  # noqa: E402
 
-from ipahcc.server import dbus_client  # noqa: E402
 from ipahcc.server.framework import (  # noqa: E402
     HTTPException,
     JSONWSGIApp,
@@ -98,17 +97,6 @@ class Application(JSONWSGIApp):
             self._org_id, self._domain_id = self._get_ipa_config()
         return self._domain_id
 
-    def check_host(self, inventory_id: str, rhsm_id: str, fqdn: str) -> str:
-        try:
-            result = dbus_client.check_host(
-                self.domain_id, inventory_id, rhsm_id, fqdn
-            )
-        except dbus_client.APIError as e:
-            raise HTTPException(e.result.status_code, e.result.body) from None
-        if typing.TYPE_CHECKING:
-            assert isinstance(result.body, dict)
-        return result.body["inventory_id"]
-
     def update_ipa(
         self,
         org_id: int,
@@ -163,7 +151,8 @@ class Application(JSONWSGIApp):
             org_id,
             rhsm_id,
         )
-        self.check_host(inventory_id, rhsm_id, fqdn)
+        # TODO: verify client request with a signed assertion (token)
+        logger.warning("Enrollment request is not verified.")
         self.update_ipa(org_id, rhsm_id, inventory_id, fqdn)
 
         logger.info(

@@ -70,7 +70,6 @@ class LookupQueue:
         "register_domain": 30,
         "update_domain": 50,
         "status_check": 60,
-        "check_host": 100,
     }
 
     def __init__(self, hccapi: HCCAPI, maxsize: int = 0):
@@ -152,24 +151,6 @@ class IPAHCCDbus(dbus.service.Object):
     # dbus.decorators.decorator() uses inspect.getargspec(), which fails with
     # ValueError: Function has keyword-only parameters or annotations, use
     #     getfullargspec() API which can support them
-    @dbus.service.method(
-        hccplatform.HCC_DBUS_IFACE_NAME,
-        "ssss",
-        DBUS_RETURN,
-        async_callbacks=("ok_cb", "err_cb"),
-    )
-    def check_host(
-        self, domain_id, inventory_id, rhsm_id, fqdn, ok_cb, err_cb
-    ):
-        """Check host by RHSM uuid"""
-        args = (
-            str(domain_id),
-            str(inventory_id),
-            str(rhsm_id),
-            str(fqdn),
-        )
-        self._lq.add_task("check_host", args, ok_cb, err_cb)
-
     @dbus.service.method(
         hccplatform.HCC_DBUS_IFACE_NAME,
         "ss",
