@@ -149,7 +149,10 @@ class JSONWSGIApp:
         raise HTTPException(404, f"{pathinfo} not found")
 
     def _validate_schema(
-        self, instance: dict, schema_name: str, suffix: str
+        self,
+        instance: typing.Union[dict, typing.List[dict]],
+        schema_name: str,
+        suffix: str,
     ) -> None:
         """Validate JSON schema"""
         schema_id = f"/schemas/{schema_name}/{suffix}"
@@ -211,16 +214,16 @@ class JSONWSGIApp:
                 title = f"server error: {e}"
                 details = traceback.format_exc()
             logger.error("[%s] %i %s", error_id, code, title)
-            response = json.dumps(
-                [
-                    {
-                        "id": error_id,
-                        "status": code,
-                        "title": title,
-                        "details": details,
-                    }
-                ]
-            )
+            errors = [
+                {
+                    "id": error_id,
+                    "status": code,
+                    "title": title,
+                    "details": details,
+                }
+            ]
+            self._validate_schema(errors, "error", "response")
+            response = json.dumps(errors)
 
         status_line = f"{code} {http_responses[code]}"
         headers = {

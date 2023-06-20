@@ -6,6 +6,7 @@ __all__ = (
 
 import copy
 import logging
+import typing
 from datetime import datetime, timezone
 
 import jsonschema
@@ -338,7 +339,7 @@ ERROR_RESPONSE = {
         "required": ["id", "status", "title", "details"],
         "additionalProperties": False,
         "properties": {
-            "id": {"title": "Unique error id", "type": "str"},
+            "id": {"title": "Unique error id", "type": "string"},
             "status": {"title": "HTTP status code", "type": "integer"},
             "title": {"title": "HTTP status reason", "type": "string"},
             "details": {"title": "Reason text", "type": "string"},
@@ -360,7 +361,9 @@ SCHEMATA = {
 }
 
 
-def validate_schema(instance: dict, schema_id: str):
+def validate_schema(
+    instance: typing.Union[dict, typing.List[dict]], schema_id: str
+):
     schema = SCHEMATA[schema_id]
     try:
         return jsonschema.validate(instance, schema)
