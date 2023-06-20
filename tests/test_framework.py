@@ -22,7 +22,7 @@ class Application(JSONWSGIApp):
     @route(
         "POST",
         "^/host-conf/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
-        schema="host-conf",
+        schema="HostConf",
     )
     def handle_host_conf(
         self, env, body, inventory_id, fqdn
@@ -152,7 +152,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
                     "id": self.m_genrid.return_value,
                     "details": (
                         "schema violation: "
-                        "invalid JSON for /schemas/host-conf/request"
+                        "invalid JSON for HostConfRequest"
                     ),
                     "status": 400,
                     "title": "Bad Request",
@@ -174,7 +174,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
                     "id": self.m_genrid.return_value,
                     "details": (
                         "schema violation: "
-                        "invalid JSON for /schemas/host-conf/response"
+                        "invalid JSON for HostConfResponse"
                     ),
                     "status": 400,
                     "title": "Bad Request",

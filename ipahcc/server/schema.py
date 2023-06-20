@@ -24,76 +24,207 @@ def rfc3339_datetime(dt: datetime) -> str:
     return dt.isoformat("T", timespec="seconds")
 
 
+# The custom schema types are using format specifiers from
+# https://spec.openapis.org/registry/format/ and pattern, because
+# python-jsonschema packages on RHEL 8 and 9 don't have a format validator.
+
 DEFS = {
-    "domain_type": {
-        "title": "Domain Type",
-        "description": f"Type of domain (currently only {hccplatform.HCC_DOMAIN_TYPE})",
+    "CaCertBundle": {
+        "title": "A bundle of CA certificates",
+        "description": "A string of concatenated, PEM-encoded X.509 certificates",
         "type": "string",
-        "enum": [hccplatform.HCC_DOMAIN_TYPE],
     },
-    "hostname": {
-        "title": "Fully qualified host name",
-        "description": "Name of a host as FQDN (all lower-case)",
+    "Certificate": {
+        "type": "object",
+        "required": ["pem"],
+        "additionalProperties": False,
+        "properties": {
+            "pem": {
+                "title": "PEM encoded X.509 certificate",
+                "example": (
+                    r"-----BEGIN CERTIFICATE-----\n"
+                    r"MII...\n"
+                    r"-----END CERTIFICATE-----\n"
+                ),
+                "type": "string",
+            },
+            "nickname": {
+                "title": "Internal nick name in LDAP",
+                "example": "DOMAIN.EXAMPLE CA",
+                "type": "string",
+            },
+            "issuer": {
+                "title": "issuer name",
+                "example": "O=DOMAIN.EXAMPLE, CN=Certificate Authority",
+                "type": "string",
+            },
+            "subject": {
+                "title": "subject name",
+                "example": "O=DOMAIN.EXAMPLE, CN=Certificate Authority",
+                "type": "string",
+            },
+            "serial_number": {
+                "title": "base 10 encoded serial number",
+                "example": "1",
+                "type": "string",
+                "pattern": r"^[1-9][0-9]*$",
+            },
+            "not_before": {
+                "title": "Not valid before timestamp (UTC)",
+                "example": "2023-03-21T05:38:09+00:00",
+                "type": "string",
+                "format": "date-time",
+            },
+            "not_after": {
+                "title": "Not valid after timestamp (UTC)",
+                "example": "2043-03-21T05:38:09+00:00",
+                "type": "string",
+                "format": "date-time",
+            },
+        },
+    },
+    "DomainId": {
+        "title": "domain id",
+        "description": "A domain id",
+        "example": "772e9618-d0f8-4bf8-bfed-d2831f63c619",
+        "type": "string",
+        "format": "uuid",
+        "minLength": 36,
+        "maxLength": 36,
+        "pattern": r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    },
+    "DomainName": {
+        "title": "Fully qualified domain name",
+        "description": "A name of a domain (all lower-case)",
+        "example": "domain.example",
         "type": "string",
         "minLength": 3,
         "maxLength": 253,
+        "format": "idn-hostname",
         "pattern": r"^[a-z0-9\.\-]+$",
     },
-    "location": {
+    "DomainType": {
+        "title": "Domain Type",
+        "description": f"Type of domain (currently only {hccplatform.HCC_DOMAIN_TYPE})",
+        "example": "rhel-idm",
+        "type": "string",
+        "enum": [hccplatform.HCC_DOMAIN_TYPE],
+    },
+    "Error": {
+        "title": "Error information",
+        "type": "object",
+        "required": ["id", "status", "title", "details"],
+        "additionalProperties": False,
+        "properties": {
+            "id": {
+                "title": "Error identifier",
+                "description": "A unique, random error identifier",
+                "example": "27c19744-29f2-42a0-8669-8fa050f8ffdf",
+                "type": "string",
+            },
+            "status": {
+                "title": "HTTP status code",
+                "description": "The HTTP status code for the error.",
+                "example": "404",
+                "type": "integer",
+                "minimum": 100,
+                "maximum": 599,
+            },
+            "title": {
+                "title": "HTTP status text",
+                "description": "The human-readable HTTP status text for the error.",
+                "example": "Not Found",
+                "type": "string",
+            },
+            "details": {
+                "title": "Details",
+                "description": "A detailed explanation of the error, e.g. traceback.",
+                "example": "Resource not found",
+                "type": "string",
+            },
+        },
+    },
+    "Fqdn": {
+        "title": "FQDN",
+        "description": "A host's Fully Qualified Domain Name (all lower-case).",
+        "example": "host.domain.example",
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 253,
+        "format": "idn-hostname",
+        "pattern": r"^[a-z0-9\.\-]+$",
+    },
+    "HostId": {
+        "title": "host id",
+        "description": "A Host-Based Inventory ID of a host.",
+        "example": "f0468001-7632-4d3f-afd2-770c93825adf",
+        "type": "string",
+        "format": "uuid",
+        "minLength": 36,
+        "maxLength": 36,
+        "pattern": r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    },
+    "LocationName": {
         "title": "Location identifier (IPA location, AD site)",
         "description": "A location identifier (lower-case DNS label)",
+        "example": "alpha",
         "type": "string",
         "minLength": 1,
         "maxLength": 63,
         "pattern": r"^[a-z][a-z0-9\-]*$",
     },
-    "domain_name": {
-        "title": "Fully qualified domain name",
-        "description": "Name of a domain (all lower-case)",
+    "OrgId": {
+        "title": "Organization id",
+        "description": "The Org ID of the tenant that owns the host.",
+        "example": "000102",
         "type": "string",
-        "minLength": 3,
-        "maxLength": 253,
-        "pattern": r"^[a-z0-9\.\-]+$",
     },
-    "realm_name": {
+    "SubscriptionManagerId": {
+        "title": "Subscription manager id",
+        "description": "A Red Hat Subcription Manager ID of a RHEL host.",
+        "example": "e658e3eb-148c-46a6-b48a-099f9593191a",
+        "type": "string",
+        "format": "uuid",
+        "minLength": 36,
+        "maxLength": 36,
+        "pattern": r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    },
+    "RealmName": {
         "title": "Kerberos realm name",
         "description": "A Kerberos realm name (usually all upper-case domain name)",
+        "example": "DOMAIN.EXAMPLE",
         "type": "string",
         "minLength": 3,
         "maxLength": 253,
         "pattern": r"^[A-Z0-9\.\-]+$",
     },
-    "uuid": {
-        "title": "Universal unique identifier (UUID)",
-        "description": (
-            "UUID of a resource "
-            "(e.g. domain, inventory, subscription manager)"
-        ),
-        "type": "string",
-        "minLength": 36,
-        "maxLength": 36,
-    },
 }
+
+
+def _limit_defs(*names):
+    """Limit '$defs' to make exception message more readable"""
+    return {name: DEFS[name] for name in names}
+
 
 # POST /hcc/{inventory_id}/{hostname}
 # "subscription_manager_id" is in mTLS client cert
-HCC_REQUEST = {
-    "$id": "/schemas/hcc-host-register/request",
+HCC_HOST_REGISTER_REQUEST = {
+    "$id": "HCCHostRegisterRequest",
     "title": "Host registration request",
     "description": "Request from a host to an IPA server",
     "type": "object",
     "required": ["domain_type", "domain_name", "domain_id"],
     "additionalProperties": False,
     "properties": {
-        "domain_type": {"$ref": "#/$defs/domain_type"},
-        "domain_name": {"$ref": "#/$defs/domain_name"},
-        "domain_id": {"$ref": "#/$defs/uuid"},
+        "domain_type": {"$ref": "#/$defs/DomainType"},
+        "domain_name": {"$ref": "#/$defs/DomainName"},
+        "domain_id": {"$ref": "#/$defs/DomainId"},
     },
-    "$defs": DEFS,
+    "$defs": _limit_defs("DomainName", "DomainType", "DomainId"),
 }
 
-HCC_RESPONSE = {
-    "$id": "/schemas/hcc-host-register/response",
+HCC_HOST_REGISTER_RESPONSE = {
+    "$id": "HCCHostRegisterResponse",
     "title": "Host registration response",
     "description": "Response of an IPA server to to host",
     "type": "object",
@@ -105,14 +236,15 @@ HCC_RESPONSE = {
     "additionalProperties": False,
     "properties": {
         "status": {"type": "string"},
-        "kdc_cabundle": {"type": "string"},
+        "kdc_cabundle": {"$ref": "#/$defs/CaCertBundle"},
     },
+    "$defs": _limit_defs("CaCertBundle"),
 }
 
 # POST /api/idm/v1/host-conf/{inventory_id}/{hostname}
 # "subscription_manager_id" is in mTLS client cert
 HOST_CONF_REQUEST = {
-    "$id": "/schemas/host-conf/request",
+    "$id": "HostConfRequest",
     "title": "Host configuration request",
     "description": "Request from a client to HCC API to request configuration data",
     "type": "object",
@@ -120,16 +252,18 @@ HOST_CONF_REQUEST = {
     "additionalProperties": False,
     "properties": {
         # additional selectors / filters
-        "domain_type": {"$ref": "#/$defs/domain_type"},
-        "domain_name": {"$ref": "#/$defs/domain_name"},
-        "domain_id": {"$ref": "#/$defs/uuid"},
-        "location": {"$ref": "#/$defs/location"},
+        "domain_type": {"$ref": "#/$defs/DomainType"},
+        "domain_name": {"$ref": "#/$defs/DomainName"},
+        "domain_id": {"$ref": "#/$defs/DomainId"},
+        "location": {"$ref": "#/$defs/LocationName"},
     },
-    "$defs": DEFS,
+    "$defs": _limit_defs(
+        "DomainName", "DomainType", "DomainId", "LocationName"
+    ),
 }
 
 HOST_CONF_RESPONSE = {
-    "$id": "/schemas/host-conf/response",
+    "$id": "HostConfResponse",
     "title": "Host configuration response",
     "description": "Response from HCC to client",
     "type": "object",
@@ -144,21 +278,17 @@ HOST_CONF_RESPONSE = {
     "additionalProperties": False,
     "properties": {
         "auto_enrollment_enabled": {"type": "boolean"},
-        "domain_type": {"$ref": "#/$defs/domain_type"},
-        "domain_name": {"$ref": "#/$defs/domain_name"},
-        "domain_id": {"$ref": "#/$defs/uuid"},
-        "inventory_id": {"$ref": "#/$defs/uuid"},
+        "domain_type": {"$ref": "#/$defs/DomainType"},
+        "domain_name": {"$ref": "#/$defs/DomainName"},
+        "domain_id": {"$ref": "#/$defs/DomainId"},
+        "inventory_id": {"$ref": "#/$defs/HostId"},
         hccplatform.HCC_DOMAIN_TYPE: {
             "title": "RHEL IdM-specific data",
             "type": "object",
             "required": ["cabundle", "enrollment_servers", "realm_name"],
             "additionalProperties": False,
             "properties": {
-                "cabundle": {
-                    "title": "Bundle of CA certificates",
-                    "description": "A PEM bundle of IPA's trusted CA certificates",
-                    "type": "string",
-                },
+                "cabundle": {"$ref": "#/$defs/CaCertBundle"},
                 "enrollment_servers": {
                     "title": (
                         "An array of RHEL IdM servers with activate "
@@ -170,23 +300,32 @@ HOST_CONF_RESPONSE = {
                         "required": ["fqdn"],
                         "additionalProperties": False,
                         "properties": {
-                            "fqdn": {"$ref": "#/$defs/hostname"},
-                            "location": {"$ref": "#/$defs/location"},
+                            "fqdn": {"$ref": "#/$defs/Fqdn"},
+                            "location": {"$ref": "#/$defs/LocationName"},
                         },
                     },
                 },
-                "realm_name": {"$ref": "#/$defs/realm_name"},
+                "realm_name": {"$ref": "#/$defs/RealmName"},
             },
         },
     },
-    "$defs": DEFS,
+    "$defs": _limit_defs(
+        "CaCertBundle",
+        "DomainId",
+        "DomainName",
+        "DomainType",
+        "Fqdn",
+        "HostId",
+        "LocationName",
+        "RealmName",
+    ),
 }
 
 # PUT /api/idm/v1/domains/{domain_id}/register
 # PUT /api/idm/v1/domains/{domain_id}/update
 # GET /api/idm/v1/domains/{domain_id} (not implemented in mockapi)
-DOMAIN_REQUEST = {
-    "$id": "/schemas/domain-register-update/request",
+IPA_DOMAIN_REQUEST = {
+    "$id": "IPADomainRequest",
     "title": "Domain registration/update request and response",
     "description": (
         "Request from an RHEL IdM server to HCC API to "
@@ -203,8 +342,8 @@ DOMAIN_REQUEST = {
         "title": {"type": "string"},
         "description": {"type": "string"},
         "auto_enrollment_enabled": {"type": "boolean", "default": True},
-        "domain_type": {"$ref": "#/$defs/domain_type"},
-        "domain_name": {"$ref": "#/$defs/domain_name"},
+        "domain_type": {"$ref": "#/$defs/DomainType"},
+        "domain_name": {"$ref": "#/$defs/DomainName"},
         hccplatform.HCC_DOMAIN_TYPE: {
             "type": "object",
             "required": [
@@ -218,51 +357,15 @@ DOMAIN_REQUEST = {
                 "ca_certs": {
                     "title": "Array of trusted CA certificates",
                     "type": "array",
-                    "items": {
-                        "type": "object",
-                        "required": ["nickname", "pem"],
-                        "additionalProperties": False,
-                        "properties": {
-                            "nickname": {
-                                "title": "Internal nick name in LDAP",
-                                "type": "string",
-                            },
-                            "pem": {
-                                "title": "PEM encoded X.509 certificate",
-                                "type": "string",
-                            },
-                            # optional, not used at the moment
-                            "issuer": {
-                                "title": "issuer name",
-                                "type": "string",
-                            },
-                            "subject": {
-                                "title": "subject name",
-                                "type": "string",
-                            },
-                            "serial_number": {
-                                "title": "base 10 encoded serial number",
-                                "type": "string",
-                            },
-                            "not_before": {
-                                "title": "Not valid before timestamp (UTC)",
-                                "type": "string",
-                            },
-                            "not_after": {
-                                "title": "Not valid after timestamp (UTC)",
-                                "type": "string",
-                            },
-                        },
-                    },
+                    "items": {"$ref": "#/$defs/Certificate"},
                 },
-                "realm_name": {"$ref": "#/$defs/realm_name"},
+                "realm_name": {"$ref": "#/$defs/RealmName"},
                 "realm_domains": {
                     "title": "Realm domains",
                     "descriptions": "DNS names that are attached to the Kerberos realm",
                     "type": "array",
-                    "items": {"$ref": "#/$defs/domain_name"},
+                    "items": {"$ref": "#/$defs/DomainName"},
                 },
-                # locations is a superset of servers[*]["location"]
                 "locations": {
                     "type": "array",
                     "items": {
@@ -270,7 +373,7 @@ DOMAIN_REQUEST = {
                         "required": ["name"],
                         "additionalProperties": False,
                         "properties": {
-                            "name": {"$ref": "#/$defs/location"},
+                            "name": {"$ref": "#/$defs/LocationName"},
                             "description": {"type": "string"},
                         },
                     },
@@ -288,16 +391,14 @@ DOMAIN_REQUEST = {
                         ],
                         "additionalProperties": False,
                         "properties": {
-                            "fqdn": {"$ref": "#/$defs/hostname"},
+                            "fqdn": {"$ref": "#/$defs/Fqdn"},
                             # The RHSM id is not available unless a server
                             # has the ipa-hcc-server package installed or the
                             # value was added manually.
                             "subscription_manager_id": {
-                                # TODO: 'string' is a workaround for HMS-1914
-                                # "$ref": "#/$defs/uuid"
-                                "type": "string",
+                                "$ref": "#/$defs/SubscriptionManagerId"
                             },
-                            "location": {"$ref": "#/$defs/location"},
+                            "location": {"$ref": "#/$defs/LocationName"},
                             "ca_server": {"type": "boolean"},
                             "hcc_enrollment_server": {"type": "boolean"},
                             "hcc_update_server": {"type": "boolean"},
@@ -308,54 +409,55 @@ DOMAIN_REQUEST = {
             },
         },
     },
-    "$defs": DEFS,
+    "$defs": _limit_defs(
+        "Certificate",
+        "DomainId",
+        "DomainName",
+        "DomainType",
+        "Fqdn",
+        "HostId",
+        "LocationName",
+        "RealmName",
+        "SubscriptionManagerId",
+    ),
 }
 
-DOMAIN_RESPONSE = copy.deepcopy(DOMAIN_REQUEST)
-DOMAIN_RESPONSE.update(
+IPA_DOMAIN_RESPONSE = copy.deepcopy(IPA_DOMAIN_REQUEST)
+IPA_DOMAIN_RESPONSE.update(
     {
-        "$id": "/schemas/domain-register-update/response",
+        "$id": "IPADomainResponse",
         "title": "Domain registration or update response",
         "description": "Response from HCC API to RHEL IdM server",
     }
 )
 
 # mypy: disable-error-code="attr-defined"
-DOMAIN_RESPONSE["required"].extend(["domain_id"])
-DOMAIN_RESPONSE["properties"].update(
+IPA_DOMAIN_RESPONSE["required"].extend(["domain_id"])
+IPA_DOMAIN_RESPONSE["properties"].update(
     {
-        "domain_id": {"$ref": "#/$defs/uuid"},
+        "domain_id": {"$ref": "#/$defs/DomainId"},
     }
 )
 
 ERROR_RESPONSE = {
-    "$id": "/schemas/error/response",
+    "$id": "Errors",
     "title": "Generic error response",
     "description": "Error response",
     "type": "array",
     "minItems": 1,
-    "items": {
-        "type": "object",
-        "required": ["id", "status", "title", "details"],
-        "additionalProperties": False,
-        "properties": {
-            "id": {"title": "Unique error id", "type": "string"},
-            "status": {"title": "HTTP status code", "type": "integer"},
-            "title": {"title": "HTTP status reason", "type": "string"},
-            "details": {"title": "Reason text", "type": "string"},
-        },
-    },
+    "items": {"$ref": "#/$defs/Error"},
+    "$defs": _limit_defs("Error"),
 }
 
 SCHEMATA = {
     s["$id"]: s
     for s in [
-        HCC_REQUEST,
-        HCC_RESPONSE,
+        HCC_HOST_REGISTER_REQUEST,
+        HCC_HOST_REGISTER_RESPONSE,
         HOST_CONF_REQUEST,
         HOST_CONF_RESPONSE,
-        DOMAIN_REQUEST,
-        DOMAIN_RESPONSE,
+        IPA_DOMAIN_REQUEST,
+        IPA_DOMAIN_RESPONSE,
         ERROR_RESPONSE,
     ]
 }
@@ -370,3 +472,21 @@ def validate_schema(
     except ValidationError:
         logger.exception("Schema %r validation error", schema_id)
         raise
+
+
+def _dump():
+    # pylint: disable=import-outside-toplevel, import-error
+    import sys
+
+    import yaml  # type: ignore
+
+    yaml.dump(
+        {"components": {"schemas": DEFS}},
+        sys.stdout,
+        indent=4,
+        sort_keys=False,
+    )
+
+
+if __name__ == "__main__":
+    _dump()
