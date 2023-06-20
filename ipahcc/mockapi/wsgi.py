@@ -174,7 +174,7 @@ class Application(JSONWSGIApp):
     @route(
         "POST",
         "^/host-conf/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
-        schema="host-conf",
+        schema="HostConf",
     )
     def handle_host_conf(  # pylint: disable=unused-argument
         self, env: dict, body: dict, inventory_id: str, fqdn: str
@@ -218,7 +218,7 @@ class Application(JSONWSGIApp):
     @route(
         "PUT",
         "^/domains/(?P<domain_id>[^/]+)/register$",
-        schema="domain-register-update",
+        schema="IPADomain",
     )
     def handle_register_domain(
         self, env: dict, body: dict, domain_id: str
@@ -234,7 +234,7 @@ class Application(JSONWSGIApp):
     @route(
         "PUT",
         "^/domains/(?P<domain_id>[^/]+)/update$",
-        schema="domain-register-update",
+        schema="IPADomain",
     )
     def handle_update_domain(
         self, env: dict, body: dict, domain_id: str

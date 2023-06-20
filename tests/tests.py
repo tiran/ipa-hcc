@@ -50,14 +50,12 @@ class TestJSONSchema(conftest.IPABaseTests):
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_id": conftest.DOMAIN_ID,
         }
-        schema.validate_schema(instance, "/schemas/hcc-host-register/request")
+        schema.validate_schema(instance, "HCCHostRegisterRequest")
 
         instance["extra"] = True
 
         with self.assertRaises(schema.ValidationError):
-            schema.validate_schema(
-                instance, "/schemas/hcc-host-register/request"
-            )
+            schema.validate_schema(instance, "HCCHostRegisterRequest")
 
     def test_domain_request(self):
         instance = {
@@ -108,9 +106,7 @@ class TestJSONSchema(conftest.IPABaseTests):
                 ],
             },
         }
-        schema.validate_schema(
-            instance, "/schemas/domain-register-update/request"
-        )
+        schema.validate_schema(instance, "IPADomainRequest")
 
 
 class TestUtil(IPAClientTests):

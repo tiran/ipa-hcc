@@ -106,18 +106,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.addCleanup(p.stop)
 
     def test_schema(self):
-        schema.validate_schema(
-            HOST_CONF_REQUEST, "/schemas/host-conf/request"
-        )
-        schema.validate_schema(
-            HOST_CONF_RESPONSE, "/schemas/host-conf/response"
-        )
-        schema.validate_schema(
-            REGISTER_REQUEST, "/schemas/hcc-host-register/request"
-        )
-        schema.validate_schema(
-            REGISTER_RESPONSE, "/schemas/hcc-host-register/response"
-        )
+        schema.validate_schema(HOST_CONF_REQUEST, "HostConfRequest")
+        schema.validate_schema(HOST_CONF_RESPONSE, "HostConfResponse")
+        schema.validate_schema(REGISTER_REQUEST, "HCCHostRegisterRequest")
+        schema.validate_schema(REGISTER_RESPONSE, "HCCHostRegisterResponse")
 
     def parse_args(self, *args):
         return auto_enrollment.parser.parse_args(args=args)

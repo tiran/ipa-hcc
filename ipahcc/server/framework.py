@@ -152,10 +152,10 @@ class JSONWSGIApp:
         self,
         instance: typing.Union[dict, typing.List[dict]],
         schema_name: str,
-        suffix: str,
+        suffix: str = "",
     ) -> None:
         """Validate JSON schema"""
-        schema_id = f"/schemas/{schema_name}/{suffix}"
+        schema_id = f"{schema_name}{suffix}"
         try:
             validate_schema(instance, schema_id)
         except ValidationError:
@@ -188,7 +188,7 @@ class JSONWSGIApp:
         try:
             meth, schema_name, body, kwargs = self._route_lookup(env)
             if schema_name is not None:
-                self._validate_schema(body, schema_name, "request")
+                self._validate_schema(body, schema_name, "Request")
 
             self.before_call()
             try:
@@ -197,7 +197,7 @@ class JSONWSGIApp:
                 self.after_call()
 
             if schema_name is not None:
-                self._validate_schema(result, schema_name, "response")
+                self._validate_schema(result, schema_name, "Response")
 
             response = json.dumps(result)
             code = 200
@@ -222,7 +222,7 @@ class JSONWSGIApp:
                     "details": details,
                 }
             ]
-            self._validate_schema(errors, "error", "response")
+            self._validate_schema(errors, "Errors")
             response = json.dumps(errors)
 
         status_line = f"{code} {http_responses[code]}"

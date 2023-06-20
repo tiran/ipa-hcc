@@ -272,9 +272,7 @@ class HCCAPI:
     ) -> typing.Tuple[dict, APIResult]:
         config = self._get_ipa_config(all_fields=True)
         info = self._get_ipa_info(config)
-        schema.validate_schema(
-            info, "/schemas/domain-register-update/request"
-        )
+        schema.validate_schema(info, "IPADomainRequest")
         extra_headers = {
             "X-RH-IDM-Registration-Token": token,
         }
@@ -284,9 +282,7 @@ class HCCAPI:
             payload=info,
             extra_headers=extra_headers,
         )
-        schema.validate_schema(
-            resp.json(), "/schemas/domain-register-update/response"
-        )
+        schema.validate_schema(resp.json(), "IPADomainResponse")
         # update after successful registration
         try:
             self.api.Command.config_mod(hccdomainid=str(domain_id))
@@ -321,18 +317,14 @@ class HCCAPI:
         domain_id = self._get_domain_id(config)
 
         info = self._get_ipa_info(config)
-        schema.validate_schema(
-            info, "/schemas/domain-register-update/request"
-        )
+        schema.validate_schema(info, "IPADomainRequest")
         resp = self._submit_idm_api(
             method="PUT",
             subpath=("domains", domain_id, "update"),
             payload=info,
             extra_headers=None,
         )
-        schema.validate_schema(
-            resp.json(), "/schemas/domain-register-update/response"
-        )
+        schema.validate_schema(resp.json(), "IPADomainResponse")
         msg = (
             f"Successfully updated domain '{info['domain_name']}' "
             f"({domain_id})."
