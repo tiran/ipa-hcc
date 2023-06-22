@@ -1,3 +1,48 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ipahcc"
+version = "0.11"
+description = "IPA enrollment agent for Red Hat Hybrid Cloud Console"
+readme = "README.md"
+authors = [
+    {name = "Christian Heimes", email = "cheimes@redhat.com"},
+]
+license = {text = "GPL-3.0-or-later"}
+requires-python = ">=3.6"
+dependencies = [
+    "requests",
+    "coverage[toml]",
+    "dbus-python",
+    "pygobject",
+    # Fedora dev (ipaclient is taken from global env)
+    "jsonschema == 4.10; python_version >= '3.10'",
+    "jwcrypto == 0.9.1; python_version >= '3.10'",
+    # RHEL 9 with Python 3.9
+    "ipaclient < 4.10.99 ; python_version == '3.9'",
+    "jsonschema < 3.3; python_version == '3.9'",
+    "jwcrypto == 0.8.0; python_version == '3.9'",
+    # RHEL 8 with Python 3.6
+    "ipaclient < 4.9.99 ; python_version == '3.6'",
+    "jsonschema < 3.0; python_version == '3.6'",
+    "jwcrypto == 0.5.0; python_version == '3.6'",
+]
+
+[tool.setuptools]
+packages = [
+    "ipahcc",
+    "ipahcc.mockapi",
+    "ipahcc.registration",
+    "ipahcc.server",
+    "ipaserver.install.plugins",
+    "ipaserver.plugins",
+]
+py-modules = [
+    "ipahcc_auto_enrollment",
+]
+
 [tool.black]
 line-length = 78
 target-version = ['py36']

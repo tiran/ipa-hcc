@@ -49,6 +49,7 @@ clean:
 	rm -f .coverage*
 	rm -rf htmlcov
 	rm -rf .mypy_cache
+	rm -rf dist build
 
 .PHONY: cleanall
 cleanall: clean clean-idm-ci
@@ -71,6 +72,8 @@ version:
 	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' \
 		$(srcdir)/ipahcc/hccplatform.py \
 		$(srcdir)/ipahcc_auto_enrollment.py
+	sed -i 's/^version\ =\ ".*/version = "$(VERSION)"/g' \
+		$(srcdir)/pyproject.toml
 
 .PHONY: rpkg
 rpkg:
@@ -78,6 +81,7 @@ rpkg:
 
 .PHONY: _rpkg
 _rpkg:
+	@if ! test -d .git; then echo "rpkg requires a git repository" >&2; exit 2; fi
 	@rm -rf .tox/rpkg
 	@mkdir -p .tox/rpkg
 	rpkg local --outdir $$(pwd)/.tox/rpkg

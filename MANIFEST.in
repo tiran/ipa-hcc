@@ -1,0 +1,18 @@
+include *.md *.txt
+include .eslintrc.json .yamllint.yaml pylintrc tox.ini
+include Makefile
+include ipa-hcc.spec.rpkg ipa-hcc.rpmlintrc
+include install.sh
+
+global-exclude *.pyc
+
+recursive-include stubs README.md *.pyi
+
+recursive-include tests *.py
+graft tests/clients
+graft tests/data
+
+graft install
+
+prune idm-ci
+exclude .gitlab*
