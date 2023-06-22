@@ -5,6 +5,10 @@ __pycache__
 *.rpm
 ~*
 /.coverage*
+/build
+/dist
+/*.egg-info
+/*.dist-info
 
 .tox
 
