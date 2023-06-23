@@ -5,9 +5,42 @@
 #
 import os
 import typing
+from datetime import datetime, timezone
 
+from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
 from ipalib import x509
+
+RFC4514_MAP = {
+    NameOID.EMAIL_ADDRESS: "E",
+}
+
+
+def rfc3339_datetime(dt: datetime) -> str:
+    """Convert datetime to RFC 3339 compatible string"""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat("T", timespec="seconds")
+
+
+def create_certinfo(
+    cert: x509.IPACertificate, nickname: typing.Optional[str] = None
+) -> dict:
+    """Create certinfo dict from a cert and optional nickname"""
+    certinfo = {
+        "nickname": nickname,
+        # cryptography 3.2.1 on RHEL 8 does not support RFC map
+        "issuer": cert.issuer.rfc4514_string(),
+        "subject": cert.subject.rfc4514_string(),
+        "pem": cert.public_bytes(Encoding.PEM).decode("ascii"),
+        # JSON number type cannot handle large serial numbers
+        "serial_number": str(cert.serial_number),
+        "not_before": rfc3339_datetime(cert.not_valid_before),
+        "not_after": rfc3339_datetime(cert.not_valid_after),
+    }
+    if nickname is None:
+        certinfo["nickname"] = certinfo["subject"]
+    return certinfo
 
 
 def parse_rhsm_cert(

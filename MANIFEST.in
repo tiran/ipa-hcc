@@ -4,6 +4,8 @@ include Makefile
 include ipa-hcc.spec.rpkg ipa-hcc.rpmlintrc
 include install.sh
 
+include ipahcc/server/schema/*.json
+
 global-exclude *.pyc
 
 recursive-include stubs README.md *.pyi

@@ -262,6 +262,7 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{_datadir}/dbus-1/system-services/com.redhat.console.ipahcc.service
 %{python_sitelib}/ipahcc/*.py
 %{python_sitelib}/ipahcc/server/*.py
+%{python_sitelib}/ipahcc/server/schema/*.json
 %{python_sitelib}/ipaserver/plugins/*.py
 %{python_sitelib}/ipaserver/install/plugins/update_hcc.py
 %{python_sitelib}/ipahcc/__pycache__/*.pyc

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Root Type for HostConfResponse",
+  "description": "The response for the action to retrieve the host vm information when it is being enrolled. This action is taken from the host vm.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "auto_enrollment_enabled": {
+      "description": "Enable or disable host vm auto-enrollment for this domain",
+      "type": "boolean"
+    },
+    "domain_id": {
+      "$ref": "defs.json#/$defs/DomainId"
+    },
+    "domain_name": {
+      "$ref": "defs.json#/$defs/DomainName"
+    },
+    "domain_type": {
+      "$ref": "defs.json#/$defs/DomainType"
+    },
+    "inventory_id": {
+      "$ref": "defs.json#/$defs/HostId"
+    },
+    "rhel-idm": {
+      "type": "object",
+      "required": [
+        "cabundle",
+        "enrollment_servers",
+        "realm_name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cabundle": {
+          "$ref": "defs.json#/$defs/CaCertBundle"
+        },
+        "enrollment_servers": {
+          "description": "List of auto-enrollment enabled servers for this domain.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fqdn"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "fqdn": {
+                "$ref": "defs.json#/$defs/Fqdn"
+              },
+              "location": {
+                "$ref": "defs.json#/$defs/LocationName"
+              }
+            }
+          }
+        },
+        "realm_name": {
+          "$ref": "defs.json#/$defs/RealmName"
+        }
+      }
+    }
+  }
+}

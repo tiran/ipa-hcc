@@ -138,7 +138,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
                 conftest.CLIENT_FQDN,
             )
         )
-        body = {"error": "error"}
+        body = {"invalid": "error"}
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path, body=body
         )
@@ -147,37 +147,17 @@ class TestWSGIFramework(conftest.IPABaseTests):
         self.assertEqual(headers["Content-Type"], "application/json")
         self.assertEqual(
             response,
-            [
-                {
-                    "id": self.m_genrid.return_value,
-                    "details": (
-                        "schema violation: "
-                        "invalid JSON for HostConfRequest"
-                    ),
-                    "status": 400,
-                    "title": "Bad Request",
-                }
-            ],
-        )
-
-        body = {}
-        status_code, status_msg, headers, response = self.call_wsgi(
-            path=path, body=body
-        )
-        self.assertEqual(status_code, 400)
-        self.assertEqual(status_msg, "Bad Request")
-        self.assertEqual(headers["Content-Type"], "application/json")
-        self.assertEqual(
-            response,
-            [
-                {
-                    "id": self.m_genrid.return_value,
-                    "details": (
-                        "schema violation: "
-                        "invalid JSON for HostConfResponse"
-                    ),
-                    "status": 400,
-                    "title": "Bad Request",
-                }
-            ],
+            {
+                "errors": [
+                    {
+                        "id": self.m_genrid.return_value,
+                        "details": (
+                            "schema violation: "
+                            "invalid JSON for HostConfRequest"
+                        ),
+                        "status": 400,
+                        "title": "Bad Request",
+                    }
+                ]
+            },
         )

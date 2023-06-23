@@ -44,18 +44,42 @@ class IPAHCCServerTests(conftest.IPABaseTests):
 
 
 class TestJSONSchema(conftest.IPABaseTests):
+    def test_valid_schema(self):
+        cls = schema.VALIDATOR_CLS
+        for name, validator in schema.VALIDATORS.items():
+            with self.subTest(name=name):
+                self.assertIsInstance(validator, schema.VALIDATOR_CLS)
+                cls.check_schema(validator.schema)
+        # validate defs' sub schemas
+        filename = schema.SCHEMATA["defs"]
+        _, defs = schema.RESOLVER.resolve(filename)
+        for subname, subschema in defs["$defs"].items():
+            with self.subTest(filename=filename, subname=subname):
+                cls.check_schema(subschema)
+
+    def test_invalid_instance(self):
+        inst = {
+            "domain_type": "invalid",
+            "domain_name": "INVALID.DOMAIN",
+            "domain_id": "not an uuid",
+        }
+        try:
+            schema.validate_schema(inst, "HostRegisterRequest")
+        except schema.ValidationError as e:
+            self.assertIn("'invalid' is not one of ['rhel-idm']", str(e))
+
     def test_hcc_request(self):
         instance = {
             "domain_name": conftest.DOMAIN,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_id": conftest.DOMAIN_ID,
         }
-        schema.validate_schema(instance, "HCCHostRegisterRequest")
+        schema.validate_schema(instance, "HostRegisterRequest")
 
         instance["extra"] = True
 
         with self.assertRaises(schema.ValidationError):
-            schema.validate_schema(instance, "HCCHostRegisterRequest")
+            schema.validate_schema(instance, "HostRegisterRequest")
 
     def test_domain_request(self):
         instance = {
@@ -92,12 +116,7 @@ class TestJSONSchema(conftest.IPABaseTests):
                         "pkinit_server": True,
                     },
                 ],
-                "ca_certs": [
-                    {
-                        "nickname": "IPAHCC.TEST IPA CA",
-                        "pem": conftest.IPA_CA_DATA,
-                    }
-                ],
+                "ca_certs": [conftest.IPA_CA_CERTINFO],
                 "realm_domains": [conftest.DOMAIN],
                 "locations": [
                     {"name": "kappa"},

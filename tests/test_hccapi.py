@@ -50,12 +50,7 @@ DOMAIN_RESULT.update(
 )
 DOMAIN_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(
     {
-        "ca_certs": [
-            {
-                "nickname": conftest.IPA_CA_NICKNAME,
-                "pem": conftest.IPA_CA_DATA,
-            },
-        ],
+        "ca_certs": [conftest.IPA_CA_CERTINFO],
     }
 )
 

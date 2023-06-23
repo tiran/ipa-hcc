@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Domain registration/update request and response",
+  "description": "Request from an RHEL IdM server to HCC API to register or update a domain.",
+  "type": "object",
+  "required": [
+    "domain_type",
+    "domain_name",
+    "rhel-idm"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "auto_enrollment_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "domain_type": {
+      "$ref": "defs.json#/$defs/DomainType"
+    },
+    "domain_name": {
+      "$ref": "defs.json#/$defs/DomainName"
+    },
+    "rhel-idm": {
+      "$ref": "defs.json#/$defs/RhelIdmDomain"
+    }
+  }
+}

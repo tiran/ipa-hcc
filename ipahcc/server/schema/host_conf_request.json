@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Root Type for HostConf",
+  "description": "Represent the request payload for the /hostconf/:fqdn endpoint.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "domain_id": {
+      "$ref": "defs.json#/$defs/DomainId"
+    },
+    "domain_name": {
+      "$ref": "defs.json#/$defs/DomainName"
+    },
+    "domain_type": {
+      "$ref": "defs.json#/$defs/DomainType"
+    }
+  }
+}

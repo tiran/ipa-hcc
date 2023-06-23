@@ -108,8 +108,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
     def test_schema(self):
         schema.validate_schema(HOST_CONF_REQUEST, "HostConfRequest")
         schema.validate_schema(HOST_CONF_RESPONSE, "HostConfResponse")
-        schema.validate_schema(REGISTER_REQUEST, "HCCHostRegisterRequest")
-        schema.validate_schema(REGISTER_RESPONSE, "HCCHostRegisterResponse")
+        schema.validate_schema(REGISTER_REQUEST, "HostRegisterRequest")
+        schema.validate_schema(REGISTER_RESPONSE, "HostRegisterResponse")
 
     def parse_args(self, *args):
         return auto_enrollment.parser.parse_args(args=args)

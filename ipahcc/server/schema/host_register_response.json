@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Host registration response",
+  "description": "Response of an IPA server to to host",
+  "type": "object",
+  "required": [
+    "status",
+    "kdc_cabundle"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string"
+    },
+    "kdc_cabundle": {
+      "$ref": "defs.json#/$defs/CaCertBundle"
+    }
+  }
+}

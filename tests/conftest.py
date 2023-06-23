@@ -12,11 +12,12 @@ from http.client import responses as http_responses
 from unittest import mock
 
 from ipalib import api
+from ipalib.x509 import load_pem_x509_certificate
 from ipaplatform.paths import paths
 from requests import Response
 
 from ipahcc import hccplatform
-from ipahcc.server.util import read_cert_dir
+from ipahcc.server.util import create_certinfo, read_cert_dir
 
 BASEDIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 TESTDATA = os.path.join(BASEDIR, "tests", "data")
@@ -51,6 +52,10 @@ with open(RHSM_CERT, encoding="utf-8") as f:
 with open(IPA_CA_CRT, encoding="utf-8") as f:
     IPA_CA_DATA = f.read()
 IPA_CA_NICKNAME = "IPA-HCC.TEST IPA CA"
+IPA_CA_CERTINFO = create_certinfo(
+    load_pem_x509_certificate(IPA_CA_DATA.encode("ascii")),
+    nickname=IPA_CA_NICKNAME,
+)
 KDC_CA_DATA = read_cert_dir(KDC_CA_DIR)
 
 # initialize first step of IPA API so server imports work
