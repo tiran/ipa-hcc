@@ -33,6 +33,7 @@ RESOLVER = RefResolver(
     referrer={},
 )
 
+
 SCHEMATA = {
     "defs": "defs.json",
     "HostRegisterRequest": "host_register_request.json",
@@ -44,25 +45,25 @@ SCHEMATA = {
     "Errors": "errors.json",
 }
 
+_VALIDATORS: typing.Dict[str, VALIDATOR_CLS] = {}
 
-def _build_validators(
-    resolver=RESOLVER,
-) -> typing.Dict[str, VALIDATOR_CLS]:
-    """Build and verify JSON schema validators"""
-    validators = {}
-    for name, filename in SCHEMATA.items():
+
+def get_validator(schema_id: str, resolver=RESOLVER):
+    """Get (cached) validator for a known schema id"""
+    validator = _VALIDATORS.get(schema_id)
+    if validator is None:
+        filename = SCHEMATA[schema_id]
         _, schema = resolver.resolve(filename)
         cls = validator_for(schema)
-        if name != "defs":
-            validators[name] = cls(schema, resolver=resolver)
-    return validators
+        cls.check_schema(schema)
+        validator = cls(schema, resolver=resolver)
+        _VALIDATORS[schema_id] = validator
+    return validator
 
 
-VALIDATORS = _build_validators()
-
-
-def validate_schema(instance: dict, schema_id: str):
-    validator = VALIDATORS[schema_id]
+def validate_schema(instance: dict, schema_id: str, resolver=RESOLVER):
+    """Validate schema of an instance"""
+    validator = get_validator(schema_id, resolver)
     try:
         error = best_match(validator.iter_errors(instance))
         if error is not None:

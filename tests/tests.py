@@ -46,9 +46,10 @@ class IPAHCCServerTests(conftest.IPABaseTests):
 class TestJSONSchema(conftest.IPABaseTests):
     def test_valid_schema(self):
         cls = schema.VALIDATOR_CLS
-        for name, validator in schema.VALIDATORS.items():
+        for name in schema.SCHEMATA:
             with self.subTest(name=name):
-                self.assertIsInstance(validator, schema.VALIDATOR_CLS)
+                validator = schema.get_validator(name)
+                self.assertIsInstance(validator, cls)
                 cls.check_schema(validator.schema)
         # validate defs' sub schemas
         filename = schema.SCHEMATA["defs"]
