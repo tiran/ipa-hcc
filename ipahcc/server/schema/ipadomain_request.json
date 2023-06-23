@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema",
-  "title": "Domain registration/update request and response",
+  "title": "Domain registration/update request",
   "description": "Request from an RHEL IdM server to HCC API to register or update a domain.",
   "type": "object",
   "required": [

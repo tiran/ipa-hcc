@@ -18,6 +18,63 @@ from ipahcc.server.schema import (  # noqa: E402
     SCHEMATA,
 )
 
+# These schemas are not (yet) in OpenAPI
+HOST_REGISTER_REQUEST = {
+    "$schema": DRAFT_04_URI,
+    "title": "Host registration request",
+    "description": "Request from a host to an IPA server",
+    "type": "object",
+    "required": ["domain_type", "domain_name", "domain_id"],
+    "additionalProperties": False,
+    "properties": {
+        "domain_type": {"$ref": "defs.json#/$defs/DomainType"},
+        "domain_name": {"$ref": "defs.json#/$defs/DomainName"},
+        "domain_id": {"$ref": "defs.json#/$defs/DomainId"},
+    },
+}
+
+HOST_REGISTER_RESPONSE = {
+    "$schema": DRAFT_04_URI,
+    "title": "Host registration response",
+    "description": "Response of an IPA server to to host",
+    "type": "object",
+    "required": [
+        "status",
+        "kdc_cabundle",
+    ],
+    "additionalProperties": False,
+    "properties": {
+        "status": {"type": "string"},
+        "kdc_cabundle": {"$ref": "defs.json#/$defs/CaCertBundle"},
+    },
+}
+
+IPA_DOMAIN_REQUEST = {
+    "$schema": DRAFT_04_URI,
+    "title": "Domain registration/update request",
+    "description": (
+        "Request from an RHEL IdM server to HCC API to "
+        "register or update a domain."
+    ),
+    "type": "object",
+    "required": [
+        "domain_type",
+        "domain_name",
+        "rhel-idm",
+    ],
+    "additionalProperties": False,
+    "properties": {
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "auto_enrollment_enabled": {"type": "boolean", "default": True},
+        "domain_type": {"$ref": "defs.json#/$defs/DomainType"},
+        "domain_name": {"$ref": "defs.json#/$defs/DomainName"},
+        "rhel-idm": {
+            "$ref": "defs.json#/$defs/RhelIdmDomain",
+        },
+    },
+}
+
 
 def read_openapi(filename: os.PathLike = OPENAPI_YAML) -> dict:
     with open(filename, "r", encoding="utf-8") as f:
@@ -77,6 +134,13 @@ def extract_openapi(oapi: dict) -> dict:
 def main():
     oapi = read_openapi()
     results = extract_openapi(oapi)
+    results.update(
+        {
+            "HostRegisterRequest": HOST_REGISTER_REQUEST,
+            "HostRegisterResponse": HOST_REGISTER_RESPONSE,
+            "IPADomainRequest": IPA_DOMAIN_REQUEST,
+        }
+    )
     for name, schema in results.items():
         filename = SCHEMATA[name]
         with open(SCHEMA_DIR / filename, "w", encoding="utf-8") as f:
