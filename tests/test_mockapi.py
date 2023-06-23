@@ -20,12 +20,7 @@ domain_request = {
                 "pkinit_server": True,
             },
         ],
-        "ca_certs": [
-            {
-                "nickname": "IPAHCC.TEST IPA CA",
-                "pem": conftest.IPA_CA_DATA,
-            }
-        ],
+        "ca_certs": [conftest.IPA_CA_CERTINFO],
         "realm_domains": [conftest.DOMAIN],
         "locations": [
             {"name": "sigma"},

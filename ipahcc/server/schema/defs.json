@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "$defs": {
+    "CaCertBundle": {
+      "title": "A bundle of CA certificates",
+      "description": "A string of concatenated, PEM-encoded X.509 certificates",
+      "type": "string"
+    },
+    "Certificate": {
+      "type": "object",
+      "required": [
+        "issuer",
+        "nickname",
+        "not_after",
+        "not_before",
+        "pem",
+        "serial_number",
+        "subject"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "issuer": {
+          "title": "Issuer name (RFC 4514 string)",
+          "type": "string"
+        },
+        "nickname": {
+          "title": "Internal nick name in LDAP",
+          "type": "string"
+        },
+        "not_after": {
+          "title": "Not valid after timestamp (UTC)",
+          "type": "string",
+          "format": "date-time"
+        },
+        "not_before": {
+          "title": "Not valid before timestamp (UTC)",
+          "type": "string",
+          "format": "date-time"
+        },
+        "pem": {
+          "title": "PEM encoded X.509 certificate",
+          "type": "string"
+        },
+        "serial_number": {
+          "title": "Serial number (base 10)",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "subject": {
+          "title": "Subject name (RFC 4514 string)",
+          "type": "string"
+        }
+      }
+    },
+    "DomainId": {
+      "title": "domain id",
+      "description": "A domain id",
+      "type": "string",
+      "format": "uuid",
+      "maxLength": 36,
+      "minLength": 36
+    },
+    "RhelIdmDomain": {
+      "title": "Root Type for ResponseIpaObject",
+      "description": "Options for ipa domains",
+      "type": "object",
+      "required": [
+        "ca_certs",
+        "realm_domains",
+        "realm_name",
+        "servers"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "servers": {
+          "description": "List of auto-enrollment enabled servers for this domain.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/IPAServer"
+          }
+        },
+        "ca_certs": {
+          "description": "A base64 representation of all the list of chain of certificates, including the server ca.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Certificate"
+          }
+        },
+        "locations": {
+          "description": "List of allowed locations",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/LocationName"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "realm_domains": {
+          "description": "List of realm associated to the IPA domain.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DomainName"
+          }
+        },
+        "realm_name": {
+          "$ref": "#/$defs/RealmName"
+        }
+      }
+    },
+    "IPAServer": {
+      "title": "Root Type for CreateDomainIpaServer",
+      "description": "Server schema for an entry into the Ipa domain type.",
+      "type": "object",
+      "required": [
+        "ca_server",
+        "fqdn",
+        "hcc_enrollment_server",
+        "hcc_update_server",
+        "pkinit_server"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ca_server": {
+          "type": "boolean"
+        },
+        "fqdn": {
+          "$ref": "#/$defs/Fqdn"
+        },
+        "hcc_enrollment_server": {
+          "type": "boolean"
+        },
+        "hcc_update_server": {
+          "type": "boolean"
+        },
+        "location": {
+          "$ref": "#/$defs/LocationName"
+        },
+        "pkinit_server": {
+          "type": "boolean"
+        },
+        "subscription_manager_id": {
+          "$ref": "#/$defs/SubscriptionManagerId"
+        }
+      }
+    },
+    "DomainName": {
+      "title": "Fully qualified domain name",
+      "description": "A name of a domain (all lower-case)",
+      "type": "string",
+      "format": "idn-hostname",
+      "maxLength": 253,
+      "minLength": 3
+    },
+    "DomainType": {
+      "title": "Domain Type",
+      "description": "Type of domain (currently only rhel-idm)",
+      "type": "string",
+      "enum": [
+        "rhel-idm"
+      ]
+    },
+    "Error": {
+      "title": "Error information",
+      "type": "object",
+      "required": [
+        "details",
+        "id",
+        "status",
+        "title"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "HTTP status text",
+          "description": "The human-readable HTTP status text for the error.",
+          "type": "string"
+        },
+        "details": {
+          "title": "Details",
+          "description": "A detailed explanation of the error, e.g. traceback.",
+          "type": "string"
+        },
+        "id": {
+          "title": "Error identifier",
+          "description": "A unique, random error identifier",
+          "type": "string"
+        },
+        "status": {
+          "title": "HTTP status code",
+          "description": "The HTTP status code for the error.",
+          "type": "integer",
+          "maximum": 599,
+          "minimum": 100
+        }
+      }
+    },
+    "Fqdn": {
+      "title": "FQDN",
+      "description": "A host's Fully Qualified Domain Name (all lower-case).",
+      "type": "string",
+      "format": "idn-hostname",
+      "maxLength": 253,
+      "minLength": 3
+    },
+    "HostId": {
+      "title": "host id",
+      "description": "A Host-Based Inventory ID of a host.",
+      "type": "string",
+      "format": "uuid",
+      "maxLength": 36,
+      "minLength": 36
+    },
+    "LocationName": {
+      "title": "Location identifier (IPA location, AD site)",
+      "description": "A location identifier (lower-case DNS label)",
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9\\-]*$"
+    },
+    "OrgId": {
+      "title": "Organization id",
+      "description": "The Org ID of the tenant that owns the host.",
+      "type": "string"
+    },
+    "RealmName": {
+      "title": "Kerberos realm name",
+      "description": "A Kerberos realm name (usually all upper-case domain name)",
+      "type": "string",
+      "maxLength": 253,
+      "minLength": 3,
+      "pattern": "^[A-Z0-9\\.\\-]+$"
+    },
+    "SubscriptionManagerId": {
+      "title": "Subscription manager id",
+      "description": "A Red Hat Subcription Manager ID of a RHEL host.",
+      "type": "string",
+      "format": "uuid",
+      "maxLength": 36,
+      "minLength": 36
+    }
+  }
+}

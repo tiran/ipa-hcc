@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Host registration request",
+  "description": "Request from a host to an IPA server",
+  "type": "object",
+  "required": [
+    "domain_type",
+    "domain_name",
+    "domain_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "domain_type": {
+      "$ref": "defs.json#/$defs/DomainType"
+    },
+    "domain_name": {
+      "$ref": "defs.json#/$defs/DomainName"
+    },
+    "domain_id": {
+      "$ref": "defs.json#/$defs/DomainId"
+    }
+  }
+}

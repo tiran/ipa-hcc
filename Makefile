@@ -129,6 +129,8 @@ install_server_plugin:
 
 	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/server
 	$(CP_PD) $(srcdir)/ipahcc/server/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/server/
+	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/server/schema
+	$(CP_PD) $(srcdir)/ipahcc/server/schema/*.json $(DEST)$(PYTHON_SITELIB)/ipahcc/server/schema/
 	$(MKDIR_P) $(DEST)$(SBINDIR)
 	$(CP_PD) $(srcdir)/install/server/ipa-hcc $(DEST)$(SBINDIR)/
 	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(SBINDIR)/ipa-hcc

@@ -10,8 +10,6 @@ from http.client import responses as http_responses
 import requests
 import requests.auth
 import requests.exceptions
-from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.x509.oid import NameOID
 from ipalib import errors
 from requests.structures import CaseInsensitiveDict
 
@@ -34,14 +32,12 @@ except ImportError:  # pragma: no cover
 from ipahcc import hccplatform
 
 from . import schema
+from .util import create_certinfo
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 10
 _missing = object()
-RFC4514_MAP = {
-    NameOID.EMAIL_ADDRESS: "E",
-}
 
 
 class APIResult(typing.NamedTuple):
@@ -423,19 +419,7 @@ class HCCAPI:
         for cert, nickname, trusted, _eku in certs:
             if not trusted:
                 continue
-            certinfo = {
-                "nickname": nickname,
-                # cryptography 3.2.1 on RHEL 8 does not support RFC map
-                "issuer": cert.issuer.rfc4514_string(),
-                "subject": cert.subject.rfc4514_string(),
-                "pem": cert.public_bytes(Encoding.PEM).decode("ascii"),
-                # JSON number type cannot handle large serial numbers
-                "serial_number": str(cert.serial_number),
-                "not_before": schema.rfc3339_datetime(cert.not_valid_before),
-                "not_after": schema.rfc3339_datetime(cert.not_valid_after),
-            }
-
-            ca_certs.append(certinfo)
+            ca_certs.append(create_certinfo(cert, nickname))
 
         return ca_certs
 

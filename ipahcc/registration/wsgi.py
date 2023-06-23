@@ -140,7 +140,7 @@ class Application(JSONWSGIApp):
     @route(
         "POST",
         "^/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
-        schema="HCCHostRegister",
+        schema="HostRegister",
     )
     def handle(  # pylint: disable=unused-argument
         self, env: dict, body: dict, inventory_id: str, fqdn: str

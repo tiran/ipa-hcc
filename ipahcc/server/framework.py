@@ -150,7 +150,7 @@ class JSONWSGIApp:
 
     def _validate_schema(
         self,
-        instance: typing.Union[dict, typing.List[dict]],
+        instance: dict,
         schema_name: str,
         suffix: str = "",
     ) -> None:
@@ -214,14 +214,16 @@ class JSONWSGIApp:
                 title = f"server error: {e}"
                 details = traceback.format_exc()
             logger.error("[%s] %i %s", error_id, code, title)
-            errors = [
-                {
-                    "id": error_id,
-                    "status": code,
-                    "title": title,
-                    "details": details,
-                }
-            ]
+            errors = {
+                "errors": [
+                    {
+                        "id": error_id,
+                        "status": code,
+                        "title": title,
+                        "details": details,
+                    }
+                ]
+            }
             self._validate_schema(errors, "Errors")
             response = json.dumps(errors)
 

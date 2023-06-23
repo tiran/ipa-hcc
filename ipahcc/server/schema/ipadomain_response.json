@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Root Type for DomainResponse",
+  "description": "A domain resource",
+  "type": "object",
+  "required": [
+    "domain_name",
+    "domain_type"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "description": "Title to describe the domain.",
+      "type": "string"
+    },
+    "description": {
+      "description": "Human readable description abou the domain.",
+      "type": "string"
+    },
+    "auto_enrollment_enabled": {
+      "description": "Enable or disable host vm auto-enrollment for this domain",
+      "type": "boolean"
+    },
+    "domain_id": {
+      "$ref": "defs.json#/$defs/DomainId"
+    },
+    "domain_name": {
+      "$ref": "defs.json#/$defs/DomainName"
+    },
+    "domain_type": {
+      "$ref": "defs.json#/$defs/DomainType"
+    },
+    "rhel-idm": {
+      "$ref": "defs.json#/$defs/RhelIdmDomain"
+    }
+  }
+}
