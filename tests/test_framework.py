@@ -151,11 +151,11 @@ class TestWSGIFramework(conftest.IPABaseTests):
                 "errors": [
                     {
                         "id": self.m_genrid.return_value,
-                        "details": (
+                        "detail": (
                             "schema violation: "
                             "invalid JSON for HostConfRequest"
                         ),
-                        "status": 400,
+                        "status": "400",
                         "title": "Bad Request",
                     }
                 ]

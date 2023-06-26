@@ -200,34 +200,34 @@ class JSONWSGIApp:
                 self._validate_schema(result, schema_name, "Response")
 
             response = json.dumps(result)
-            code = 200
+            status = 200
         except BaseException as e:  # pylint: disable=broad-except
             error_id = APIResult.genrid()
             if isinstance(e, HTTPException):
-                code = e.code
-                title = http_responses[code]
+                status = e.code
+                title = http_responses[status]
                 details = e.message
-                logger.info("%i: %s", code, details)
+                logger.info("%i: %s", status, details)
             else:
                 logger.exception("Request failed")
-                code = 500
+                status = 500
                 title = f"server error: {e}"
                 details = traceback.format_exc()
-            logger.error("[%s] %i %s", error_id, code, title)
+            logger.error("[%s] %i %s", error_id, status, title)
             errors = {
                 "errors": [
                     {
                         "id": error_id,
-                        "status": code,
+                        "status": str(status),
                         "title": title,
-                        "details": details,
+                        "detail": details,
                     }
                 ]
             }
             self._validate_schema(errors, "Errors")
             response = json.dumps(errors)
 
-        status_line = f"{code} {http_responses[code]}"
+        status_line = f"{status} {http_responses[status]}"
         headers = {
             "Content-Type": "application/json",
             "Content-Length": str(len(response)),
