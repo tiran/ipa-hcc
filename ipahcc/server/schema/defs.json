@@ -110,7 +110,8 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/DomainName"
-          }
+          },
+          "minItems": 1
         },
         "realm_name": {
           "$ref": "#/$defs/RealmName"

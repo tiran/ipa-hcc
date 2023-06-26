@@ -3,6 +3,14 @@
   "title": "Root Type for HostConfResponse",
   "description": "The response for the action to retrieve the host vm information when it is being enrolled. This action is taken from the host vm.",
   "type": "object",
+  "required": [
+    "auto_enrollment_enabled",
+    "domain_id",
+    "domain_name",
+    "domain_type",
+    "inventory_id",
+    "rhel-idm"
+  ],
   "additionalProperties": false,
   "properties": {
     "auto_enrollment_enabled": {
