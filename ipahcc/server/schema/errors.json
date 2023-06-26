@@ -3,6 +3,10 @@
   "title": "Root Type for ErrorResponse",
   "description": "General error response returned by the hmsidm API",
   "type": "object",
+  "required": [
+    "errors"
+  ],
+  "additionalProperties": false,
   "properties": {
     "errors": {
       "description": "Error objects provide additional information about problems encountered while performing an operation.",

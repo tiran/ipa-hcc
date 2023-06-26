@@ -173,7 +173,6 @@
       "title": "Error information",
       "type": "object",
       "required": [
-        "details",
         "id",
         "status",
         "title"
@@ -185,22 +184,27 @@
           "description": "The human-readable HTTP status text for the error.",
           "type": "string"
         },
-        "details": {
-          "title": "Details",
+        "code": {
+          "description": "an application-specific error code",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
           "description": "A detailed explanation of the error, e.g. traceback.",
           "type": "string"
         },
         "id": {
           "title": "Error identifier",
-          "description": "A unique, random error identifier",
+          "description": "a unique identifier for this particular occurrence of the problem.",
           "type": "string"
         },
         "status": {
           "title": "HTTP status code",
           "description": "The HTTP status code for the error.",
-          "type": "integer",
-          "maximum": 599,
-          "minimum": 100
+          "type": "string",
+          "maxLength": 3,
+          "minLength": 3,
+          "pattern": "^[1-5][0-9][0-9]$"
         }
       }
     },
