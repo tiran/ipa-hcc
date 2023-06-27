@@ -49,11 +49,11 @@ clean:
 	rm -f .coverage*
 	rm -rf htmlcov
 	rm -rf .mypy_cache
-	rm -rf dist build
+	rm -rf dist build *.egg-info *.dist-info
 
 .PHONY: cleanall
 cleanall: clean clean-idm-ci
-	rm -rf .tox
+	rm -rf .tox .ruff_cache .mypy_cache
 
 .PHONY: tox
 tox:
