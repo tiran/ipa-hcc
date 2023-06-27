@@ -125,6 +125,10 @@ class IPABaseTests(unittest.TestCase):
         root_logger.handlers = self._old_handlers
         root_logger.setLevel(self._old_level)
 
+    def get_logs(self):
+        fmt = logging.Formatter()
+        return [fmt.format(r) for r in self.log_capture.records]
+
     def setUp(self):
         super().setUp()
         self.log_capture_start()
@@ -208,6 +212,22 @@ class IPABaseTests(unittest.TestCase):
             response = json.loads(b"".join(response).decode("utf-8"))
         return status_code, status_msg, headers, response
 
+    def assert_response(
+        self,
+        expected_code: int,
+        status_code: int,
+        status_msg: str,
+        headers: dict,
+        response: dict,
+    ):
+        if expected_code != status_code:
+            # extend error message with log output
+            msg = [response]
+            msg.extend(self.get_logs())
+            self.assertEqual(status_code, 200, msg)
+        self.assertEqual(status_msg, http_responses[status_code])
+        self.assertEqual(headers["Content-Type"], "application/json")
+
     def assert_cli_run(self, mainfunc, *args, **kwargs):
         try:
             with capture_output() as out:
@@ -219,8 +239,7 @@ class IPABaseTests(unittest.TestCase):
         return out.read()
 
     def assert_log_entry(self, msg):
-        msgs = [r.getMessage() for r in self.log_capture.records]
-        self.assertIn(msg, msgs)
+        self.assertIn(msg, self.get_logs())
 
 
 @contextlib.contextmanager
