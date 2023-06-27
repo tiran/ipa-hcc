@@ -1,0 +1,50 @@
+---
+- hosts: ipaclient
+  become: true
+  become_method: sudo
+
+  tasks:
+    - name: Test idm-domains-backend
+      when: meta_role == 'backend'
+      block:
+        - include_vars:
+            file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
+            name: hmsidm_config
+
+        - name: Create domain
+          command: scripts/get-ipa-hcc-register.py --compose localhost:8000
+          args:
+            chdir: /idm-domains-backend
+          register: ipahccregister
+
+        - name: Print ipa-hcc register command
+          debug:
+            msg="{{ ipahccregister.stdout }}"
+
+        - name: Register domain on IPA server
+          command: "{{ ipahccregister.stdout }}"
+          delegate_to: "{{ hostvars[groups.ipaserver.0].meta_fqdn }}"
+
+- hosts: ipaserver
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Run ipa-hcc status
+      command: ipa-hcc status
+      register: ipahccstatus
+
+    - name: Show ipa-hcc status result
+      debug:
+        msg: "{{ ipahccstatus.stdout }}"
+
+    - name: kinit as IPA admin
+      shell: |
+        echo Secret123 | kinit admin
+
+    - name: Run ipa config-show
+      command: ipa config-show
+      register: ipaconfigshow
+
+    - name: Show ipa config-show result
+      debug:
+        msg: "{{ ipaconfigshow.stdout }}"

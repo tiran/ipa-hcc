@@ -1,21 +1,34 @@
 [hcc]
 {% if hmsidm_config.rhc_env == 'stage' %}
+## Console stage
 token_url=https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
 inventory_api_url=https://console.stage.redhat.com/api/inventory/v1
 # mockapi
 idm_api_url=https://{{ meta_fqdn }}/api/idm/v1
 {% elif hmsidm_config.rhc_env == 'prod' %}
+## Console prod
 token_url=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
 inventory_api_url=https://console.redhat.com/api/inventory/v1
 # mockapi
 idm_api_url=https://{{ meta_fqdn }}/api/idm/v1
 {% elif hmsidm_config.rhc_env == 'ephemeral' %}
+## Ephemeral testing environment
 token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token
 inventory_api_url=https://console.invalid/api/inventory/v1
-idm_api_url=https://{{ hmsidm_config.ephemeral_hmsidm_backend }}/api/hmsidm/v1
+idm_api_url=https://{{ hmsidm_config.hmsidm_backend }}/api/hmsidm/v1
 # see idm-domains-backend: ./scripts/http/public.http
 dev_org_id=12345
 dev_cert_cn=6f324116-b3d2-11ed-8a37-482ae3863d30
-dev_username={{ hmsidm_config.ephemeral_username }}
-dev_password={{ hmsidm_config.ephemeral_password }}
+dev_username={{ hmsidm_config.dev_username }}
+dev_password={{ hmsidm_config.dev_password }}
+{% elif hmsidm_config.rhc_env == 'compose' %}
+## podman-compose environment
+token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token
+inventory_api_url=https://console.invalid/api/inventory/v1
+# TODO get backend hostname from inventory
+idm_api_url=http://{{ hmsidm_config.hmsidm_backend }}:8000/api/hmsidm/v1
+dev_org_id=12345
+dev_cert_cn=6f324116-b3d2-11ed-8a37-482ae3863d30
+dev_username=compose
+dev_password=compose
 {% endif %}
