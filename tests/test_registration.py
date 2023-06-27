@@ -72,9 +72,7 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
             path=path, body=body
         )
 
-        self.assertEqual(status_code, 200)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assert_response(200, status_code, status_msg, headers, response)
         self.assertEqual(
             response,
             {

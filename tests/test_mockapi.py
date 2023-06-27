@@ -67,10 +67,7 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
         status_code, status_msg, headers, response = self.call_wsgi(
             "/", {}, method="GET"
         )
-        self.assertEqual(status_code, 200, response)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
-        self.assertEqual(response, {})
+        self.assert_response(200, status_code, status_msg, headers, response)
 
     def test_host_conf(self):
         path = "/".join(
@@ -85,9 +82,7 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
         status_code, status_msg, headers, response = self.call_wsgi(
             path, body, method="POST"
         )
-        self.assertEqual(status_code, 200, response)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assert_response(200, status_code, status_msg, headers, response)
 
     def test_register_domain(self):
         headers = {"HTTP_X_RH_IDM_REGISTRATION_TOKEN": "mockapi"}
@@ -100,15 +95,11 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
                 "X-RH-IDM-Registration-Token": "mockapi",
             },
         )
-        self.assertEqual(status_code, 200, response)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assert_response(200, status_code, status_msg, headers, response)
 
     def test_update_domain(self):
         path = "/".join(("", "domains", conftest.DOMAIN_ID, "update"))
         status_code, status_msg, headers, response = self.call_wsgi(
             path, domain_request, method="PUT"
         )
-        self.assertEqual(status_code, 200, response)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assert_response(200, status_code, status_msg, headers, response)

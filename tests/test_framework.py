@@ -40,10 +40,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
         p = mock.patch.object(APIResult, "genrid")
         self.m_genrid = p.start()
         self.m_genrid.return_value = "rid"
-
-    def tearDown(self):
-        self.m_genrid.stop()
-        super().tearDown()
+        self.addCleanup(p.stop)
 
     def test_route(self):
         with self.assertRaises(ValueError):
@@ -56,28 +53,29 @@ class TestWSGIFramework(conftest.IPABaseTests):
             path="/", body=None, method="GET"
         )
 
-        self.assertEqual(status_code, 200)
-        self.assertEqual(status_msg, "OK")
-        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assert_response(200, status_code, status_msg, headers, response)
         self.assertEqual(response, {"status": "ok"})
 
     def test_errors(self):
+        # method not allowed
         status_code, status_msg, headers, response = self.call_wsgi(
             path="/", body={}, method="POST"
         )
-        self.assertEqual(status_code, 405)
+        self.assert_response(405, status_code, status_msg, headers, response)
 
         status_code, status_msg, headers, response = self.call_wsgi(
             path="/fail", body=None, method="GET"
         )
-        self.assertEqual(status_code, 500)
+        self.assert_response(500, status_code, status_msg, headers, response)
 
+        # not found
         status_code, status_msg, headers, response = self.call_wsgi(
             path="/not-found",
             body={},
         )
-        self.assertEqual(status_code, 404)
+        self.assert_response(404, status_code, status_msg, headers, response)
 
+        # length required
         path = "/".join(
             (
                 "",
@@ -89,20 +87,22 @@ class TestWSGIFramework(conftest.IPABaseTests):
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path, body=None
         )
-        self.assertEqual(status_code, 411)
+        self.assert_response(411, status_code, status_msg, headers, response)
 
+        # not acceptable (content type)
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path,
             body={},
             content_type="text/plain",
         )
-        self.assertEqual(status_code, 406)
+        self.assert_response(406, status_code, status_msg, headers, response)
 
+        # too large
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path,
             body={"large": "a" * (JSONWSGIApp.max_content_length + 1)},
         )
-        self.assertEqual(status_code, 413)
+        self.assert_response(413, status_code, status_msg, headers, response)
 
     def test_cert(self):
         status_code, status_msg, headers, response = self.call_wsgi(
@@ -110,7 +110,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
             body=None,
             method="GET",
         )
-        self.assertEqual(status_code, 200)
+        self.assert_response(200, status_code, status_msg, headers, response)
         self.assertEqual(
             response,
             {
@@ -122,12 +122,12 @@ class TestWSGIFramework(conftest.IPABaseTests):
         status_code, status_msg, headers, response = self.call_wsgi(
             path="/cert", body=None, method="GET", client_cert=None
         )
-        self.assertEqual(status_code, 412)
+        self.assert_response(412, status_code, status_msg, headers, response)
 
         status_code, status_msg, headers, response = self.call_wsgi(
             path="/cert", body=None, method="GET", client_cert="invalid"
         )
-        self.assertEqual(status_code, 400)
+        self.assert_response(400, status_code, status_msg, headers, response)
 
     def test_schema_violations(self):
         path = "/".join(
@@ -142,8 +142,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
         status_code, status_msg, headers, response = self.call_wsgi(
             path=path, body=body
         )
-        self.assertEqual(status_code, 400)
-        self.assertEqual(status_msg, "Bad Request")
+        self.assert_response(400, status_code, status_msg, headers, response)
         self.assertEqual(headers["Content-Type"], "application/json")
         self.assertEqual(
             response,
