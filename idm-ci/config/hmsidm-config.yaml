@@ -21,9 +21,9 @@ ipa_hcc_copr: copr.devel.redhat.com/cheimes/ipa-hcc
 
 # backend host
 # oc get routes -l app=hmsidm-backend -o jsonpath='{.items[0].spec.host}'
-ephemeral_hmsidm_backend: "{{ lookup('env', 'HMSIDM_BACKEND', default=undef()) }}"
-ephemeral_username: "{{ lookup('env', 'EPHEMERAL_USERNAME', default=undef()) }}"
-ephemeral_password: "{{ lookup('env', 'EPHEMERAL_PASSWORD', default=undef()) }}"
+hmsidm_backend: "{{ lookup('env', 'HMSIDM_BACKEND', default=undef()) }}"
+dev_username: "{{ lookup('env', 'DEV_USERNAME', default=undef()) }}"
+dev_password: "{{ lookup('env', 'DEV_PASSWORD', default=undef()) }}"
 
 # see ipahcc.hccplatform
 domain_id: '772e9618-d0f8-4bf8-bfed-d2831f63c619'
@@ -33,3 +33,6 @@ domain_token: 'mockapi'
 # Docker Hub credentials (to avoid rate limiting)
 docker_username: "{{ lookup('env', 'DOCKER_USERNAME', default=undef()) }}"
 docker_password: "{{ lookup('env', 'DOCKER_PASSWORD', default=undef()) }}"
+
+backend_git_repo: "{{ lookup('env', 'BACKEND_GIT_REPO') | default('https://gitlab.cee.redhat.com/identity-management/idmocp/idm-domains-backend.git', True) }}"
+backend_git_branch: "{{ lookup('env', 'BACKEND_GIT_BRANCH') | default('HEAD', True) }}"

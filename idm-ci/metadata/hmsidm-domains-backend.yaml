@@ -14,6 +14,8 @@ domains:
         os: rhel-9.2
       - name: backend.hmsidm-dev.test
         role: backend
+        # medium machine, Go compiler requires lots of RAM
+        size: medium
         group: ipaclient
         os: rhel-9.2
 phases:
@@ -35,7 +37,7 @@ phases:
       - playbook: prep/ipa-network.yaml
   - name: backend
     steps:
-      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend-deploy.yaml
   - name: pkg
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-rpkg-local.yaml
@@ -47,6 +49,9 @@ phases:
       - playbook: prep/ipa-replica-install.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
+  - name: test
+    steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend-test.yaml
   - name: collect
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
