@@ -87,7 +87,7 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
         )
 
         self.m_api.Command.config_mod.assert_called_once_with(
-            hccorgid=int(conftest.ORG_ID),
+            hccorgid=conftest.ORG_ID,
         )
 
     def test_update_hcc_enrollment_service(self):

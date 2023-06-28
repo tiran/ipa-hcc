@@ -171,7 +171,7 @@ class JSONWSGIApp:
     def after_call(self) -> None:
         """After handle method call hook"""
 
-    def parse_cert(self, env: dict) -> typing.Tuple[int, str]:
+    def parse_cert(self, env: dict) -> typing.Tuple[str, str]:
         """Parse XRHID certificate"""
 
         cert_pem = env.get("SSL_CLIENT_CERT")

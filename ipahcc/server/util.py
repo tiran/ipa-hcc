@@ -45,7 +45,7 @@ def create_certinfo(
 
 def parse_rhsm_cert(
     data: typing.Union[str, typing.ByteString]
-) -> typing.Tuple[int, str]:
+) -> typing.Tuple[str, str]:
     """Parse RHSM certificate
 
     returns org_id and rhsm_id (CN UUID)
@@ -58,11 +58,7 @@ def parse_rhsm_cert(
     nas = list(cert.subject)
     if len(nas) != 2 or nas[0].oid != NameOID.ORGANIZATION_NAME:
         raise ValueError(f"Invalid cert subject {cert.subject}.")
-    try:
-        org_id = int(nas[0].value, 10)
-    except (ValueError, TypeError):
-        raise ValueError(f"Invalid cert subject {cert.subject}.") from None
-    return org_id, nas[1].value
+    return nas[0].value, nas[1].value
 
 
 def read_cert_dir(path: str) -> str:

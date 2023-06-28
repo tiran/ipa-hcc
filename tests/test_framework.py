@@ -114,7 +114,7 @@ class TestWSGIFramework(conftest.IPABaseTests):
         self.assertEqual(
             response,
             {
-                "org_id": int(conftest.ORG_ID),
+                "org_id": conftest.ORG_ID,
                 "subscription_manager_id": conftest.CLIENT_RHSM_ID,
             },
         )

@@ -6,7 +6,7 @@
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
 from ipalib import _, errors
-from ipalib.parameters import Int, Str
+from ipalib.parameters import Str
 
 # pylint: disable=import-error
 from ipaserver.plugins.config import config, config_mod, config_show
@@ -28,11 +28,10 @@ config.default_attributes.extend(list(hcc_config_attributes))
 
 
 takes_params = (
-    Int(
+    Str(
         "hccorgid?",
         cli_name="hccorgid",
         label=_("HCC organization id"),
-        minvalue=1,
     ),
     Str(
         "hccdomainid?",
