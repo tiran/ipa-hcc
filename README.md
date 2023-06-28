@@ -19,14 +19,14 @@ time.
 
 ## Additional host attributes
 
-* *HCCOrgId*: int
+* *HCCOrgId*: string
 * *HCCSubscriptionId*: string
 * *HCCInventoryId*: string
 * *HCCCertSubject*: string (auto-generated)
 
 ## Server config
 
-* *HCCOrgId*: int
+* *HCCOrgId*: string
 * *HCCDomainId*: string
 
 ## Host groups
@@ -69,7 +69,7 @@ $ ipa host-show host.test.example
   ...
 $ ipa config-mod --help
   ...
-  --hccorgid=INT  organization id
+  --hccorgid=STR  organization id
   --hccdomainid=STR  domain id
   ...
 ```

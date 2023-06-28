@@ -133,12 +133,10 @@ class TestUtil(IPAClientTests):
     def test_parse_cert(self):
         with open(conftest.RHSM_CERT, "rb") as f:
             org_id, rhsm_id = parse_rhsm_cert(f.read())
-        self.assertEqual(str(org_id), conftest.ORG_ID)
+        self.assertEqual(org_id, conftest.ORG_ID)
         self.assertEqual(rhsm_id, conftest.CLIENT_RHSM_ID)
 
         with self.assertRaises(ValueError):
             parse_rhsm_cert("data")
         with self.assertRaises(ValueError):
             parse_rhsm_cert(b"data")
-        with self.assertRaises(ValueError):
-            parse_rhsm_cert(conftest.IPA_CA_DATA)

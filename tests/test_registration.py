@@ -82,7 +82,7 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
         )
 
         app = self.app
-        self.assertEqual(app.org_id, int(conftest.ORG_ID))
+        self.assertEqual(app.org_id, conftest.ORG_ID)
         self.assertEqual(app.domain_id, conftest.DOMAIN_ID)
 
         host_add = self.m_api.Command.host_add

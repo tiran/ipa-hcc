@@ -36,7 +36,7 @@ class Application(JSONWSGIApp):
     def __init__(self, api=None) -> None:
         super().__init__(api=api)
         # cached org_id from IPA config_show
-        self._org_id: typing.Optional[int] = None
+        self._org_id: typing.Optional[str] = None
         self._domain_id: typing.Optional[str] = None
         # cached PEM bundle
         self._kdc_cabundle = read_cert_dir(hccplatform.HMSIDM_CACERTS_DIR)
@@ -68,7 +68,7 @@ class Application(JSONWSGIApp):
         ):
             self.api.Backend.rpcclient.disconnect()
 
-    def _get_ipa_config(self) -> typing.Tuple[int, str]:
+    def _get_ipa_config(self) -> typing.Tuple[str, str]:
         """Get org_id and domain_id from IPA config"""
         # no need to fetch additional values
         result = self.api.Command.config_show(raw=True)["result"]
@@ -83,10 +83,10 @@ class Application(JSONWSGIApp):
                 "Invalid IPA configuration, 'hccdomainid' is not set."
             )
 
-        return int(org_ids[0]), domain_ids[0]
+        return org_ids[0], domain_ids[0]
 
     @property
-    def org_id(self) -> int:
+    def org_id(self) -> str:
         if self._org_id is None:
             self._org_id, self._domain_id = self._get_ipa_config()
         return self._org_id
@@ -99,7 +99,7 @@ class Application(JSONWSGIApp):
 
     def update_ipa(
         self,
-        org_id: int,
+        org_id: str,
         rhsm_id: str,
         inventory_id: str,
         fqdn: str,
