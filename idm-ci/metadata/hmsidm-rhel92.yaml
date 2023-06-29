@@ -22,8 +22,11 @@ phases:
       - playbook: init/testrunner-dir.yaml
       - playbook: init/git-clone.yaml
         extra_vars:
-          url: https://gitlab.cee.redhat.com/identity-management/idmocp/ipa-hcc
+          url: "{{ lookup('env', 'CI_MERGE_REQUEST_SOURCE_PROJECT_URL', default='https://gitlab.cee.redhat.com/identity-management/idmocp/ipa-hcc') }}"
           branch: "{{ lookup('env', 'CI_MERGE_REQUEST_SOURCE_BRANCH_NAME', default='main') }}"
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-check-env.yaml
+        extra_vars:
+          expects_envs: "prod stage"
   - name: provision
     steps:
       - playbook: provision/mrack-up.yaml
@@ -34,31 +37,31 @@ phases:
       # PKINIT on 9.2 is currently broken in FIPS mode
       # see https://bugzilla.redhat.com/show_bug.cgi?id=2187722
       # - playbook: prep/enable-fips.yaml
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-local-rpms.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-local-rpms.yaml
       - playbook: prep/prefer-ipv4.yaml
       - playbook: prep/repos.yaml
       - playbook: prep/install-ipa-packages.yaml
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml
   - name: test
     steps:
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaserver
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
       - playbook: prep/ipa-server-install.yaml
       - playbook: prep/ipa-replica-install.yaml
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
       # - playbook: prep/hmsidm-auto-enrollment.yaml
       # trigger auto-enrollment
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaclient
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
   - name: teardown
     steps:
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
-      - playbook: ../idmocp/ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
       - playbook: teardown/mrack-destroy.yaml

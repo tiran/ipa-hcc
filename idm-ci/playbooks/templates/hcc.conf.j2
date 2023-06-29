@@ -25,8 +25,7 @@ dev_password={{ hmsidm_config.dev_password }}
 ## podman-compose environment
 token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token
 inventory_api_url=https://console.invalid/api/inventory/v1
-# TODO get backend hostname from inventory
-idm_api_url=http://{{ hmsidm_config.hmsidm_backend }}:8000/api/hmsidm/v1
+idm_api_url=http://{{ (groups.all | map('extract', hostvars) | selectattr('meta_role', 'equalto', 'backend') | first).meta_fqdn }}:8000/api/hmsidm/v1
 dev_org_id=12345
 dev_cert_cn=6f324116-b3d2-11ed-8a37-482ae3863d30
 dev_username=compose

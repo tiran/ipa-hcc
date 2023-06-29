@@ -1,5 +1,6 @@
 ---
 # metadata file to run tests with locally deployed idm-domains-backend
+
 domains:
   - name: hmsidm-dev.test
     type: IPA
@@ -22,6 +23,9 @@ phases:
   - name: init
     steps:
       - playbook: init/testrunner-dir.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-check-env.yaml
+        extra_vars:
+          expects_envs: "compose"
   - name: provision
     steps:
       - playbook: provision/mrack-up.yaml

@@ -40,6 +40,9 @@ phases:
   - name: init
     steps:
       - playbook: init/testrunner-dir.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-check-env.yaml
+        extra_vars:
+          expects_envs: "prod stage"
   - name: provision
     steps:
       - playbook: provision/mrack-up.yaml

@@ -6,7 +6,8 @@
   vars:
     compose_env:
       COMPOSE_FILE: "deployments/backend-compose.yaml"
-      CONTAINER_IMAGE_BASE: "localhost/hmsidm-backend"
+      # force local image
+      CONTAINER_IMAGE_BASE: "hmsidm-backend"
 
   tasks:
     - name: Provision idm-domains-backend
@@ -65,19 +66,25 @@
             - hmsidm_config.docker_username
             - hmsidm_config.docker_password
 
-        - name: build local tools
+        - name: Build local tools
           command: make install-xrhidgen install-db-tool
           args:
             chdir: /idm-domains-backend
 
-        - name: make compose-build
+        - name: Pull external images (podman-compose pull)
+          command: timeout 180 make compose-pull
+          args:
+            chdir: /idm-domains-backend
+          environment: "{{ compose_env }}"
+
+        - name: Build local images (podman-compose build)
           command: make compose-build
           args:
             chdir: /idm-domains-backend
           environment: "{{ compose_env }}"
 
-        - name: make compose-up
-          command: make compose-up
+        - name: Start compose (podman-compose up)
+          command: timeout 180 make compose-up
           args:
             chdir: /idm-domains-backend
           environment: "{{ compose_env }}"

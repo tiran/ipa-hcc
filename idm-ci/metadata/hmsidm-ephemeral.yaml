@@ -1,7 +1,6 @@
 ---
 # hmsidm-ephemeral metadata file builds and installs RPMs from local checkout
 # deploys with existing ephemeral environment. See `EPHEMERAL.md` for details.
-#
 
 domains:
   - name: hmsidm-dev.test
@@ -23,6 +22,9 @@ phases:
   - name: init
     steps:
       - playbook: init/testrunner-dir.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-check-env.yaml
+        extra_vars:
+          expects_envs: "ephemeral"
   - name: provision
     steps:
       - playbook: provision/mrack-up.yaml

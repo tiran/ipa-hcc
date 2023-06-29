@@ -10,7 +10,7 @@
     - name: Run ipa-hcc register
       command: "ipa-hcc register --unattended {{ hmsidm_config.domain_id }} {{ hmsidm_config.domain_token }}"
       when:
-        hmsidm_config.rhc_env == 'prod' or hmsidm_config.rhc_env == 'stage'
+        hmsidm_config.rhc_env in ['prod', 'stage']
 
     - name: kinit as IPA admin
       shell: |

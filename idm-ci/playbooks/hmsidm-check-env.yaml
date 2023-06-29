@@ -1,0 +1,32 @@
+- hosts: localhost
+  gather_facts: False
+  tasks:
+    - include_vars:
+        file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
+        name: hmsidm_config
+
+    - name: "Check for RHC_ENV"
+      fail:
+        msg: "Invalid or missing setting RHC_ENV (got '{{ hmsidm_config.rhc_env }}')"
+      when: 'hmsidm_config.rhc_env is not defined or hmsidm_config.rhc_env not in ["prod", "stage", "ephemeral", "compose"]'
+
+    - name: Check for expected RHC_ENV
+      fail:
+        msg: "RHC_ENV expected one of '{{ expects_envs }}', got '{{ hmsidm_config.rhc_env }}'"
+      when:
+        - expects_envs is defined
+        - hmsidm_config.rhc_env not in expects_envs
+
+    - name: Check for RHC_ORG
+      fail:
+        msg: "RHC_ORG is required"
+      when:
+        - not hmsidm_config.rhc_org
+        - hmsidm_config.rhc_env in ['prod', 'stage']
+
+    - name: Check for RHC_KEY
+      fail:
+        msg: "RHC_KEY is required"
+      when:
+        - not hmsidm_config.rhc_key
+        - hmsidm_config.rhc_env in ['prod', 'stage']
