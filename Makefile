@@ -36,6 +36,7 @@ CP_CONFIG = $(CP_PD) -n
 RPKGDIR=$(abs_srcdir)/build/rpkg
 
 CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem
+OPENAPI_YAML = api/public.openapi.yaml
 
 
 .PHONY: all
@@ -59,6 +60,17 @@ clean:
 .PHONY: cleanall
 cleanall: clean clean-idm-ci
 	rm -rf .tox .ruff_cache .mypy_cache
+
+$(OPENAPI_YAML):
+	git submodule update --init
+
+ipahcc/server/schema/%.json: contrib/convert_schema.py $(OPENAPI_YAML)
+	contrib/convert_schema.py
+
+.PHONY: generate-schema
+generate-schema:
+	rm -f ipahcc/server/schema/*.json
+	$(MAKE) ipahcc/server/schema/defs.json
 
 .PHONY: tox
 tox:

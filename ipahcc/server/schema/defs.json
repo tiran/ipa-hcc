@@ -21,7 +21,8 @@
       "properties": {
         "issuer": {
           "title": "Issuer name (RFC 4514 string)",
-          "type": "string"
+          "type": "string",
+          "format": "cert-issuer"
         },
         "nickname": {
           "title": "Internal nick name in LDAP",
@@ -39,7 +40,8 @@
         },
         "pem": {
           "title": "PEM encoded X.509 certificate",
-          "type": "string"
+          "type": "string",
+          "format": "cert-pem"
         },
         "serial_number": {
           "title": "Serial number (base 10)",
@@ -48,7 +50,8 @@
         },
         "subject": {
           "title": "Subject name (RFC 4514 string)",
-          "type": "string"
+          "type": "string",
+          "format": "cert-subject"
         }
       }
     },
@@ -111,6 +114,7 @@
           "items": {
             "$ref": "#/$defs/DomainName"
           },
+          "format": "ipa-realm-domains",
           "minItems": 1
         },
         "realm_name": {
@@ -203,6 +207,7 @@
           "title": "HTTP status code",
           "description": "The HTTP status code for the error.",
           "type": "string",
+          "format": "http-status",
           "maxLength": 3,
           "minLength": 3,
           "pattern": "^[1-5][0-9][0-9]$"
@@ -242,6 +247,7 @@
       "title": "Kerberos realm name",
       "description": "A Kerberos realm name (usually all upper-case domain name)",
       "type": "string",
+      "format": "realm",
       "maxLength": 253,
       "minLength": 3,
       "pattern": "^[A-Z0-9\\.\\-]+$"

@@ -83,6 +83,7 @@ BuildRequires: dbus-daemon
 BuildRequires: gobject-introspection-devel
 BuildRequires: cairo-devel
 BuildRequires: cairo-gobject-devel
+BuildRequires: python3-pyyaml
 %endif
 
 %description

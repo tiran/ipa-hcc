@@ -11,11 +11,13 @@
   "properties": {
     "title": {
       "description": "Title to describe the domain.",
-      "type": "string"
+      "type": "string",
+      "format": "domain-title"
     },
     "description": {
       "description": "Human readable description abou the domain.",
-      "type": "string"
+      "type": "string",
+      "format": "domain-description"
     },
     "auto_enrollment_enabled": {
       "description": "Enable or disable host vm auto-enrollment for this domain",

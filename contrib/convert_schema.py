@@ -7,8 +7,9 @@ import sys
 import yaml
 
 BASEDIR = pathlib.Path(__file__).absolute().parent.parent
-IDBDIR = BASEDIR.parent / "idm-domains-backend"
-OPENAPI_YAML = IDBDIR / "api" / "public.openapi.yaml"
+# OpenAPI files are in a separate repository which is included as a
+# git submodule.
+OPENAPI_YAML = BASEDIR / "api" / "public.openapi.yaml"
 
 sys.path.append(str(BASEDIR))
 
