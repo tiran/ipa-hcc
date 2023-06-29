@@ -1,6 +1,7 @@
 VERSION = 0.11
 
 srcdir = .
+abs_srcdir = $(shell pwd)
 DEST =
 
 # /etc
@@ -31,6 +32,9 @@ MKDIR_P = mkdir -p -m755
 CP_PD = cp -p -d
 CP_CONFIG = $(CP_PD) -n
 
+# rpkg --outdir must be an absolute path
+RPKGDIR=$(abs_srcdir)/build/rpkg
+
 CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem
 
 
@@ -49,6 +53,7 @@ clean:
 	rm -f .coverage*
 	rm -rf htmlcov
 	rm -rf .mypy_cache
+	rm -rf $(RPKGDIR)
 	rm -rf dist build *.egg-info *.dist-info
 
 .PHONY: cleanall
@@ -77,15 +82,11 @@ version:
 
 .PHONY: rpkg
 rpkg:
-	tox -e rpkg
-
-.PHONY: _rpkg
-_rpkg:
 	@if ! test -d .git; then echo "rpkg requires a git repository" >&2; exit 2; fi
-	@rm -rf .tox/rpkg
-	@mkdir -p .tox/rpkg
-	rpkg local --outdir $$(pwd)/.tox/rpkg
-	rpmlint --ignore-unused-rpmlintrc --strict -r ipa-hcc.rpmlintrc .tox/rpkg/
+	@rm -rf $(RPKGDIR)
+	@mkdir -p $(RPKGDIR)
+	rpkg local --outdir $(RPKGDIR)
+	rpmlint --ignore-unused-rpmlintrc --strict -r ipa-hcc.rpmlintrc $(RPKGDIR)
 
 .PHONY: test
 test:
